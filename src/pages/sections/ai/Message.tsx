@@ -17,8 +17,7 @@ import { FILE_ICONS, formatDuration, formatSize, modelById } from './data'
 import { copyToClipboard, currentReply, replyText } from './helpers'
 import { Markdown } from './markdown'
 import {
-  ActivityLine, ApprovalCard, ArtifactCard, ErrorCard, PlanBlock, SourcesRow, StoppedNote, ThinkingBlock,
-  ToolCard, TypingDots,
+  ApprovalCard, ArtifactCard, ErrorCard, ProcessTrail, SourcesRow, StoppedNote, type ProcessPart,
 } from './parts'
 import type { AssistantMessage, FileRef, Part, PartOf, UserMessage } from './types'
 
@@ -229,14 +228,19 @@ function FeedbackDialog({ open, onOpenChange, onSubmit }: {
   )
 }
 
-type Group = { tools: PartOf<'tool'>[]; key: string } | { part: Part; key: string }
+// Thinking, plan steps and tool calls that run back to back become one
+// process trail; everything else (approval, text, sources…) stands alone.
+type Group = { process: ProcessPart[]; key: string } | { part: Part; key: string }
+
+const isProcess = (part: Part): part is ProcessPart =>
+  part.type === 'thinking' || part.type === 'plan' || part.type === 'tool'
 
 function groupParts(parts: Part[]): Group[] {
   const groups: Group[] = []
   for (const part of parts) {
     const last = groups[groups.length - 1]
-    if (part.type === 'tool' && last && 'tools' in last) last.tools.push(part)
-    else if (part.type === 'tool') groups.push({ tools: [part], key: part.id })
+    if (isProcess(part) && last && 'process' in last) last.process.push(part)
+    else if (isProcess(part)) groups.push({ process: [part], key: part.id })
     else groups.push({ part, key: part.id })
   }
   return groups
@@ -259,15 +263,15 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
   const lastPart = reply.parts[reply.parts.length - 1]
   const streaming = lastPart?.type === 'text' && lastPart.streaming
   const address = [chatId, message.id, reply.id] as const
+  const groups = groupParts(reply.parts)
+  const lastGroup = groups[groups.length - 1]
 
   function renderPart(part: Part) {
     switch (part.type) {
       case 'thinking':
-        return <ThinkingBlock part={part} />
       case 'plan':
-        return <PlanBlock part={part} />
       case 'tool':
-        return <ToolCard part={part} />
+        return null
       case 'approval':
         return <ApprovalCard part={part} onDecide={(decision) => actions.decide(...address, part.id, decision)} />
       case 'text':
@@ -299,16 +303,22 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
         )}
       </header>
 
-      {running && reply.parts.length === 0 && <TypingDots />}
-      {groupParts(reply.parts).map((group) => (
+      {groups.map((group, i) => (
         <Fragment key={group.key}>
-          {'tools' in group
-            ? <div className="grid min-w-0 gap-1.5">{group.tools.map((tool) => <ToolCard key={tool.id} part={tool} />)}</div>
-            : renderPart(group.part)}
+          {'process' in group ? (
+            <ProcessTrail
+              parts={group.process}
+              // Only the trail the agent is still adding to shimmers; earlier ones fold away.
+              live={running && i === groups.length - 1 && !streaming}
+              activity={reply.activity}
+              since={reply.startedAt}
+            />
+          ) : renderPart(group.part)}
         </Fragment>
       ))}
-      {running && reply.activity && reply.parts.length > 0 && !streaming && (
-        <ActivityLine text={reply.activity} since={reply.startedAt} />
+      {/* Waiting before the first part, or between steps (e.g. right after an approval). */}
+      {running && !streaming && !(lastGroup && 'process' in lastGroup) && (
+        <ProcessTrail parts={[]} live activity={reply.activity} since={reply.startedAt} />
       )}
       {reply.status === 'stopped' && <StoppedNote />}
 

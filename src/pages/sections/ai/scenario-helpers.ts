@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import { LABELS, PRIORITY, STATUS, type Job, type Priority, type Status } from '../../data'
 import { now } from './data'
 
@@ -66,7 +67,7 @@ export function csv(rows: Record<string, string | number>[]) {
   return [keys.join(','), ...rows.map((r) => keys.map((k) => esc(r[k])).join(','))].join('\n')
 }
 
-export const DATE_LABEL = () => new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }).format(now())
+export const DATE_LABEL = () => format(now(), 'd MMM yyyy')
 
 export function findJobIds(prompt: string) {
   return [...prompt.matchAll(/\bDO-\d{3,}\b/gi)].map((m) => m[0].toUpperCase())

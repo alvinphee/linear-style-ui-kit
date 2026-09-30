@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  AiBrain01Icon, Alert02Icon, ArrowDown01Icon, ArrowRight02Icon, Attachment01Icon, BookOpen01Icon,
-  CancelCircleIcon, CheckListIcon, CheckmarkCircle02Icon, CircleIcon, DatabaseIcon, FileTextIcon,
+  AiBrain01Icon, Alert02Icon, ArrowDown01Icon, ArrowRight01Icon, ArrowRight02Icon, Attachment01Icon, BookOpen01Icon,
+  CancelCircleIcon, CheckmarkCircle02Icon, DatabaseIcon, FileTextIcon,
   FileViewIcon, Globe02Icon, PencilEdit02Icon, RefreshIcon, Search01Icon, Shield01Icon, SourceCodeIcon,
   StopCircleIcon, Table01Icon, Tick02Icon,
 } from '@hugeicons/core-free-icons'
@@ -34,9 +34,13 @@ export function AiStyles() {
 .ai-dot { animation: ai-dot 1.2s ease-in-out infinite }
 @keyframes ai-wave { 0%, 100% { transform: scaleY(.3) } 50% { transform: scaleY(1) } }
 .ai-wave { animation: ai-wave 0.9s ease-in-out infinite; transform-origin: center }
+@keyframes ai-in { from { opacity: 0; transform: translateY(2px) } to { opacity: 1; transform: none } }
+.ai-in { animation: ai-in .3s ease-out both }
+@keyframes ai-pulse { 0%, 100% { opacity: .35; transform: scale(.8) } 50% { opacity: 1; transform: scale(1) } }
+.ai-pulse { animation: ai-pulse 1.4s ease-in-out infinite }
 @media (prefers-reduced-motion: reduce) {
   .ai-shimmer { animation: none; background: none; color: var(--muted-foreground) }
-  .ai-dot, .ai-wave { animation: none }
+  .ai-dot, .ai-wave, .ai-in, .ai-pulse { animation: none }
 }
 `}</style>
   )
@@ -78,63 +82,99 @@ export function ActivityLine({ text, since }: { text: string; since: number }) {
   )
 }
 
-export function ThinkingBlock({ part }: { part: PartOf<'thinking'> }) {
-  const running = part.state === 'running'
-  // Open while thinking, closed after, unless the reader chose otherwise.
-  const [choice, setChoice] = useState<boolean | null>(null)
-  const open = choice ?? running
-  return (
-    <Collapsible open={open} onOpenChange={setChoice}>
-      <CollapsibleTrigger className="group/think text-muted-foreground hover:text-foreground focus-visible:ring-ring/30 -mx-1 inline-flex h-6 items-center gap-1.5 rounded-md px-1 text-xs outline-none focus-visible:ring-2">
-        <HugeiconsIcon icon={AiBrain01Icon} strokeWidth={2} className="size-3.5" />
-        {running ? <span className="ai-shimmer font-medium">Thinking…</span> : <span>Thought for {formatDuration(part.ms)}</span>}
-        <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="size-3 transition-transform group-data-[state=open]/think:rotate-180" />
-      </CollapsibleTrigger>
-      <CollapsibleContent className="data-open:animate-collapsible-down data-closed:animate-collapsible-up overflow-hidden">
-        <p className="text-muted-foreground mt-1.5 border-l-2 pl-3 text-xs/relaxed whitespace-pre-wrap">
-          {part.text}
-          {running && <Caret />}
-        </p>
-      </CollapsibleContent>
-    </Collapsible>
-  )
-}
+/* ---------- The process trail: thinking, plan steps and tool calls in one quiet line ---------- */
+
+export type ProcessPart = PartOf<'thinking'> | PartOf<'plan'> | PartOf<'tool'>
 
 const STEP_LABEL: Record<StepState, string> = { pending: 'Pending', running: 'Running', done: 'Done', failed: 'Failed' }
 
-function StepIcon({ state }: { state: StepState }) {
-  if (state === 'running') return <Spinner className="text-brand size-3.5 shrink-0" />
-  if (state === 'done') return <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="text-status-done size-3.5 shrink-0" />
-  if (state === 'failed') return <HugeiconsIcon icon={CancelCircleIcon} strokeWidth={2} className="text-destructive size-3.5 shrink-0" />
-  return <HugeiconsIcon icon={CircleIcon} strokeWidth={2} className="text-muted-foreground/60 size-3.5 shrink-0" />
+function StepMark({ state }: { state: StepState }) {
+  if (state === 'running') return <span className="ai-pulse bg-brand mt-[7px] size-1.5 shrink-0 rounded-full" />
+  if (state === 'done') return <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="text-muted-foreground mt-[3px] size-3 shrink-0" />
+  if (state === 'failed') return <HugeiconsIcon icon={CancelCircleIcon} strokeWidth={2} className="text-destructive mt-[3px] size-3 shrink-0" />
+  return <span className="border-muted-foreground/50 mt-[5px] size-2 shrink-0 rounded-full border" />
 }
 
-export function PlanBlock({ part }: { part: PartOf<'plan'> }) {
-  const done = part.steps.filter((s) => s.state === 'done').length
+function stepTime(step: { state: StepState; ms?: number; startedAt?: number }) {
+  if (step.state === 'running' && step.startedAt) return <Elapsed since={step.startedAt} interval={200} />
+  return step.state !== 'pending' && step.ms ? formatDuration(step.ms) : null
+}
+
+// Claude- and ChatGPT-like: one shimmering line while the agent works, folded
+// to "Worked for 8s · 3 tools ›" when it's done. The details stay one click away.
+export function ProcessTrail({ parts, live, activity, since }: {
+  parts: ProcessPart[]
+  // True while this is the part of the reply the agent is working on now.
+  live: boolean
+  activity?: string
+  since: number
+}) {
+  const [choice, setChoice] = useState<boolean | null>(null)
+  const open = choice ?? live
+  const thinking = parts.find((p): p is PartOf<'thinking'> => p.type === 'thinking')
+  const steps = parts.find((p): p is PartOf<'plan'> => p.type === 'plan')?.steps ?? []
+  const tools = parts.filter((p): p is PartOf<'tool'> => p.type === 'tool')
+  const failed = tools.some((t) => t.state === 'error') || steps.some((s) => s.state === 'failed')
+  const total = (thinking?.ms ?? 0) + tools.reduce((n, t) => n + t.ms, 0)
+  const onlyThinking = !steps.length && !tools.length
+
+  const label = live
+    ? activity || (thinking?.state === 'running' || !parts.length ? 'Thinking…' : 'Working…')
+    : failed ? `Stopped on an error after ${formatDuration(total)}`
+    : onlyThinking ? `Thought for ${formatDuration(total)}` : `Worked for ${formatDuration(total)}`
+  const meta = [
+    steps.length ? `${steps.length} steps` : '',
+    tools.length ? `${tools.length} ${tools.length === 1 ? 'tool' : 'tools'}` : '',
+  ].filter(Boolean).join(' · ')
+  const hasDetails = !!thinking?.text || steps.length > 0 || tools.length > 0
+
   return (
-    <div className="min-w-0 rounded-lg border">
-      <div className="flex h-8 items-center gap-2 border-b px-3 text-xs">
-        <HugeiconsIcon icon={CheckListIcon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-        <span className="font-medium">Plan</span>
-        <span className="text-muted-foreground ml-auto text-[11px] tabular-nums">{done} of {part.steps.length} done</span>
-      </div>
-      <ol className="grid py-1">
-        {part.steps.map((step, i) => (
-          <li key={i} className="flex min-h-7 items-center gap-2.5 px-3 text-xs">
-            <StepIcon state={step.state} />
-            <span className={cn('min-w-0 flex-1', step.state === 'pending' && 'text-muted-foreground', step.state === 'failed' && 'text-destructive')}>
-              <span className="sr-only">{STEP_LABEL[step.state]}: </span>
-              {step.label}
-            </span>
-            <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">
-              {step.state === 'running' && step.startedAt
-                ? <Elapsed since={step.startedAt} interval={200} />
-                : step.state !== 'pending' && step.ms ? formatDuration(step.ms) : null}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </div>
+    <Collapsible open={open && hasDetails} onOpenChange={setChoice} className="min-w-0">
+      <CollapsibleTrigger
+        disabled={!hasDetails}
+        className="group/trail text-muted-foreground hover:text-foreground focus-visible:ring-ring/30 -mx-1 inline-flex h-6 max-w-full items-center gap-1.5 rounded-md px-1 text-xs outline-none focus-visible:ring-2 disabled:pointer-events-none"
+      >
+        {live
+          ? <span className="ai-pulse bg-brand size-1.5 shrink-0 rounded-full" />
+          : failed
+            ? <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="text-destructive size-3.5 shrink-0" />
+            : <HugeiconsIcon icon={AiBrain01Icon} strokeWidth={2} className="size-3.5 shrink-0" />}
+        <span className={cn('min-w-0 truncate', live && 'ai-shimmer font-medium')}>{label}</span>
+        {live
+          ? <span className="shrink-0 opacity-70"><Elapsed since={since} /></span>
+          : meta && <span className="hidden shrink-0 opacity-70 @sm:inline">· {meta}</span>}
+        {hasDetails && (
+          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3 shrink-0 transition-transform group-data-[state=open]/trail:rotate-90" />
+        )}
+      </CollapsibleTrigger>
+      <CollapsibleContent className="data-open:animate-collapsible-down data-closed:animate-collapsible-up overflow-hidden">
+        <ol className="mt-1 ml-[6px] grid min-w-0 gap-0.5 border-l py-0.5 pl-3.5">
+          {thinking?.text && (
+            <li className="ai-in text-muted-foreground py-0.5 text-xs/relaxed whitespace-pre-wrap">
+              {thinking.text}
+              {thinking.state === 'running' && <Caret />}
+            </li>
+          )}
+          {steps.map((step, i) => (
+            <li key={i} className="ai-in flex min-h-6 min-w-0 items-start gap-2 py-0.5 text-xs">
+              <StepMark state={step.state} />
+              <span className={cn(
+                'min-w-0 flex-1',
+                step.state === 'running' && 'ai-shimmer font-medium',
+                step.state === 'done' && 'text-muted-foreground',
+                step.state === 'pending' && 'text-muted-foreground/70',
+                step.state === 'failed' && 'text-destructive',
+              )}>
+                <span className="sr-only">{STEP_LABEL[step.state]}: </span>
+                {step.label}
+              </span>
+              <span className="text-muted-foreground/80 shrink-0 text-[11px] tabular-nums">{stepTime(step)}</span>
+            </li>
+          ))}
+          {tools.map((tool) => <TrailTool key={tool.id} part={tool} />)}
+        </ol>
+      </CollapsibleContent>
+    </Collapsible>
   )
 }
 
@@ -184,51 +224,69 @@ function JsonBlock({ label, value, max }: { label: string; value: unknown; max?:
 function ToolStatus({ part }: { part: PartOf<'tool'> }) {
   if (part.state === 'running') {
     return (
-      <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-[11px]">
-        <Spinner className="size-3" />
-        {part.startedAt ? <Elapsed since={part.startedAt} interval={200} /> : 'Running'}
+      <span className="text-muted-foreground/80 shrink-0 text-[11px]">
+        {part.startedAt ? <Elapsed since={part.startedAt} interval={200} /> : null}
       </span>
     )
   }
   if (part.state === 'error') {
-    return (
-      <span className="text-destructive flex shrink-0 items-center gap-1 text-[11px]">
-        <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-3" /> Failed · {formatDuration(part.ms)}
-      </span>
-    )
+    return <span className="text-destructive shrink-0 text-[11px] tabular-nums">Failed · {formatDuration(part.ms)}</span>
   }
-  if (part.state === 'stopped') return <span className="text-muted-foreground shrink-0 text-[11px]">Stopped</span>
+  if (part.state === 'stopped') return <span className="text-muted-foreground/80 shrink-0 text-[11px]">Stopped</span>
   return (
-    <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px]">
-      <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="text-status-done size-3" />
+    <span className="text-muted-foreground/80 shrink-0 text-[11px] tabular-nums">
       <span className="hidden @sm:inline">{part.summary && `${part.summary} · `}</span>
-      <span className="tabular-nums">{formatDuration(part.ms)}</span>
+      {formatDuration(part.ms)}
     </span>
   )
 }
 
-export function ToolCard({ part }: { part: PartOf<'tool'> }) {
+// Plain-words names, so a tool reads as "Searched jobs", not "search_jobs".
+const TOOL_VERBS: Record<ToolName, [running: string, done: string]> = {
+  search_jobs: ['Searching jobs', 'Searched jobs'],
+  read_job: ['Reading', 'Read'],
+  web_search: ['Searching the web', 'Searched the web'],
+  run_query: ['Running a query', 'Ran a query'],
+  update_jobs: ['Updating', 'Updated'],
+  read_file: ['Reading a file', 'Read a file'],
+  search_knowledge: ['Searching the knowledge files', 'Searched the knowledge files'],
+}
+
+function TrailTool({ part }: { part: PartOf<'tool'> }) {
   const [open, setOpen] = useState(false)
+  const running = part.state === 'running'
+  const [runningVerb, doneVerb] = TOOL_VERBS[part.name]
+  const hint = inputHint(part.input)
   return (
-    <Collapsible
-      open={open}
-      onOpenChange={setOpen}
-      className={cn('min-w-0 rounded-lg border', part.state === 'error' && 'border-destructive/40')}
-    >
+    <Collapsible open={open} onOpenChange={setOpen} className="ai-in min-w-0">
       <CollapsibleTrigger
-        aria-label={`${part.name}, ${part.state === 'running' ? 'running' : part.state === 'error' ? 'failed' : part.state}. Show input and output`}
-        className="group/tool hover:bg-accent/50 focus-visible:ring-ring/30 flex h-8 w-full min-w-0 items-center gap-2 rounded-lg px-2 text-left text-xs outline-none focus-visible:ring-2"
+        aria-label={`${running ? runningVerb : doneVerb} ${hint}, ${part.state === 'error' ? 'failed' : part.state}. Show input and output (${part.name})`}
+        className="group/tool hover:text-foreground focus-visible:ring-ring/30 -mx-1 flex min-h-6 w-full min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left text-xs outline-none focus-visible:ring-2"
       >
-        <span className="bg-muted grid size-5 shrink-0 place-items-center rounded">
-          <HugeiconsIcon icon={TOOL_ICONS[part.name]} strokeWidth={2} className="size-3" />
+        <HugeiconsIcon
+          icon={TOOL_ICONS[part.name]}
+          strokeWidth={2}
+          className={cn('size-3 shrink-0', part.state === 'error' ? 'text-destructive' : 'text-muted-foreground')}
+        />
+        <span className={cn(
+          'min-w-0 truncate',
+          running ? 'ai-shimmer font-medium' : part.state === 'error' ? 'text-destructive' : 'text-muted-foreground',
+        )}>
+          {running ? runningVerb : doneVerb}
+          {hint && <span className="opacity-80"> {hint}</span>}
         </span>
-        <code className="shrink-0 font-mono text-[11px] font-medium">{part.name}</code>
-        <span className="text-muted-foreground min-w-0 flex-1 truncate">{inputHint(part.input)}</span>
-        <ToolStatus part={part} />
-        <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0 transition-transform group-data-[state=open]/tool:rotate-180" />
+        <span className="ml-auto flex shrink-0 items-center gap-1.5">
+          <ToolStatus part={part} />
+          <HugeiconsIcon
+            icon={ArrowDown01Icon}
+            strokeWidth={2}
+            className="text-muted-foreground size-3 opacity-0 transition group-hover/tool:opacity-100 group-focus-visible/tool:opacity-100 group-data-[state=open]/tool:rotate-180 group-data-[state=open]/tool:opacity-100"
+          />
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="data-open:animate-collapsible-down data-closed:animate-collapsible-up overflow-hidden">
-        <div className="grid min-w-0 gap-2 border-t p-2.5">
+        <div className="bg-muted/40 my-1 grid min-w-0 gap-2 rounded-md p-2.5">
+          <p className="text-muted-foreground font-mono text-[10px]">{part.name}</p>
           <JsonBlock label="Input" value={part.input} />
           {part.error ? (
             <div className="grid gap-1">

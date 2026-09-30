@@ -1,3 +1,4 @@
+import { format } from 'date-fns'
 import type { IconSvgElement } from '@hugeicons/react'
 import {
   AiBrain02Icon, Atom01Icon, BalanceScaleIcon, CheckListIcon, ChartColumnIcon, Csv01Icon, Doc01Icon,
@@ -115,7 +116,8 @@ export function formatDuration(ms: number) {
 }
 
 const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' })
-const DATE = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short' })
+// date-fns, not Intl: newer en-GB data writes "Sept", while the rest of the page writes "Sep".
+const DATE = { format: (time: number) => format(time, 'd MMM') }
 
 export function formatWhen(time: number) {
   const startToday = new Date(now()).setHours(0, 0, 0, 0)

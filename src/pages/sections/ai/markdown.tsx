@@ -352,7 +352,12 @@ function Blocks({ text, ctx, cursor, className }: { text: string; ctx: Ctx; curs
   const blocks = useMemo(() => parseBlocks(text), [text])
   return (
     <div className={cn('grid min-w-0 gap-3', className)}>
-      {blocks.map((block, i) => <BlockView key={i} block={block} ctx={ctx} cursor={!!cursor && i === blocks.length - 1} />)}
+      {/* Keyed by position, so each block fades in once, when it first appears while streaming. */}
+      {blocks.map((block, i) => (
+        <div key={i} className="ai-in min-w-0">
+          <BlockView block={block} ctx={ctx} cursor={!!cursor && i === blocks.length - 1} />
+        </div>
+      ))}
       {cursor && !blocks.length && <span><Caret /></span>}
     </div>
   )
