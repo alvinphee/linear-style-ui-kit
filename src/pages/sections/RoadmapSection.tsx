@@ -17,7 +17,15 @@ const TODAY = date(9, 30)
 const TOTAL_DAYS = Math.round((END - START) / DAY) + 1
 const dayIndex = (t: number) => Math.round((t - START) / DAY)
 
-const shortDate = new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+// Built by hand: en-GB's short month is "Sept" on newer ICU data, and the
+// rest of the page writes "Sep".
+const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const shortDate = {
+  format: (value: Date | number) => {
+    const d = new Date(value)
+    return `${d.getUTCDate()} ${SHORT_MONTHS[d.getUTCMonth()]}`
+  },
+}
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', timeZone: 'UTC' })
 
 type Milestone = { name: string; date: number }

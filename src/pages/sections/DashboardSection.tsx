@@ -1,0 +1,522 @@
+import { useId, useState, type ReactNode } from 'react'
+import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
+import {
+  ArrowDownRight01Icon, ArrowUpRight01Icon, DollarCircleIcon, Download01Icon, Target02Icon,
+  UserAdd01Icon, UserGroupIcon,
+} from '@hugeicons/core-free-icons'
+import { Area, CartesianGrid, ComposedChart, Line, LineChart, XAxis, YAxis } from 'recharts'
+import { toast } from 'sonner'
+import { cn } from 'cn'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Panel, Section } from './shared'
+import { Initials } from './StatusSection'
+
+type Range = '7d' | '30d' | '90d'
+const RANGES: { value: Range; label: string; days: number }[] = [
+  { value: '7d', label: 'Last 7 days', days: 7 },
+  { value: '30d', label: 'Last 30 days', days: 30 },
+  { value: '90d', label: 'Last 90 days', days: 90 },
+]
+const rangeOf = (range: Range) => RANGES.find((r) => r.value === range) ?? RANGES[1]!
+
+// All dates are UTC midnights so the day maths never trips over a DST change.
+const DAY = 86_400_000
+const END = Date.UTC(2026, 8, 30)
+// Two 90-day periods, plus a week so the 7-day smoothing has data before the first day.
+const SMOOTH = 7
+const HISTORY_DAYS = 180 + SMOOTH - 1
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// Not Intl: newer en-GB data writes "Sept", which reads oddly next to "Aug".
+const shortDate = {
+  format: (t: number) => `${new Date(t).getUTCDate()} ${MONTHS[new Date(t).getUTCMonth()]}`,
+}
+const int = new Intl.NumberFormat('en-US')
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+
+function seeded(seed: number) {
+  let s = seed
+  return () => {
+    s = (s + 0x6d2b79f5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// A product launch mid-September: the extra signups make the last 7 days look down.
+const LAUNCH: Record<number, number> = {
+  [Date.UTC(2026, 8, 16)]: 70, [Date.UTC(2026, 8, 17)]: 52,
+  [Date.UTC(2026, 8, 18)]: 34, [Date.UTC(2026, 8, 19)]: 18,
+}
+
+type Metric = 'revenue' | 'users' | 'signups' | 'conversion'
+type DayStats = { t: number } & Record<Metric, number>
+
+// Made-up numbers from a fixed seed: steady growth, quieter weekends, some noise.
+const HISTORY: DayStats[] = (() => {
+  const rand = seeded(1)
+  return Array.from({ length: HISTORY_DAYS }, (_, i) => {
+    const t = END - (HISTORY_DAYS - 1 - i) * DAY
+    const weekday = new Date(t).getUTCDay()
+    const weekend = weekday === 0 || weekday === 6
+    return {
+      t,
+      revenue: Math.round(3400 * (1 + 0.0032 * i) * (weekend ? 0.7 : 1) * (0.9 + 0.2 * rand())),
+      users: Math.round(1650 * (1 + 0.0024 * i) * (weekend ? 0.6 : 1) * (0.94 + 0.12 * rand())),
+      signups: Math.round(38 * (1 + 0.0025 * i) * (weekend ? 0.55 : 1) * (0.8 + 0.4 * rand()) + (LAUNCH[t] ?? 0)),
+      conversion: Math.round((3.2 + 0.35 * Math.sin(i / 11) + (rand() - 0.5) * 0.5) * 100) / 100,
+    }
+  })
+})()
+
+function periods(range: Range) {
+  const n = rangeOf(range).days
+  const end = HISTORY.length
+  return { current: HISTORY.slice(end - n), previous: HISTORY.slice(end - 2 * n, end - n), start: end - n }
+}
+
+const spanLabel = (days: DayStats[]) =>
+  `${shortDate.format(days[0]?.t ?? END)} – ${shortDate.format(days.at(-1)?.t ?? END)}`
+
+type Kpi = {
+  key: Metric
+  label: string
+  hint: string
+  icon: IconSvgElement
+  total: 'sum' | 'avg'
+  // Rates change in points, counts in percent.
+  change: 'pct' | 'pts'
+  format: (v: number) => string
+}
+
+const compactUsd = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : usd.format(v))
+
+const KPIS: Kpi[] = [
+  { key: 'revenue', label: 'Revenue', hint: 'total', icon: DollarCircleIcon, total: 'sum', change: 'pct', format: compactUsd },
+  { key: 'users', label: 'Active users', hint: 'avg / day', icon: UserGroupIcon, total: 'avg', change: 'pct', format: (v) => int.format(Math.round(v)) },
+  { key: 'signups', label: 'New signups', hint: 'total', icon: UserAdd01Icon, total: 'sum', change: 'pct', format: (v) => int.format(Math.round(v)) },
+  { key: 'conversion', label: 'Conversion', hint: 'avg', icon: Target02Icon, total: 'avg', change: 'pts', format: (v) => `${v.toFixed(2)}%` },
+]
+
+const KPI_BY_KEY = Object.fromEntries(KPIS.map((k) => [k.key, k])) as Record<Metric, Kpi>
+
+function totalOf(days: DayStats[], kpi: Kpi) {
+  const sum = days.reduce((s, d) => s + d[kpi.key], 0)
+  return kpi.total === 'sum' ? sum : sum / Math.max(1, days.length)
+}
+
+function changeOf(current: number, previous: number, kpi: Kpi) {
+  const value = kpi.change === 'pts' ? current - previous : (current / previous - 1) * 100
+  const sign = value >= 0 ? '+' : '−'
+  const text = kpi.change === 'pts'
+    ? `${sign}${Math.abs(value).toFixed(2)} pts`
+    : `${sign}${Math.abs(value).toFixed(1)}%`
+  return { up: value >= 0, text }
+}
+
+// Trailing 7-day average, so the longer sparklines show a trend rather than weekend zigzags.
+function smoothed(start: number, length: number, key: Metric) {
+  return Array.from({ length }, (_, i) => {
+    const end = start + i + 1
+    const days = HISTORY.slice(Math.max(0, end - SMOOTH), end)
+    return days.reduce((s, d) => s + d[key], 0) / days.length
+  })
+}
+
+function sparkSeries(range: Range, key: Metric) {
+  const n = rangeOf(range).days
+  const { start } = periods(range)
+  if (n <= SMOOTH) {
+    return {
+      current: HISTORY.slice(start, start + n).map((d) => d[key]),
+      previous: HISTORY.slice(start - n, start).map((d) => d[key]),
+    }
+  }
+  return { current: smoothed(start, n, key), previous: smoothed(start - n, n, key) }
+}
+
+// SVG ids end up in url(#…), which does not accept the colons useId can produce.
+const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '')
+
+function DeltaBadge({ up, text }: { up: boolean; text: string }) {
+  return (
+    <Badge variant="outline" className={cn('tabular-nums', up ? 'text-status-done' : 'text-destructive')}>
+      <HugeiconsIcon icon={up ? ArrowUpRight01Icon : ArrowDownRight01Icon} strokeWidth={2} data-icon="inline-start" />
+      {text}
+    </Badge>
+  )
+}
+
+const sparkConfig = (up: boolean) => ({
+  value: { label: 'This period', color: up ? 'var(--chart-1)' : 'var(--destructive)' },
+  previous: { label: 'Previous period', color: 'var(--muted-foreground)' },
+}) satisfies ChartConfig
+
+function Sparkline({ current, previous, compare, up }: {
+  current: number[]
+  previous: number[]
+  compare: boolean
+  up: boolean
+}) {
+  const data = current.map((value, i) => ({ i, value, previous: previous[i] }))
+  return (
+    <ChartContainer config={sparkConfig(up)} className="aspect-auto h-9 w-24 shrink-0" aria-hidden>
+      <LineChart data={data} margin={{ top: 3, right: 2, bottom: 3, left: 2 }} accessibilityLayer={false}>
+        <YAxis hide domain={['dataMin', 'dataMax']} />
+        {compare && (
+          <Line
+            dataKey="previous"
+            type="monotone"
+            stroke="var(--color-previous)"
+            strokeWidth={1}
+            strokeDasharray="2 2"
+            strokeOpacity={0.7}
+            dot={false}
+            isAnimationActive={false}
+          />
+        )}
+        <Line
+          dataKey="value"
+          type="monotone"
+          stroke="var(--color-value)"
+          strokeWidth={1.5}
+          dot={false}
+          isAnimationActive={false}
+        />
+      </LineChart>
+    </ChartContainer>
+  )
+}
+
+function KpiCard({ kpi, range, compare }: { kpi: Kpi; range: Range; compare: boolean }) {
+  const { current, previous } = periods(range)
+  const value = totalOf(current, kpi)
+  const before = totalOf(previous, kpi)
+  const delta = changeOf(value, before, kpi)
+  const spark = sparkSeries(range, kpi.key)
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          tabIndex={0}
+          className="bg-card hover:border-foreground/15 focus-visible:ring-ring/50 grid min-w-0 gap-2.5 rounded-lg border p-3 transition-colors outline-none focus-visible:ring-2"
+        >
+          <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+            <HugeiconsIcon icon={kpi.icon} strokeWidth={2} className="size-3.5 shrink-0" />
+            <span className="text-foreground truncate font-medium">{kpi.label}</span>
+            <span className="ml-auto shrink-0 text-[11px]">{kpi.hint}</span>
+          </div>
+          <div className="flex min-w-0 items-end justify-between gap-3">
+            <div className="grid min-w-0 gap-1.5">
+              <span className="truncate text-xl leading-none font-semibold tracking-tight tabular-nums">
+                {kpi.format(value)}
+              </span>
+              <DeltaBadge {...delta} />
+            </div>
+            <Sparkline current={spark.current} previous={spark.previous} compare={compare} up={delta.up} />
+          </div>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" sideOffset={6}>
+        <div className="grid gap-0.5">
+          <span className="font-medium">Previous period: {kpi.format(before)}</span>
+          <span className="opacity-70">{spanLabel(previous)}</span>
+        </div>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+type ChartMetric = 'revenue' | 'users'
+const CHART_METRICS: { value: ChartMetric; label: string; format: (v: number) => string; axis: (v: number) => string }[] = [
+  { value: 'revenue', label: 'Revenue', format: (v) => usd.format(v), axis: (v) => `$${Math.round(v / 1000)}k` },
+  { value: 'users', label: 'Active users', format: (v) => int.format(v), axis: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`) },
+]
+
+const mainConfig = {
+  current: { label: 'This period', color: 'var(--chart-1)' },
+  previous: { label: 'Previous period', color: 'var(--muted-foreground)' },
+} satisfies ChartConfig
+
+type Point = { day: string; prevDay: string; current: number; previous: number | undefined }
+
+function LegendLine({ dashed, color, label }: { dashed?: boolean; color: string; label: string }) {
+  return (
+    <span className="flex items-center gap-1.5">
+      <svg width="16" height="6" aria-hidden>
+        <line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '3 3' : undefined} />
+      </svg>
+      {label}
+    </span>
+  )
+}
+
+function MetricChart({ metric, range, compare }: { metric: (typeof CHART_METRICS)[number]; range: Range; compare: boolean }) {
+  const gradientId = `dash-${useSvgId()}`
+  const { current, previous } = periods(range)
+  const data: Point[] = current.map((d, i) => ({
+    day: shortDate.format(d.t),
+    prevDay: previous[i] ? shortDate.format(previous[i].t) : '',
+    current: d[metric.value],
+    previous: previous[i]?.[metric.value],
+  }))
+
+  return (
+    <ChartContainer config={mainConfig} className="aspect-auto h-64 w-full">
+      <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} accessibilityLayer>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-current)" stopOpacity={0.24} />
+            <stop offset="100%" stopColor="var(--color-current)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} minTickGap={28} />
+        <YAxis tickLine={false} axisLine={false} width={40} tickMargin={4} tickFormatter={metric.axis} />
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              labelFormatter={(_, payload) => {
+                const p = payload?.[0]?.payload as Point | undefined
+                if (!p) return null
+                return compare ? `${p.day} vs ${p.prevDay}` : p.day
+              }}
+              formatter={(value, name) => (
+                <div className="flex w-full items-center gap-2">
+                  <span
+                    className={cn(
+                      'h-2.5 shrink-0 rounded-[2px]',
+                      name === 'previous' ? 'w-0 border-l-[1.5px] border-dashed' : 'w-1',
+                    )}
+                    style={name === 'previous'
+                      ? { borderColor: 'var(--color-previous)' }
+                      : { backgroundColor: 'var(--color-current)' }}
+                  />
+                  <span className="text-muted-foreground flex-1">
+                    {name === 'previous' ? 'Previous period' : 'This period'}
+                  </span>
+                  <span className="text-foreground font-mono font-medium tabular-nums">{metric.format(Number(value))}</span>
+                </div>
+              )}
+            />
+          }
+        />
+        {compare && (
+          <Line
+            dataKey="previous"
+            type="monotone"
+            stroke="var(--color-previous)"
+            strokeWidth={1.5}
+            strokeDasharray="4 4"
+            dot={false}
+            activeDot={{ r: 3 }}
+          />
+        )}
+        <Area
+          dataKey="current"
+          type="monotone"
+          stroke="var(--color-current)"
+          strokeWidth={2}
+          fill={`url(#${gradientId})`}
+          activeDot={{ r: 3.5 }}
+        />
+      </ComposedChart>
+    </ChartContainer>
+  )
+}
+
+function PerformancePanel({ range, compare }: { range: Range; compare: boolean }) {
+  const [metric, setMetric] = useState<ChartMetric>('revenue')
+  const { current, previous } = periods(range)
+
+  return (
+    <Panel title="Performance" note={`${spanLabel(current)}${compare ? ` vs ${spanLabel(previous)}` : ''}`} wide>
+      <Tabs value={metric} onValueChange={(v) => setMetric(v as ChartMetric)} className="gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <TabsList>
+            {CHART_METRICS.map((m) => (
+              <TabsTrigger key={m.value} value={m.value}>{m.label}</TabsTrigger>
+            ))}
+          </TabsList>
+          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px]">
+            <LegendLine color="var(--chart-1)" label="This period" />
+            {compare && <LegendLine color="var(--muted-foreground)" label="Previous period" dashed />}
+          </div>
+        </div>
+        {CHART_METRICS.map((m) => {
+          const kpi = KPI_BY_KEY[m.value]
+          const value = totalOf(current, kpi)
+          const before = totalOf(previous, kpi)
+          return (
+            <TabsContent key={m.value} value={m.value} className="grid gap-3">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-xl font-semibold tracking-tight tabular-nums">
+                  {m.value === 'revenue' ? usd.format(value) : int.format(Math.round(value))}
+                </span>
+                <DeltaBadge {...changeOf(value, before, kpi)} />
+                <span className="text-muted-foreground text-xs">
+                  {m.value === 'revenue' ? 'total' : 'average per day'} · vs {kpi.format(before)} the period before
+                </span>
+              </div>
+              <MetricChart metric={m} range={range} compare={compare} />
+            </TabsContent>
+          )
+        })}
+      </Tabs>
+    </Panel>
+  )
+}
+
+// Made-up customers. Shares are of all revenue in the range, so the ranking moves between ranges.
+const CUSTOMERS: { name: string; plan: string; share: Record<Range, number> }[] = [
+  { name: 'Kestrel Labs', plan: 'Enterprise', share: { '7d': 0.112, '30d': 0.094, '90d': 0.088 } },
+  { name: 'Northpeak', plan: 'Enterprise', share: { '7d': 0.071, '30d': 0.082, '90d': 0.079 } },
+  { name: 'Brightline Studio', plan: 'Business', share: { '7d': 0.078, '30d': 0.066, '90d': 0.061 } },
+  { name: 'Juniper Analytics', plan: 'Business', share: { '7d': 0.049, '30d': 0.054, '90d': 0.058 } },
+  { name: 'Harbor & Co', plan: 'Business', share: { '7d': 0.052, '30d': 0.047, '90d': 0.043 } },
+  { name: 'Oakridge Health', plan: 'Team', share: { '7d': 0.031, '30d': 0.036, '90d': 0.039 } },
+]
+
+function TopCustomersPanel({ range }: { range: Range }) {
+  const revenue = totalOf(periods(range).current, KPI_BY_KEY.revenue)
+  const ranked = [...CUSTOMERS].sort((a, b) => b.share[range] - a.share[range])
+  const top = ranked[0]?.share[range] ?? 1
+  const combined = ranked.reduce((s, c) => s + c.share[range], 0)
+
+  return (
+    <Panel title="Top customers" note={`By revenue, ${rangeOf(range).label.toLowerCase()}`}>
+      <ol className="grid gap-3">
+        {ranked.map((c, i) => {
+          const share = c.share[range]
+          return (
+            <li key={c.name} className="grid gap-1.5">
+              <div className="flex min-w-0 items-center gap-2.5 text-xs">
+                <span className="text-muted-foreground w-3 shrink-0 text-right text-[11px] tabular-nums">{i + 1}</span>
+                <span
+                  aria-hidden
+                  className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-medium"
+                >
+                  {c.name[0]}
+                </span>
+                <span className="min-w-0 truncate font-medium">{c.name}</span>
+                <span className="text-muted-foreground hidden shrink-0 text-[11px] sm:inline">{c.plan}</span>
+                <span className="ml-auto shrink-0 tabular-nums">{usd.format(Math.round(revenue * share))}</span>
+                <span className="text-muted-foreground w-10 shrink-0 text-right text-[11px] tabular-nums">
+                  {(share * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div
+                role="img"
+                aria-label={`${c.name}: ${(share * 100).toFixed(1)}% of revenue`}
+                className="bg-muted ml-[1.375rem] h-1 overflow-hidden rounded-full"
+              >
+                <span
+                  className={cn('block h-full rounded-full transition-[width] duration-500', i === 0 ? 'bg-brand' : 'bg-muted-foreground/45')}
+                  style={{ width: `${(share / top) * 100}%` }}
+                />
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+      <p className="text-muted-foreground mt-3 border-t pt-3 text-[11px] tabular-nums">
+        These {ranked.length} customers bring in {(combined * 100).toFixed(0)}% of revenue.
+      </p>
+    </Panel>
+  )
+}
+
+const b = (text: string) => <span className="text-foreground font-medium">{text}</span>
+
+// Made-up events; the people are the sample team.
+const ACTIVITY: { id: string; who: string; text: ReactNode; time: string; at: string }[] = [
+  { id: 'a1', who: 'Mei Ling', text: <>upgraded {b('Kestrel Labs')} to Enterprise</>, time: '12m', at: '12 minutes ago' },
+  { id: 'a2', who: 'Daniel', text: <>closed a {b('$4,800')} deal with {b('Northpeak')}</>, time: '48m', at: '48 minutes ago' },
+  { id: 'a3', who: 'Siti', text: <>invited 3 teammates to {b('Juniper Analytics')}</>, time: '2h', at: '2 hours ago' },
+  { id: 'a4', who: 'Ravi', text: <>renewed {b('Brightline Studio')} for 12 months</>, time: '4h', at: '4 hours ago' },
+  { id: 'a5', who: 'Ali', text: <>refunded {b('$120')} to {b('Harbor & Co')}</>, time: '1d', at: 'Yesterday' },
+  { id: 'a6', who: 'Mei Ling', text: <>added {b('Oakridge Health')} as a customer</>, time: '2d', at: '2 days ago' },
+]
+
+function ActivityPanel() {
+  return (
+    <Panel title="Recent activity" note="Across the workspace">
+      <ul className="-my-1 divide-y">
+        {ACTIVITY.map((a) => (
+          <li key={a.id} className="flex min-w-0 items-center gap-2.5 py-2">
+            <Initials name={a.who} className="size-6" />
+            <p className="text-muted-foreground min-w-0 flex-1 text-xs text-pretty">
+              {b(a.who)} {a.text}
+            </p>
+            <time className="text-muted-foreground shrink-0 text-[11px] tabular-nums" title={a.at}>{a.time}</time>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  )
+}
+
+export default function DashboardSection() {
+  const [range, setRange] = useState<Range>('30d')
+  const [compare, setCompare] = useState(true)
+  const compareId = useId()
+  const { current } = periods(range)
+
+  function exportData() {
+    toast.success(`Exported ${rangeOf(range).label.toLowerCase()}`, {
+      description: `dashboard-${range}-2026-09-30.csv · revenue, users, signups and conversion`,
+    })
+  }
+
+  return (
+    <Section id="dashboard" title="Dashboard" description="KPI cards, sparklines and a range switch">
+      <div className="bg-card flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 lg:col-span-2">
+        <div className="mr-auto grid min-w-0 gap-0.5">
+          <span className="text-xs font-medium">{rangeOf(range).label}</span>
+          <span className="text-muted-foreground text-[11px] tabular-nums">{spanLabel(current)} 2026</span>
+        </div>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          spacing={0}
+          value={range}
+          onValueChange={(v) => v && setRange(v as Range)}
+          aria-label="Date range"
+        >
+          {RANGES.map((r) => (
+            <ToggleGroupItem key={r.value} value={r.value} aria-label={r.label} className="tabular-nums">
+              {r.value}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <Switch id={compareId} checked={compare} onCheckedChange={setCompare} />
+          <Label htmlFor={compareId} className="font-normal">Compare to previous period</Label>
+        </div>
+        <Button variant="outline" onClick={exportData}>
+          <HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" />
+          Export
+        </Button>
+      </div>
+
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-4">
+        {KPIS.map((kpi) => (
+          <KpiCard key={kpi.key} kpi={kpi} range={range} compare={compare} />
+        ))}
+      </div>
+
+      <PerformancePanel range={range} compare={compare} />
+      <TopCustomersPanel range={range} />
+      <ActivityPanel />
+    </Section>
+  )
+}

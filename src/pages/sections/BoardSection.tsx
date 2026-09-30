@@ -1,14 +1,13 @@
 import { useRef, useState, type DragEvent } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Add01Icon, ArrowUpRight01Icon, Calendar03Icon, Camera01Icon, MoreHorizontalIcon, ViewIcon,
+  Add01Icon, Calendar03Icon, Camera01Icon, MoreHorizontalIcon, ViewIcon,
   ViewOffSlashIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { LABELS, STATUS, type Job, type Status } from '../data'
 import { useJobs } from '../jobs-store'
@@ -17,6 +16,7 @@ import {
   type Filters,
 } from './FilterBar'
 import { Section } from './shared'
+import { JobContextMenu, JobDropdownMenu, JobPeek, openFullPage } from './JobActions'
 import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
 
 const COLUMNS: Status[] = ['backlog', 'todo', 'progress', 'done']
@@ -31,6 +31,7 @@ export default function BoardSection() {
   const [hidden, setHidden] = useState<Status[]>([])
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [overStatus, setOverStatus] = useState<Status | null>(null)
+  const [peekId, setPeekId] = useState<string | null>(null)
   // Read synchronously in dragover, before the state update above has rendered.
   const dragRef = useRef<string | null>(null)
 
@@ -45,10 +46,8 @@ export default function BoardSection() {
   const hiddenColumns = statuses.filter((s) => hidden.includes(s))
   const shown = columns.reduce((n, c) => n + c.jobs.length, 0)
 
-  function openJob(id: string) {
-    select(id)
-    document.getElementById('issue')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  // Board order, column by column, for the peek's previous / next.
+  const order = columns.flatMap((c) => c.jobs.map((j) => j.id))
 
   function move(id: string, status: Status) {
     const job = jobs.find((j) => j.id === id)
@@ -134,10 +133,10 @@ export default function BoardSection() {
                       key={job.id}
                       job={job}
                       display={display}
-                      selected={job.id === selectedId}
+                      selected={job.id === peekId || job.id === selectedId}
                       dragging={job.id === draggingId}
-                      onOpen={() => openJob(job.id)}
-                      onMove={(s) => move(job.id, s)}
+                      onOpen={() => setPeekId(job.id)}
+                      onOpenFull={() => openFullPage(select, job.id)}
                       onDragStart={(e) => startDrag(e, job.id)}
                       onDragEnd={endDrag}
                     />
@@ -186,6 +185,7 @@ export default function BoardSection() {
           )}
         </div>
       </article>
+      <JobPeek jobId={peekId} order={order} onNavigate={setPeekId} onClose={() => setPeekId(null)} />
     </Section>
   )
 }
@@ -224,13 +224,13 @@ function ColumnHeader({ status, count, onAdd, onHide }: {
   )
 }
 
-function BoardCard({ job, display, selected, dragging, onOpen, onMove, onDragStart, onDragEnd }: {
+function BoardCard({ job, display, selected, dragging, onOpen, onOpenFull, onDragStart, onDragEnd }: {
   job: Job
   display: DisplayOptions
   selected: boolean
   dragging: boolean
   onOpen: () => void
-  onMove: (status: Status) => void
+  onOpenFull: () => void
   onDragStart: (e: DragEvent) => void
   onDragEnd: () => void
 }) {
@@ -244,113 +244,67 @@ function BoardCard({ job, display, selected, dragging, onOpen, onMove, onDragSta
   return (
     <div className="group/card relative">
       {/* The menu button sits beside this element, not inside it, so no button is nested in a button. */}
-      <div
-        role="button"
-        tabIndex={0}
-        draggable
-        onClick={onOpen}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onOpen()
-          }
-        }}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        data-selected={selected}
-        data-dragging={dragging}
-        className="bg-card hover:ring-foreground/10 focus-visible:ring-ring/40 data-[selected=true]:border-brand/40 grid cursor-grab gap-1.5 rounded-md border p-2.5 shadow-xs transition-[box-shadow,opacity] outline-none hover:ring-1 focus-visible:ring-2 active:cursor-grabbing data-[dragging=true]:opacity-40"
-      >
-        {topRow && (
-          <div className="flex h-5 items-center gap-1.5 pr-6 text-xs">
-            {show.priority && <PriorityIcon priority={job.priority} />}
-            {show.id && <span className="text-muted-foreground tabular-nums">{job.id}</span>}
-          </div>
-        )}
-        <p className={`line-clamp-2 leading-snug font-medium ${topRow ? '' : 'pr-6'}`}>{job.title}</p>
-        {bottomRow && (
-          <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-            {labels.map((l) => (
-              <span
-                key={l.id}
-                className="text-muted-foreground inline-flex h-5 items-center gap-1 rounded-full border px-1.5 text-[11px] whitespace-nowrap"
-              >
-                <LabelDot colour={l.colour} className="size-1.5" />
-                {l.name}
-              </span>
-            ))}
-            {photos && (
-              <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
-                <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="size-3.5" />
-                <span className="tabular-nums">{job.photos}</span>
-                <span className="sr-only">{job.photos === 1 ? 'photo' : 'photos'}</span>
-              </span>
-            )}
-            {due && (
-              <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] whitespace-nowrap">
-                <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
-                <span className="sr-only">Due</span>
-                {job.due}
-              </span>
-            )}
-            {show.assignee && (
-              <span className="ml-auto" title={job.driver || 'No assignee'}>
-                {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
-                <span className="sr-only">{job.driver ? `Assigned to ${job.driver}` : 'No assignee'}</span>
-              </span>
-            )}
-          </div>
-        )}
-      </div>
-      <CardMenu job={job} onOpen={onOpen} onMove={onMove} />
-    </div>
-  )
-}
-
-function CardMenu({ job, onOpen, onMove }: { job: Job; onOpen: () => void; onMove: (status: Status) => void }) {
-  const opening = useRef(false)
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={`Actions for ${job.id}`}
-          className="bg-card absolute top-2 right-2 pointer-fine:opacity-0 group-hover/card:opacity-100 group-focus-within/card:opacity-100 data-[state=open]:opacity-100"
-        >
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-44"
-        onCloseAutoFocus={(e) => {
-          // Returning focus to this button would scroll the page back up to the board.
-          if (opening.current) e.preventDefault()
-          opening.current = false
-        }}
-      >
-        <DropdownMenuItem
-          onSelect={() => {
-            opening.current = true
-            onOpen()
+      <JobContextMenu job={job} onOpen={onOpen} onOpenFull={onOpenFull}>
+        <div
+          role="button"
+          tabIndex={0}
+          draggable
+          onClick={onOpen}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onOpen()
+            }
           }}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          data-selected={selected}
+          data-dragging={dragging}
+          className="bg-card hover:ring-foreground/10 focus-visible:ring-ring/40 data-[selected=true]:border-brand/40 grid cursor-grab gap-1.5 rounded-md border p-2.5 shadow-xs transition-[box-shadow,opacity] outline-none hover:ring-1 focus-visible:ring-2 active:cursor-grabbing data-[dragging=true]:opacity-40"
         >
-          <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} />
-          Open
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>Move to</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={job.status} onValueChange={(v) => onMove(v as Status)}>
-          {ALL_STATUSES.map((s) => (
-            <DropdownMenuRadioItem key={s} value={s}>
-              <StatusIcon status={s} />
-              {STATUS[s].label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {topRow && (
+            <div className="flex h-5 items-center gap-1.5 pr-6 text-xs">
+              {show.priority && <PriorityIcon priority={job.priority} />}
+              {show.id && <span className="text-muted-foreground tabular-nums">{job.id}</span>}
+            </div>
+          )}
+          <p className={`line-clamp-2 leading-snug font-medium ${topRow ? '' : 'pr-6'}`}>{job.title}</p>
+          {bottomRow && (
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+              {labels.map((l) => (
+                <span
+                  key={l.id}
+                  className="text-muted-foreground inline-flex h-5 items-center gap-1 rounded-full border px-1.5 text-[11px] whitespace-nowrap"
+                >
+                  <LabelDot colour={l.colour} className="size-1.5" />
+                  {l.name}
+                </span>
+              ))}
+              {photos && (
+                <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px]">
+                  <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="size-3.5" />
+                  <span className="tabular-nums">{job.photos}</span>
+                  <span className="sr-only">{job.photos === 1 ? 'photo' : 'photos'}</span>
+                </span>
+              )}
+              {due && (
+                <span className="text-muted-foreground inline-flex items-center gap-1 text-[11px] whitespace-nowrap">
+                  <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
+                  <span className="sr-only">Due</span>
+                  {job.due}
+                </span>
+              )}
+              {show.assignee && (
+                <span className="ml-auto" title={job.driver || 'No assignee'}>
+                  {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
+                  <span className="sr-only">{job.driver ? `Assigned to ${job.driver}` : 'No assignee'}</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </JobContextMenu>
+      <JobDropdownMenu job={job} onOpen={onOpen} onOpenFull={onOpenFull} className="bg-card absolute top-2 right-2" />
+    </div>
   )
 }

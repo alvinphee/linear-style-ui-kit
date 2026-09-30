@@ -40,6 +40,7 @@ hugeicons-playground/
 ├── CLAUDE.md
 ├── components.json            shadcn settings (style, icon library, paths)
 ├── docs/
+│   ├── agent-brief.md         the rules given to each helper
 │   └── findings.md            what we have learned so far
 └── src/
     ├── main.tsx
@@ -62,6 +63,7 @@ hugeicons-playground/
             ├── ThemeSection.tsx      presets and the theme mixer
             ├── ButtonsSection.tsx
             ├── FormsSection.tsx
+            ├── FormModalsSection.tsx quick create, validated dialogs, wizard
             ├── InputsSection.tsx     button groups, OTP, dates, combobox, tags
             ├── StatusSection.tsx     also exports StatusIcon, PriorityIcon, Initials
             ├── DisplaySection.tsx    spinners, empty states, alerts, accordion
@@ -69,13 +71,19 @@ hugeicons-playground/
             ├── OverlaysSection.tsx
             ├── OverlaysMoreSection.tsx  context menu, sheets, drawer, hover card
             ├── NavigationSection.tsx    breadcrumb, pagination, menus, panes
+            ├── ContentSection.tsx    file upload, Markdown editor, reorder list
+            ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
             ├── JobListSection.tsx    grouped list with bulk select
             ├── FilterBar.tsx         filter chips, saved views, display options
             ├── BoardSection.tsx      Kanban with drag and drop
             ├── IssueSection.tsx      issue detail and properties panel
             ├── InboxSection.tsx
+            ├── DashboardSection.tsx  KPI cards, sparklines, range switch
+            ├── CalendarSection.tsx   month and week views
             ├── RoadmapSection.tsx
             ├── SettingsSection.tsx
+            ├── AuditLogSection.tsx   filterable event log
+            ├── PricingSection.tsx    plans, yearly switch, comparison table
             ├── OnboardingSection.tsx
             ├── SignInSection.tsx
             └── IconsSection.tsx

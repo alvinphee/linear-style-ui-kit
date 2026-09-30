@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowDown01Icon, Camera01Icon, Cancel01Icon, CircleDashedIcon, Delete02Icon,
-  FilterHorizontalIcon, MoreHorizontalIcon, NoSignalIcon, Sorting01Icon, UserIcon, UserSwitchIcon,
+  FilterHorizontalIcon, NoSignalIcon, Sorting01Icon, UserIcon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
@@ -23,6 +23,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { Section } from './shared'
+import { JobContextMenu, JobDropdownMenu, JobPeek, openFullPage } from './JobActions'
 import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
 
 const ORDER: Status[] = ['progress', 'todo', 'backlog', 'done', 'cancelled']
@@ -50,8 +51,14 @@ function shared<K extends keyof Job>(list: Job[], key: K): Job[K] | undefined {
 
 export default function JobListSection() {
   const [tab, setTab] = useState('all')
-  const { jobs, updateJobs, removeJobs } = useJobs()
+  const { jobs, updateJobs, removeJobs, select } = useJobs()
   const [selected, setSelected] = useState<string | null>('DO-24817')
+  const [peekId, setPeekId] = useState<string | null>(null)
+
+  function peek(id: string) {
+    setSelected(id)
+    setPeekId(id)
+  }
   const [checked, setChecked] = useState<Set<string>>(() => new Set())
   const anchor = useRef<string | null>(null)
   const card = useRef<HTMLElement>(null)
@@ -160,7 +167,8 @@ export default function JobListSection() {
                 selected={selected === job.id}
                 picked={checked.has(job.id)}
                 selecting={picked.length > 0}
-                onSelect={() => setSelected(job.id)}
+                onSelect={() => peek(job.id)}
+                onOpenFull={() => openFullPage(select, job.id)}
                 onToggle={(range) => toggle(job.id, range)}
               />
             ))}
@@ -203,6 +211,7 @@ export default function JobListSection() {
           </>
         )}
       </article>
+      <JobPeek jobId={peekId} order={visible} onNavigate={peek} onClose={() => setPeekId(null)} />
     </Section>
   )
 }
@@ -363,73 +372,69 @@ function NoAssignee() {
   )
 }
 
-function JobRow({ job, selected, picked, selecting, onSelect, onToggle }: {
+function JobRow({ job, selected, picked, selecting, onSelect, onOpenFull, onToggle }: {
   job: Job
   selected: boolean
   picked: boolean
   selecting: boolean
   onSelect: () => void
+  onOpenFull: () => void
   onToggle: (range: boolean) => void
 }) {
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.target !== e.currentTarget) return
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
-        } else if (e.key.toLowerCase() === 'x' && !e.metaKey && !e.ctrlKey && !e.altKey) {
-          e.preventDefault()
-          onToggle(e.shiftKey)
-        }
-      }}
-      aria-keyshortcuts="X"
-      data-selected={selected}
-      className={cn(
-        'hover:bg-accent/60 data-[selected=true]:bg-accent group/row flex h-9 cursor-default items-center gap-2.5 border-b px-3 text-xs outline-none select-none last:border-b-0 focus-visible:bg-accent',
-        picked && 'bg-brand/5 dark:bg-brand/10',
-      )}
-    >
-      <Checkbox
-        checked={picked}
-        onClick={(e) => {
-          e.stopPropagation()
-          onToggle(e.shiftKey)
+    <JobContextMenu job={job} onOpen={onSelect} onOpenFull={onOpenFull}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onSelect}
+        onKeyDown={(e) => {
+          if (e.target !== e.currentTarget) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onSelect()
+          } else if (e.key.toLowerCase() === 'x' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+            e.preventDefault()
+            onToggle(e.shiftKey)
+          }
         }}
-        aria-label={`Select ${job.id}`}
+        aria-keyshortcuts="X"
+        data-selected={selected}
         className={cn(
-          'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100',
-          selecting && 'opacity-100',
+          'hover:bg-accent/60 data-[selected=true]:bg-accent group/row flex h-9 cursor-default items-center gap-2.5 border-b px-3 text-xs outline-none select-none last:border-b-0 focus-visible:bg-accent',
+          picked && 'bg-brand/5 dark:bg-brand/10',
         )}
-      />
-      <PriorityIcon priority={job.priority} />
-      <span className="text-muted-foreground w-[4.75rem] shrink-0 whitespace-nowrap tabular-nums">{job.id}</span>
-      <StatusIcon status={job.status} />
-      <span className="min-w-0 flex-1 truncate font-medium">{job.title}</span>
-      {job.photos > 0 && (
-        <span className="text-muted-foreground hidden items-center gap-1 md:flex">
-          <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="size-3.5" />
-          <span className="tabular-nums">{job.photos}</span>
-        </span>
-      )}
-      {job.customer && (
-        <span className="text-muted-foreground hidden rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap lg:inline">
-          {job.customer}
-        </span>
-      )}
-      <span className="text-muted-foreground hidden w-16 text-right sm:inline">{job.due}</span>
-      {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee />}
-      <Button
-        variant="ghost"
-        size="icon-xs"
-        aria-label={`Actions for ${job.id}`}
-        className="opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100"
       >
-        <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
-      </Button>
-    </div>
+        <Checkbox
+          checked={picked}
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle(e.shiftKey)
+          }}
+          aria-label={`Select ${job.id}`}
+          className={cn(
+            'opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 pointer-coarse:opacity-100',
+            selecting && 'opacity-100',
+          )}
+        />
+        <PriorityIcon priority={job.priority} />
+        <span className="text-muted-foreground w-[4.75rem] shrink-0 whitespace-nowrap tabular-nums">{job.id}</span>
+        <StatusIcon status={job.status} />
+        <span className="min-w-0 flex-1 truncate font-medium">{job.title}</span>
+        {job.photos > 0 && (
+          <span className="text-muted-foreground hidden items-center gap-1 md:flex">
+            <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="size-3.5" />
+            <span className="tabular-nums">{job.photos}</span>
+          </span>
+        )}
+        {job.customer && (
+          <span className="text-muted-foreground hidden rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap lg:inline">
+            {job.customer}
+          </span>
+        )}
+        <span className="text-muted-foreground hidden w-16 text-right sm:inline">{job.due}</span>
+        {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee />}
+        <JobDropdownMenu job={job} onOpen={onSelect} onOpenFull={onOpenFull} />
+      </div>
+    </JobContextMenu>
   )
 }

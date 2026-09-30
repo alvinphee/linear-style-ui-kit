@@ -4,7 +4,6 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ComputerIcon, KeyboardIcon, Moon02Icon, PaintBoardIcon, Search01Icon, Sun03Icon,
 } from '@hugeicons/core-free-icons'
-import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
   Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -16,10 +15,16 @@ import { PRESETS } from '@/lib/theme'
 import { GO_KEYS, NAV, NAV_GROUPS, goTo } from './nav'
 import ShortcutsSheet from './ShortcutsSheet'
 import ShowcaseSidebar from './ShowcaseSidebar'
+import AuditLogSection from './sections/AuditLogSection'
 import BoardSection from './sections/BoardSection'
 import ButtonsSection from './sections/ButtonsSection'
+import CalendarSection from './sections/CalendarSection'
 import ChartsSection from './sections/ChartsSection'
+import ContentSection from './sections/ContentSection'
+import DashboardSection from './sections/DashboardSection'
+import DataTableSection from './sections/DataTableSection'
 import DisplaySection from './sections/DisplaySection'
+import FormModalsSection, { QuickCreateDialog } from './sections/FormModalsSection'
 import FormsSection from './sections/FormsSection'
 import InputsSection from './sections/InputsSection'
 import NavigationSection from './sections/NavigationSection'
@@ -28,6 +33,7 @@ import InboxSection from './sections/InboxSection'
 import IssueSection from './sections/IssueSection'
 import OnboardingSection from './sections/OnboardingSection'
 import OverlaysMoreSection from './sections/OverlaysMoreSection'
+import PricingSection from './sections/PricingSection'
 import RoadmapSection from './sections/RoadmapSection'
 import SettingsSection from './sections/SettingsSection'
 import SignInSection from './sections/SignInSection'
@@ -36,11 +42,9 @@ import OverlaysSection from './sections/OverlaysSection'
 import StatusSection from './sections/StatusSection'
 import ThemeSection, { ThemeControls } from './sections/ThemeSection'
 
-const newJob = () => toast('New job', { description: 'Demo only. Try the form under Forms.' })
-
 function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement
-    && !!target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"]')
+    && !!target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
 }
 
 // The current section is the last one whose top has passed just below the
@@ -74,6 +78,7 @@ function useActiveSection() {
 export default function KitchenSink() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const { resolvedTheme, setTheme, applyPreset } = useTheme()
   const active = useActiveSection()
   const dark = resolvedTheme === 'dark'
@@ -102,7 +107,10 @@ export default function KitchenSink() {
         e.preventDefault()
         setShortcutsOpen(true)
       } else if (key === 'G') pressedG.current = Date.now()
-      else if (key === 'C') newJob()
+      else if (key === 'C') {
+        e.preventDefault()
+        setCreateOpen(true)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -153,7 +161,7 @@ export default function KitchenSink() {
               </TooltipTrigger>
               <TooltipContent>{dark ? 'Light mode' : 'Dark mode'}</TooltipContent>
             </Tooltip>
-            <Button size="sm" aria-label="New job" onClick={newJob}>
+            <Button size="sm" aria-label="New job" onClick={() => setCreateOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
               <span className="hidden sm:inline">New job</span>
             </Button>
@@ -172,6 +180,7 @@ export default function KitchenSink() {
           <ThemeSection />
           <ButtonsSection />
           <FormsSection />
+          <FormModalsSection />
           <InputsSection />
           <StatusSection />
           <DisplaySection />
@@ -179,12 +188,18 @@ export default function KitchenSink() {
           <OverlaysSection onOpenCommand={() => setCommandOpen(true)} />
           <OverlaysMoreSection />
           <NavigationSection />
+          <ContentSection />
+          <DataTableSection />
           <JobListSection />
           <BoardSection />
           <IssueSection />
           <InboxSection />
+          <DashboardSection />
+          <CalendarSection />
           <RoadmapSection />
           <SettingsSection />
+          <AuditLogSection />
+          <PricingSection />
           <OnboardingSection />
           <SignInSection />
           <IconsSection />
@@ -192,6 +207,7 @@ export default function KitchenSink() {
       </div>
 
       <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <QuickCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
         <Command>
@@ -199,7 +215,7 @@ export default function KitchenSink() {
           <CommandList>
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup heading="Actions">
-              <CommandItem onSelect={() => run(newJob)}>
+              <CommandItem onSelect={() => run(() => setCreateOpen(true))}>
                 <HugeiconsIcon icon={Add01Icon} strokeWidth={2} /> Create job
                 <CommandShortcut>C</CommandShortcut>
               </CommandItem>
