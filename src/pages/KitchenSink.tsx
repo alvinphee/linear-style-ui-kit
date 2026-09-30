@@ -17,6 +17,7 @@ import ShortcutsSheet from './ShortcutsSheet'
 import ShowcaseSidebar from './ShowcaseSidebar'
 import AuditLogSection from './sections/AuditLogSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
+import AiWorkspaceSection from './sections/AiWorkspaceSection'
 import BoardSection from './sections/BoardSection'
 import ButtonsSection from './sections/ButtonsSection'
 import CalendarSection from './sections/CalendarSection'
@@ -203,6 +204,7 @@ export default function KitchenSink() {
           <PricingSection />
           <OnboardingSection />
           <SignInSection />
+          <AiWorkspaceSection />
           <AiFeaturesSection />
           <IconsSection />
         </main>

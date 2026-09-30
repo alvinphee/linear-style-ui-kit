@@ -2,7 +2,7 @@ import type { IconSvgElement } from '@hugeicons/react'
 import {
   ChartAreaIcon, Compass01Icon, CursorPointer02Icon, FileUploadIcon, GridViewIcon, InboxIcon,
   InformationCircleIcon, Money03Icon, DashboardSquare01Icon, Calendar03Icon, FormIcon, Table01Icon,
-  Audit01Icon, SparklesIcon,
+  Audit01Icon, SparklesIcon, AiChat02Icon,
   InputTextIcon, KanbanIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
   PaintBoardIcon, Rocket01Icon, Search01Icon, Settings01Icon, Settings02Icon, SlidersHorizontalIcon,
   Tag01Icon, Task01Icon, TimelineIcon,
@@ -53,6 +53,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'AI',
     items: [
+      { id: 'ai-workspace', label: 'AI workspace', icon: AiChat02Icon },
       { id: 'ai-features', label: 'AI in the product', icon: SparklesIcon },
     ],
   },

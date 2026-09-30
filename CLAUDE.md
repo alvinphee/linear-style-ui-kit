@@ -86,6 +86,8 @@ hugeicons-playground/
             ├── PricingSection.tsx    plans, yearly switch, comparison table
             ├── OnboardingSection.tsx
             ├── SignInSection.tsx
+            ├── AiWorkspaceSection.tsx AI chat workspace: projects, history, agent, artifacts
+            ├── ai/                    its engine, scripted scenarios and parts
             ├── AiFeaturesSection.tsx  inline AI, summary, triage, AI search and more
             ├── ai-features/           its panels and scripted helpers
             └── IconsSection.tsx
