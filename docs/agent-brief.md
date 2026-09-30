@@ -16,7 +16,7 @@ two helpers never edit the same file.
 You are building part of a showcase page. Work only in the files named below.
 
 ## Project
-C:\Users\Alvin\Desktop\hugeicons-playground — a standalone showcase app:
+C:\Users\Alvin\Desktop\linear-style-ui-kit — a standalone showcase app:
 Hugeicons (free set) + shadcn/ui (style radix-mira) for a sleek Linear-style
 SaaS UI. React 19 + Vite + TypeScript 7 + Tailwind v4. Read CLAUDE.md first.
 Keep content generic SaaS, no real brands.

@@ -1,4 +1,4 @@
-# Hugeicons Playground
+# Linear-style UI Kit
 
 ## What this folder is
 A standalone showcase app: how to use **Hugeicons** with **shadcn/ui** to
@@ -30,7 +30,7 @@ npx shadcn@latest add <name>
 
 ## Layout
 ```
-hugeicons-playground/
+linear-style-ui-kit/
 ├── .claude/
 │   ├── launch.json            dev server config for the Claude app's preview
 │   ├── settings.json          turns on the MCP server without asking
