@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTheme } from '@/lib/theme'
-import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Add01Icon, ComputerIcon, CursorPointer02Icon, GridViewIcon, InputTextIcon, Layers01Icon,
-  LeftToRightListBulletIcon, Moon02Icon, PaintBoardIcon, Search01Icon, Settings02Icon, Sun03Icon,
-  Tag01Icon,
+  Add01Icon, ComputerIcon, KeyboardIcon, Moon02Icon, PaintBoardIcon, Search01Icon, Sun03Icon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -12,65 +10,99 @@ import {
   Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
   CommandSeparator, CommandShortcut,
 } from '@/components/ui/command'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PRESETS } from '@/lib/theme'
+import { GO_KEYS, NAV, NAV_GROUPS, goTo } from './nav'
+import ShortcutsSheet from './ShortcutsSheet'
+import ShowcaseSidebar from './ShowcaseSidebar'
+import BoardSection from './sections/BoardSection'
 import ButtonsSection from './sections/ButtonsSection'
+import ChartsSection from './sections/ChartsSection'
+import DisplaySection from './sections/DisplaySection'
 import FormsSection from './sections/FormsSection'
+import InputsSection from './sections/InputsSection'
+import NavigationSection from './sections/NavigationSection'
 import IconsSection from './sections/IconsSection'
+import InboxSection from './sections/InboxSection'
+import IssueSection from './sections/IssueSection'
+import OnboardingSection from './sections/OnboardingSection'
+import OverlaysMoreSection from './sections/OverlaysMoreSection'
+import RoadmapSection from './sections/RoadmapSection'
+import SettingsSection from './sections/SettingsSection'
+import SignInSection from './sections/SignInSection'
 import JobListSection from './sections/JobListSection'
 import OverlaysSection from './sections/OverlaysSection'
 import StatusSection from './sections/StatusSection'
 import ThemeSection, { ThemeControls } from './sections/ThemeSection'
 
-const NAV: { id: string; label: string; icon: IconSvgElement }[] = [
-  { id: 'theme', label: 'Theme', icon: PaintBoardIcon },
-  { id: 'buttons', label: 'Buttons', icon: CursorPointer02Icon },
-  { id: 'forms', label: 'Forms', icon: InputTextIcon },
-  { id: 'status', label: 'Status', icon: Tag01Icon },
-  { id: 'overlays', label: 'Menus and overlays', icon: Layers01Icon },
-  { id: 'list', label: 'Job list', icon: LeftToRightListBulletIcon },
-  { id: 'icons', label: 'Icons', icon: GridViewIcon },
-  { id: 'props', label: 'Icon props', icon: Settings02Icon },
-  { id: 'all-icons', label: 'All free icons', icon: Search01Icon },
-]
+const newJob = () => toast('New job', { description: 'Demo only. Try the form under Forms.' })
 
-function goTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+function isTyping(target: EventTarget | null) {
+  return target instanceof HTMLElement
+    && !!target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"]')
 }
 
+// The current section is the last one whose top has passed just below the
+// header. Read from scroll position, so big jumps (G then …) stay correct.
 function useActiveSection() {
   const [active, setActive] = useState(NAV[0].id)
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting)
-        if (visible.length) setActive(visible[0].target.id)
-      },
-      { rootMargin: '-15% 0px -75% 0px' },
-    )
-    NAV.forEach(({ id }) => {
-      const el = document.getElementById(id)
-      if (el) observer.observe(el)
-    })
-    return () => observer.disconnect()
+    let timer = 0
+    function update() {
+      timer = 0
+      let current = NAV[0].id
+      for (const { id } of NAV) {
+        const el = document.getElementById(id)
+        if (el && el.getBoundingClientRect().top <= 120) current = id
+      }
+      setActive(current)
+    }
+    function onScroll() {
+      if (!timer) timer = window.setTimeout(update, 50)
+    }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      clearTimeout(timer)
+    }
   }, [])
   return active
 }
 
 export default function KitchenSink() {
   const [commandOpen, setCommandOpen] = useState(false)
+  const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const { resolvedTheme, setTheme, applyPreset } = useTheme()
   const active = useActiveSection()
   const dark = resolvedTheme === 'dark'
+  const pressedG = useRef(0)
 
+  // Ctrl+K command menu, ? shortcuts, C new job, and Linear-style "G then …" jumps.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key.toLowerCase() === 'k' && (e.metaKey || e.ctrlKey)) {
         e.preventDefault()
         setCommandOpen((open) => !open)
+        return
       }
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return
+      const key = e.key.toUpperCase()
+      if (pressedG.current && Date.now() - pressedG.current < 1200) {
+        pressedG.current = 0
+        const target = GO_KEYS.find((g) => g.key === key)
+        if (target) {
+          e.preventDefault()
+          goTo(target.id)
+        }
+        return
+      }
+      if (e.key === '?') {
+        e.preventDefault()
+        setShortcutsOpen(true)
+      } else if (key === 'G') pressedG.current = Date.now()
+      else if (key === 'C') newJob()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -83,47 +115,7 @@ export default function KitchenSink() {
 
   return (
     <div className="flex min-h-svh">
-      <aside className="bg-sidebar text-sidebar-foreground sticky top-0 hidden h-svh w-56 shrink-0 flex-col border-r md:flex">
-        <div className="flex h-11 items-center gap-2 px-3">
-          <span className="bg-primary text-primary-foreground grid size-5 place-items-center rounded text-[9px] font-semibold">KS</span>
-          <span className="text-foreground text-[13px] font-medium">Kitchen Sink</span>
-        </div>
-
-        <div className="px-2">
-          <button
-            type="button"
-            onClick={() => setCommandOpen(true)}
-            className="text-muted-foreground hover:bg-sidebar-accent flex h-7 w-full items-center gap-2 rounded-md border px-2 text-xs"
-          >
-            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="size-3.5" />
-            Search…
-            <KbdGroup className="ml-auto">
-              <Kbd>Ctrl</Kbd>
-              <Kbd>K</Kbd>
-            </KbdGroup>
-          </button>
-        </div>
-
-        <nav className="mt-4 grid gap-px px-2">
-          <p className="text-muted-foreground px-2 pb-1 text-[11px] font-medium">Showcase</p>
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => goTo(item.id)}
-              data-active={active === item.id}
-              className="hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground flex h-7 items-center gap-2 rounded-md px-2 text-left text-xs"
-            >
-              <HugeiconsIcon icon={item.icon} strokeWidth={2} className="size-3.5 opacity-80" />
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="text-muted-foreground mt-auto border-t p-3 text-[11px] leading-4">
-          shadcn/ui Mira · Hugeicons free · Inter
-        </div>
-      </aside>
+      <ShowcaseSidebar active={active} onSearch={() => setCommandOpen(true)} onShortcuts={() => setShortcutsOpen(true)} />
 
       <div className="min-w-0 flex-1">
         <header className="bg-background/85 sticky top-0 z-20 flex h-11 items-center gap-2 border-b px-4 backdrop-blur md:px-6">
@@ -134,6 +126,14 @@ export default function KitchenSink() {
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={() => setCommandOpen(true)}>
               <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
             </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" className="hidden md:inline-flex" aria-label="Keyboard shortcuts" onClick={() => setShortcutsOpen(true)}>
+                  <HugeiconsIcon icon={KeyboardIcon} strokeWidth={2} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Keyboard shortcuts <span className="ml-1 opacity-70">?</span></TooltipContent>
+            </Tooltip>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" aria-label="Theme">
@@ -153,7 +153,7 @@ export default function KitchenSink() {
               </TooltipTrigger>
               <TooltipContent>{dark ? 'Light mode' : 'Dark mode'}</TooltipContent>
             </Tooltip>
-            <Button size="sm" aria-label="New job" onClick={() => toast('New job', { description: 'Demo only. Try the form under Forms.' })}>
+            <Button size="sm" aria-label="New job" onClick={newJob}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
               <span className="hidden sm:inline">New job</span>
             </Button>
@@ -172,12 +172,26 @@ export default function KitchenSink() {
           <ThemeSection />
           <ButtonsSection />
           <FormsSection />
+          <InputsSection />
           <StatusSection />
+          <DisplaySection />
+          <ChartsSection />
           <OverlaysSection onOpenCommand={() => setCommandOpen(true)} />
+          <OverlaysMoreSection />
+          <NavigationSection />
           <JobListSection />
+          <BoardSection />
+          <IssueSection />
+          <InboxSection />
+          <RoadmapSection />
+          <SettingsSection />
+          <OnboardingSection />
+          <SignInSection />
           <IconsSection />
         </main>
       </div>
+
+      <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>
         <Command>
@@ -185,9 +199,13 @@ export default function KitchenSink() {
           <CommandList>
             <CommandEmpty>No results.</CommandEmpty>
             <CommandGroup heading="Actions">
-              <CommandItem onSelect={() => run(() => toast('New job', { description: 'Demo only.' }))}>
+              <CommandItem onSelect={() => run(newJob)}>
                 <HugeiconsIcon icon={Add01Icon} strokeWidth={2} /> Create job
                 <CommandShortcut>C</CommandShortcut>
+              </CommandItem>
+              <CommandItem onSelect={() => run(() => setShortcutsOpen(true))}>
+                <HugeiconsIcon icon={KeyboardIcon} strokeWidth={2} /> Keyboard shortcuts
+                <CommandShortcut>?</CommandShortcut>
               </CommandItem>
               <CommandItem onSelect={() => run(() => setTheme('light'))}>
                 <HugeiconsIcon icon={Sun03Icon} strokeWidth={2} /> Light theme
@@ -207,14 +225,19 @@ export default function KitchenSink() {
                 </CommandItem>
               ))}
             </CommandGroup>
-            <CommandSeparator />
-            <CommandGroup heading="Go to">
-              {NAV.map((item) => (
-                <CommandItem key={item.id} onSelect={() => run(() => goTo(item.id))}>
-                  <HugeiconsIcon icon={item.icon} strokeWidth={2} /> {item.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {NAV_GROUPS.map((group) => (
+              <CommandGroup key={group.title} heading={`Go to · ${group.title}`}>
+                {group.items.map((item) => {
+                  const go = GO_KEYS.find((g) => g.id === item.id)
+                  return (
+                    <CommandItem key={item.id} onSelect={() => run(() => goTo(item.id))}>
+                      <HugeiconsIcon icon={item.icon} strokeWidth={2} /> {item.label}
+                      {go && <CommandShortcut>G {go.key}</CommandShortcut>}
+                    </CommandItem>
+                  )
+                })}
+              </CommandGroup>
+            ))}
           </CommandList>
         </Command>
       </CommandDialog>

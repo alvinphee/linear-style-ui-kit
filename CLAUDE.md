@@ -51,33 +51,46 @@ hugeicons-playground/
     │   ├── theme.tsx          light / dark / system switch
     │   └── utils.ts
     └── pages/
-        ├── KitchenSink.tsx    sidebar, header, Ctrl+K menu, all sections
-        ├── data.ts            icon groups, job statuses, sample jobs
+        ├── KitchenSink.tsx      page shell, header, shortcuts, Ctrl+K menu
+        ├── ShowcaseSidebar.tsx  workspace switcher, folding nav groups
+        ├── ShortcutsSheet.tsx   the "?" keyboard shortcuts sheet
+        ├── nav.ts               nav groups, section ids, G-then shortcuts
+        ├── data.ts              icon groups, statuses, labels, sample jobs
+        ├── jobs-store.tsx       shared job state (list, board, issue page)
         └── sections/
-            ├── shared.tsx         Section and Panel wrappers
-            ├── ThemeSection.tsx   presets and the theme mixer
+            ├── shared.tsx            Section and Panel wrappers
+            ├── ThemeSection.tsx      presets and the theme mixer
             ├── ButtonsSection.tsx
             ├── FormsSection.tsx
-            ├── StatusSection.tsx
+            ├── InputsSection.tsx     button groups, OTP, dates, combobox, tags
+            ├── StatusSection.tsx     also exports StatusIcon, PriorityIcon, Initials
+            ├── DisplaySection.tsx    spinners, empty states, alerts, accordion
+            ├── ChartsSection.tsx     area, bars, rings, cycle burn-down
             ├── OverlaysSection.tsx
-            ├── JobListSection.tsx
+            ├── OverlaysMoreSection.tsx  context menu, sheets, drawer, hover card
+            ├── NavigationSection.tsx    breadcrumb, pagination, menus, panes
+            ├── JobListSection.tsx    grouped list with bulk select
+            ├── FilterBar.tsx         filter chips, saved views, display options
+            ├── BoardSection.tsx      Kanban with drag and drop
+            ├── IssueSection.tsx      issue detail and properties panel
+            ├── InboxSection.tsx
+            ├── RoadmapSection.tsx
+            ├── SettingsSection.tsx
+            ├── OnboardingSection.tsx
+            ├── SignInSection.tsx
             └── IconsSection.tsx
 ```
 
 ## The kitchen sink page
-A Linear-style app frame (sidebar, slim header, Ctrl+K command menu) with
-one section per kind of component:
-1. **Buttons**: variants, sizes, icons with shortcut hints, tooltips,
-   a segmented control.
-2. **Forms**: a full "Create job" form plus input states.
-3. **Status**: badges, Linear-style status and priority icons, avatars,
-   progress, skeletons.
-4. **Menus and overlays**: dropdown with shortcuts and a submenu, filter
-   popover, dialog, command menu, toasts.
-5. **Job list**: a Linear-style list grouped by status.
-6. **Icons**, **Icon props**, **All free icons**: the Hugeicons test.
-   Search also matches Lucide names (try "trash"). Click an icon to copy
-   its import.
+One long page in four sidebar groups: **Get started** (theme), **Components**
+(every shadcn component, restyled), **Patterns** (Linear-style screens built
+from them: list, board, issue detail, inbox, roadmap, settings, onboarding,
+sign-in) and **Icons** (the Hugeicons test). The job list, board and issue
+page share one store (`jobs-store.tsx`), so an edit in one shows in all.
+
+Shortcuts: `Ctrl+K` command menu, `?` shortcut list, `C` new job, and
+`G` then a letter to jump (`G B` board, `G I` inbox, `G S` settings…).
+Section ids and shortcut letters live in `src/pages/nav.ts`.
 
 ## The Linear look, and where it lives
 All of it is in `src/styles.css`, so it can be moved as one piece:
