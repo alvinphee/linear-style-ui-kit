@@ -86,6 +86,8 @@ hugeicons-playground/
             ├── PricingSection.tsx    plans, yearly switch, comparison table
             ├── OnboardingSection.tsx
             ├── SignInSection.tsx
+            ├── AiFeaturesSection.tsx  inline AI, summary, triage, AI search and more
+            ├── ai-features/           its panels and scripted helpers
             └── IconsSection.tsx
 ```
 
