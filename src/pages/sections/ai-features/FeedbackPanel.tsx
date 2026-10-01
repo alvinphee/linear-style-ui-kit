@@ -1,17 +1,11 @@
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Copy01Icon, InformationCircleIcon, RefreshIcon, SparklesIcon, ThumbsDownIcon, ThumbsUpIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { FeedbackDialog, UserMessage } from '@/blocks/ai/chat-message'
 import { PRIORITY, type Job, type Priority } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
@@ -31,12 +25,9 @@ function progressOf(job: Job) {
 }
 
 export function FeedbackPanel() {
-  const id = useId()
   const { jobs, select } = useJobs()
   const [vote, setVote] = useState<'up' | 'down' | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [reasons, setReasons] = useState<string[]>([])
-  const [comment, setComment] = useState('')
   const [regenerating, setRegenerating] = useState(false)
   const { later } = useTimers()
 
@@ -45,7 +36,6 @@ export function FeedbackPanel() {
     .filter((j) => j.due === 'Today' && j.status !== 'done' && j.status !== 'cancelled')
     .sort((a, b) => RANK[a.priority] - RANK[b.priority] || progressOf(b).left - progressOf(a).left)
   const worst = atRisk[0]
-  const canSend = reasons.length > 0 || comment.trim() !== ''
 
   function answerText() {
     if (!atRisk.length) return 'Nothing due today is still open.'
@@ -68,27 +58,19 @@ export function FeedbackPanel() {
   }
 
   function thumbsDown() {
-    if (vote === 'down') {
-      setVote(null)
-      return
-    }
-    setReasons([])
-    setComment('')
-    setDialogOpen(true)
+    if (vote === 'down') setVote(null)
+    else setDialogOpen(true)
   }
 
   function sendFeedback() {
     setVote('down')
-    setDialogOpen(false)
     toast.success('Feedback sent', { description: 'Demo only. Nothing was sent.' })
   }
 
   return (
     <Panel title="Feedback and trust" note="Label it, ask about it, own the limits">
       <div className="grid min-w-0 gap-3">
-        <div className="flex justify-end">
-          <p className="bg-muted max-w-[85%] rounded-lg rounded-br-sm px-3 py-1.5 text-[13px]">{QUESTION}</p>
-        </div>
+        <UserMessage text={QUESTION} />
 
         <article aria-label="AI answer" className="bg-subtle min-w-0 rounded-lg border">
           <header className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-3">
@@ -98,12 +80,8 @@ export function FeedbackPanel() {
             </Badge>
             <span className="text-muted-foreground truncate text-[11px]">from the live job list</span>
             <div className="ml-auto flex items-center gap-0.5">
-              <IconAction label="Regenerate answer" disabled={regenerating} onClick={regenerate}>
-                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-              </IconAction>
-              <IconAction label="Copy answer" onClick={() => copyText(answerText(), 'Answer copied')}>
-                <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
-              </IconAction>
+              <IconAction label="Regenerate answer" disabled={regenerating} onClick={regenerate} icon={RefreshIcon} />
+              <IconAction label="Copy answer" onClick={() => copyText(answerText(), 'Answer copied')} icon={Copy01Icon} />
             </div>
           </header>
 
@@ -153,12 +131,8 @@ export function FeedbackPanel() {
             <span className="text-muted-foreground mr-auto text-[11px]" aria-live="polite">
               {vote === 'up' ? 'Thanks for the feedback.' : vote === 'down' ? 'Thanks. We will look into it.' : 'How was this?'}
             </span>
-            <IconAction label="Good answer" pressed={vote === 'up'} onClick={() => setVote(vote === 'up' ? null : 'up')}>
-              <HugeiconsIcon icon={ThumbsUpIcon} strokeWidth={2} />
-            </IconAction>
-            <IconAction label="Bad answer" pressed={vote === 'down'} onClick={thumbsDown}>
-              <HugeiconsIcon icon={ThumbsDownIcon} strokeWidth={2} />
-            </IconAction>
+            <IconAction label="Good answer" pressed={vote === 'up'} onClick={() => setVote(vote === 'up' ? null : 'up')} icon={ThumbsUpIcon} />
+            <IconAction label="Bad answer" pressed={vote === 'down'} onClick={thumbsDown} icon={ThumbsDownIcon} />
           </footer>
         </article>
 
@@ -168,53 +142,13 @@ export function FeedbackPanel() {
         </p>
       </div>
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>What went wrong?</DialogTitle>
-            <DialogDescription>Pick anything that applies. Demo only: nothing is sent.</DialogDescription>
-          </DialogHeader>
-          <form
-            className="grid gap-4"
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (canSend) sendFeedback()
-            }}
-          >
-            <fieldset className="grid gap-2.5">
-              <legend className="sr-only">Reasons</legend>
-              {REASONS.map((reason) => (
-                <Label key={reason} className="font-normal">
-                  <Checkbox
-                    checked={reasons.includes(reason)}
-                    onCheckedChange={(on) =>
-                      setReasons((r) => (on ? [...r, reason] : r.filter((x) => x !== reason)))
-                    }
-                  />
-                  {reason}
-                </Label>
-              ))}
-            </fieldset>
-            <div className="grid gap-1.5">
-              <Label htmlFor={`${id}-comment`}>
-                Anything else? <span className="text-muted-foreground font-normal">Optional</span>
-              </Label>
-              <Textarea
-                id={`${id}-comment`}
-                value={comment}
-                maxLength={500}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="What should the answer have said?"
-                className="min-h-20"
-              />
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={!canSend}>Send feedback</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <FeedbackDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        reasons={REASONS}
+        description="Pick anything that applies. Demo only: nothing is sent."
+        onSubmit={sendFeedback}
+      />
     </Panel>
   )
 }

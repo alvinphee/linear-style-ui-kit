@@ -7,6 +7,10 @@ import {
 } from '@hugeicons/core-free-icons'
 import type { FileKind, FileRef, Model, ModelId } from './types'
 
+// The kit's formatters (components/file-chip, components/thinking-indicator).
+export { formatFileSize as formatSize } from '@/components/file-chip'
+export { formatDuration } from '@/components/thinking-indicator'
+
 // Made-up models. The choice changes the scripted thinking time and how long
 // the replies are; there is no real model behind any of them.
 export const MODELS: (Model & { icon: IconSvgElement })[] = [
@@ -90,12 +94,6 @@ export const FILE_ICONS: Record<FileKind, IconSvgElement> = {
   other: File01Icon,
 }
 
-export function formatSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-}
-
 export function toFileRef(file: { name: string; size: number }): FileRef {
   return { id: uid('f'), name: file.name, size: file.size, kind: fileKind(file.name) }
 }
@@ -106,13 +104,6 @@ export function greeting(date = new Date()) {
   if (h < 12) return 'Good morning'
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
-}
-
-export function formatDuration(ms: number) {
-  if (ms < 1000) return `${(ms / 1000).toFixed(1)}s`
-  const s = Math.round(ms / 1000)
-  if (s < 60) return `${s}s`
-  return `${Math.floor(s / 60)}m ${s % 60}s`
 }
 
 const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' })

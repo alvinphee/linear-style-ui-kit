@@ -1,10 +1,16 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight01Icon, ArrowUp02Icon, DatabaseIcon, PencilEdit02Icon, SparklesIcon, StopIcon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon, DatabaseIcon, PencilEdit02Icon, SparklesIcon } from '@hugeicons/core-free-icons'
+import { toast } from 'sonner'
+import { AssistantMessage, FollowUps, MessageActions, StoppedNote, UserMessage, type Feedback } from '@/blocks/ai/chat-message'
+import { Markdown } from '@/blocks/ai/markdown'
+import { PromptBox, type PromptBoxHandle } from '@/blocks/ai/prompt-box'
+import { ThinkingTrail, type TrailStep } from '@/blocks/ai/thinking-trail'
+import { IconAction } from '@/components/icon-action'
+import { IconMark } from '@/components/mark'
+import { Shortcut } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { usePath } from '@/lib/router'
 import { ROLE_LABEL } from './data'
 import { TODAY, addDays, daysBetween, formatDate, formatMoney, formatNumber } from './format'
@@ -12,7 +18,6 @@ import { MODULES, moduleById } from './modules'
 import { go, parseRoute } from './route'
 import { useErp } from './store'
 import type { Data, EntityId, ErpModule, Role, Row } from './types'
-import { MOD } from './ui'
 
 // The "Ask AI" copilot: a side panel that answers questions about the
 // company's records. Answers are scripted from the live data (no model is
@@ -633,25 +638,42 @@ function respond(question: string, ctx: Ctx): Answer {
 
 /* ---------- Streaming ---------- */
 
-// What streams: a word with its spacing, or a whole record number.
-type Token = string | Ref
-type Chunk = { kind: 'p'; tokens: Token[] } | { kind: 'list'; items: Token[][] }
-
+// The answer is written as Markdown for the kit's Markdown block: record
+// numbers become "#record:<entity>:<id>" links the panel opens. It streams
+// word by word (a record link counts as one word); the block heals any
+// half-written syntax while it streams.
+const recordHref = (r: Ref) => `#record:${r.entity}:${r.id}`
+const inlineMarkdown = (parts: Inline[]) => parts.map((part) => (typeof part === 'string' ? part : `[${part.id}](${recordHref(part)})`)).join('')
+const inlinePlain = (parts: Inline[]) => parts.map((part) => (typeof part === 'string' ? part : part.id)).join('')
 const WORDS = /\s*\S+\s*/g
-const split = (parts: Inline[]) => parts.flatMap((part): Token[] => (typeof part === 'string' ? part.match(WORDS) ?? [part] : [part]))
-const prepare = (blocks: Block[]) => blocks.map((b): Chunk => (b.kind === 'p' ? { kind: 'p', tokens: split(b.parts) } : { kind: 'list', items: b.items.map(split) }))
-const tokenCount = (chunks: Chunk[]) => chunks.reduce((n, c) => n + (c.kind === 'p' ? c.tokens.length : c.items.reduce((m, item) => m + item.length, 0)), 0)
+const words = (text: string) => text.match(WORDS) ?? [text]
+
+function toPieces(blocks: Block[]) {
+  const pieces: string[] = []
+  blocks.forEach((b, i) => {
+    if (i > 0) pieces.push('\n\n')
+    if (b.kind === 'p') pieces.push(...words(inlineMarkdown(b.parts)))
+    else b.items.forEach((item, j) => pieces.push(`${j ? '\n' : ''}- `, ...words(inlineMarkdown(item))))
+  })
+  return pieces
+}
+
+const toPlain = (blocks: Block[]) =>
+  blocks.map((b) => (b.kind === 'p' ? inlinePlain(b.parts) : b.items.map((item) => `• ${inlinePlain(item)}`).join('\n'))).join('\n\n')
 
 type Reply = {
   id: number
   role: 'assistant'
-  chunks: Chunk[]
-  total: number
+  question: string
+  pieces: string[]
+  plain: string
   shown: number
   state: 'thinking' | 'streaming' | 'done' | 'stopped'
+  startedAt: number
   source?: string
   links?: Link[]
   followUps?: string[]
+  feedback?: Feedback
 }
 type Message = { id: number; role: 'user'; text: string } | Reply
 
@@ -659,133 +681,28 @@ const THINK_MS = 700
 const WORD_MS = 28
 let nextId = 0
 
-function Caret() {
-  return <span aria-hidden="true" className="erp-ai-caret bg-foreground/70 ml-0.5 inline-block h-[1em] w-0.5 translate-y-0.5 rounded-full" />
-}
-
-function RecordButton({ target, onOpen }: { target: Ref; onOpen: (r: Ref) => void }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(target)}
-      title={`Open ${target.id}`}
-      className="text-brand hover:bg-brand/10 focus-visible:ring-ring/40 -mx-0.5 rounded px-0.5 font-mono text-[12px] font-medium whitespace-nowrap outline-none focus-visible:ring-2"
-    >
-      {target.id}
-    </button>
-  )
-}
-
-// Renders the first `shown` tokens of an answer, with a caret at the end while it streams.
-function AnswerBody({ chunks, shown, streaming, onOpen }: { chunks: Chunk[]; shown: number; streaming: boolean; onOpen: (r: Ref) => void }) {
-  let left = shown
-  const words = (tokens: Token[]) => tokens.map((t, i) => (typeof t === 'string' ? t : <RecordButton key={i} target={t} onOpen={onOpen} />))
-  const nodes: ReactNode[] = []
-  for (let i = 0; i < chunks.length && left > 0; i++) {
-    const chunk = chunks[i]
-    if (chunk.kind === 'p') {
-      const tokens = chunk.tokens.slice(0, left)
-      left -= tokens.length
-      nodes.push(<p key={i}>{words(tokens)}{streaming && left <= 0 && <Caret />}</p>)
-    } else {
-      const items: ReactNode[] = []
-      for (let j = 0; j < chunk.items.length && left > 0; j++) {
-        const tokens = chunk.items[j].slice(0, left)
-        left -= tokens.length
-        items.push(<li key={j}>{words(tokens)}{streaming && left <= 0 && <Caret />}</li>)
-      }
-      nodes.push(<ul key={i} className="marker:text-muted-foreground grid list-disc gap-1 pl-4">{items}</ul>)
-    }
+// The reply's thinking trail: reading the records it answers from.
+function trailOf(reply: Reply): TrailStep[] {
+  const thinking = reply.state === 'thinking'
+  const status = thinking ? 'running' : 'done'
+  const steps: TrailStep[] = [{
+    id: 'match', kind: 'thinking', status, ms: THINK_MS / 2, startedAt: reply.startedAt,
+    label: reply.source ? `Matched the question to ${reply.source}.` : 'Looked for records that answer the question.',
+  }]
+  if (reply.source) {
+    steps.push({
+      id: 'read', kind: 'tool', status, ms: THINK_MS / 2, startedAt: reply.startedAt, icon: DatabaseIcon,
+      label: 'Read', activeLabel: 'Reading', detail: reply.source, name: 'read_records',
+      input: { question: reply.question }, output: { read: reply.source }, summary: thinking ? undefined : reply.source,
+    })
   }
-  return <div className="grid gap-2 text-[13px] leading-relaxed">{nodes}</div>
-}
-
-function ReplyView({ reply, onOpen, onLink, onAsk }: {
-  reply: Reply
-  onOpen: (r: Ref) => void
-  onLink: (link: Link) => void
-  onAsk: (question: string) => void
-}) {
-  const extras = reply.state === 'done' && ((reply.links?.length ?? 0) > 0 || (reply.followUps?.length ?? 0) > 0)
-  return (
-    <div className="flex min-w-0 gap-2.5">
-      <span aria-hidden="true" className="bg-brand/10 text-brand mt-0.5 grid size-6 shrink-0 place-items-center rounded-md">
-        <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-3.5" />
-      </span>
-      <div className="grid min-w-0 flex-1 content-start gap-2">
-        <span className="sr-only">Ask AI said:</span>
-        {reply.state === 'thinking' ? (
-          <div className="grid gap-0.5">
-            <span className="flex h-6 items-center gap-2 text-xs">
-              <span className="erp-ai-pulse bg-brand size-1.5 shrink-0 rounded-full" />
-              <span className="erp-ai-shimmer font-medium">Thinking…</span>
-            </span>
-            {reply.source && <span className="text-muted-foreground text-[11px]">Reading {reply.source}</span>}
-          </div>
-        ) : (
-          <>
-            {reply.source && (
-              <p className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                <HugeiconsIcon icon={DatabaseIcon} strokeWidth={2} className="size-3 shrink-0" />
-                Read {reply.source}
-              </p>
-            )}
-            <AnswerBody chunks={reply.chunks} shown={reply.shown} streaming={reply.state === 'streaming'} onOpen={onOpen} />
-            {reply.state === 'stopped' && <p className="text-muted-foreground text-[11px]">{reply.shown ? 'Stopped.' : 'Stopped before answering.'}</p>}
-            {extras && (
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
-                {reply.links?.map((l) => (
-                  <Button key={`${l.module}/${l.page}`} variant="outline" size="sm" onClick={() => onLink(l)}>
-                    {l.label}
-                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
-                  </Button>
-                ))}
-                {reply.followUps?.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => onAsk(q)}
-                    className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/40 h-6 rounded-full border px-2.5 text-[11px] outline-none focus-visible:ring-2"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// Shimmer, pulse and caret keyframes. React hoists this into <head> once.
-function CopilotStyles() {
-  return (
-    <style href="erp-copilot-motion" precedence="default">{`
-@keyframes erp-ai-shimmer { from { background-position: 150% 0 } to { background-position: -50% 0 } }
-.erp-ai-shimmer {
-  background-image: linear-gradient(90deg, var(--muted-foreground) 0%, var(--muted-foreground) 38%, var(--foreground) 50%, var(--muted-foreground) 62%, var(--muted-foreground) 100%);
-  background-size: 250% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  animation: erp-ai-shimmer 2.2s linear infinite;
-}
-@keyframes erp-ai-pulse { 0%, 100% { opacity: .35; transform: scale(.8) } 50% { opacity: 1; transform: scale(1) } }
-.erp-ai-pulse { animation: erp-ai-pulse 1.4s ease-in-out infinite }
-@keyframes erp-ai-caret { 50% { opacity: 0 } }
-.erp-ai-caret { animation: erp-ai-caret 1s steps(1) infinite }
-@media (prefers-reduced-motion: reduce) {
-  .erp-ai-shimmer { animation: none; background: none; color: var(--muted-foreground) }
-  .erp-ai-pulse, .erp-ai-caret { animation: none }
-}
-`}</style>
-  )
+  return steps
 }
 
 /* ---------- The panel ---------- */
 
+// Built from the kit's AI blocks (src/blocks/ai): the same prompt box, thinking
+// trail, messages and markdown as the AI workspace, with the ERP's answers.
 export function CopilotPanel() {
   const { copilotOpen, setCopilotOpen, data, session, company, openPeek } = useErp()
   const route = parseRoute(usePath())
@@ -798,7 +715,7 @@ export function CopilotPanel() {
   const [draft, setDraft] = useState('')
   const timers = useRef({ wait: 0, tick: 0 })
   const openingRecord = useRef(false)
-  const inputRef = useRef<HTMLTextAreaElement>(null)
+  const promptRef = useRef<PromptBoxHandle>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const last = messages[messages.length - 1]
   const busy = last?.role === 'assistant' && (last.state === 'thinking' || last.state === 'streaming')
@@ -819,7 +736,7 @@ export function CopilotPanel() {
     clearTimers()
     setMessages((list) => list.map((m): Message => {
       if (m.role !== 'assistant' || (m.state !== 'thinking' && m.state !== 'streaming')) return m
-      return finish ? { ...m, shown: m.total, state: 'done' } : { ...m, state: 'stopped' }
+      return finish ? { ...m, shown: m.pieces.length, state: 'done' } : { ...m, state: 'stopped' }
     }))
   }
 
@@ -835,20 +752,8 @@ export function CopilotPanel() {
     if (el) el.scrollTop = el.scrollHeight
   }, [messages])
 
-  function send(raw: string) {
-    const text = raw.trim()
-    if (!text || busy) return
-    const answer = respond(text, { data, role, name: session?.name ?? '' })
-    const chunks = prepare(answer.blocks)
-    const total = tokenCount(chunks)
-    const userId = ++nextId
-    const id = ++nextId
-    setMessages((list) => [
-      ...list,
-      { id: userId, role: 'user', text },
-      { id, role: 'assistant', chunks, total, shown: 0, state: 'thinking', source: answer.source, links: answer.links, followUps: answer.followUps },
-    ])
-    setDraft('')
+  // Think, then stream the reply in word by word.
+  function play(id: number, total: number) {
     clearTimers()
     timers.current.wait = window.setTimeout(() => {
       patch(id, { state: 'streaming' })
@@ -862,159 +767,182 @@ export function CopilotPanel() {
     }, THINK_MS)
   }
 
-  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent.isComposing) return
-    e.preventDefault()
-    send(draft)
+  function replyFor(question: string, id: number): Reply {
+    const answer = respond(question, { data, role, name: session?.name ?? '' })
+    return {
+      id, role: 'assistant', question, pieces: toPieces(answer.blocks), plain: toPlain(answer.blocks), shown: 0, state: 'thinking',
+      startedAt: Date.now(), source: answer.source, links: answer.links, followUps: answer.followUps,
+    }
+  }
+
+  function send(raw: string) {
+    const text = raw.trim()
+    if (!text || busy) return false
+    const userId = ++nextId
+    const reply = replyFor(text, ++nextId)
+    setMessages((list) => [...list, { id: userId, role: 'user', text }, reply])
+    setDraft('')
+    play(reply.id, reply.pieces.length)
+  }
+
+  // Answers again from the data as it is now (a record may have changed).
+  function regenerate(reply: Reply) {
+    if (busy) return
+    const fresh = replyFor(reply.question, reply.id)
+    setMessages((list) => list.map((m) => (m.id === reply.id ? fresh : m)))
+    play(fresh.id, fresh.pieces.length)
   }
 
   function newChat() {
     clearTimers()
     setMessages([])
     setDraft('')
-    inputRef.current?.focus()
+    promptRef.current?.focus()
   }
 
-  function openRecord(target: Ref) {
+  function openLink(href: string) {
+    const [, entity, id] = href.match(/^#record:([^:]+):(.+)$/) ?? []
+    if (!entity || !id) return
     openingRecord.current = true
     setCopilotOpen(false)
-    openPeek(target.entity, target.id)
+    openPeek(entity as EntityId, id)
   }
 
-  function openLink(link: Link) {
+  function openPage(link: Link) {
     setCopilotOpen(false)
     go(link.module, link.page)
   }
 
+  function copy(text: string) {
+    navigator.clipboard?.writeText(text).catch(() => toast.error('Copy failed', { description: 'Your browser blocked the clipboard.' }))
+  }
+
   return (
-    <>
-      <CopilotStyles />
-      <Sheet open={copilotOpen} onOpenChange={setCopilotOpen}>
-        <SheetContent
-          side="right"
-          className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            inputRef.current?.focus()
-            const el = listRef.current
-            if (el) el.scrollTop = el.scrollHeight
-          }}
-          onCloseAutoFocus={(e) => {
-            // The record's side panel takes focus; don't pull it back to the trigger.
-            if (openingRecord.current) e.preventDefault()
-            openingRecord.current = false
-          }}
-        >
-          <header className="flex min-w-0 items-center gap-2.5 border-b py-3 pr-12 pl-4">
-            <span aria-hidden="true" className="bg-brand/10 text-brand grid size-7 shrink-0 place-items-center rounded-md">
-              <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-4" />
-            </span>
-            <div className="flex min-w-0 flex-1 items-center gap-2">
-              <SheetTitle className="shrink-0">Ask AI</SheetTitle>
-              <span
-                title="The page Ask AI is looking at"
-                className="text-muted-foreground inline-flex h-5 min-w-0 items-center gap-1 rounded-md border px-1.5 text-[11px]"
-              >
-                <HugeiconsIcon icon={module.icon} strokeWidth={2} className="size-3 shrink-0" style={{ color: module.colour }} />
-                <span className="truncate">
-                  <span className="sr-only">Context: </span>
-                  {module.id === 'home' ? page.label : `${module.name} › ${page.label}`}
-                </span>
+    <Sheet open={copilotOpen} onOpenChange={setCopilotOpen}>
+      <SheetContent
+        side="right"
+        className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+        onOpenAutoFocus={(e) => {
+          e.preventDefault()
+          promptRef.current?.focus()
+          const el = listRef.current
+          if (el) el.scrollTop = el.scrollHeight
+        }}
+        onCloseAutoFocus={(e) => {
+          // The record's side panel takes focus; don't pull it back to the trigger.
+          if (openingRecord.current) e.preventDefault()
+          openingRecord.current = false
+        }}
+      >
+        <header className="flex min-w-0 items-center gap-2.5 border-b py-3 pr-12 pl-4">
+          <IconMark icon={SparklesIcon} colour="var(--brand)" />
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <SheetTitle className="shrink-0">Ask AI</SheetTitle>
+            <span
+              title="The page Ask AI is looking at"
+              className="text-muted-foreground inline-flex h-5 min-w-0 items-center gap-1 rounded-md border px-1.5 text-[11px]"
+            >
+              <HugeiconsIcon icon={module.icon} strokeWidth={2} className="size-3 shrink-0" style={{ color: module.colour }} />
+              <span className="truncate">
+                <span className="sr-only">Context: </span>
+                {module.id === 'home' ? page.label : `${module.name} › ${page.label}`}
               </span>
-            </div>
-            {messages.length > 0 && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon-sm" aria-label="New chat" onClick={newChat}>
-                    <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>New chat</TooltipContent>
-              </Tooltip>
-            )}
-            <SheetDescription className="sr-only">
-              Ask questions about the records in {company?.name ?? 'your company'}. Answers come from the live data.
-            </SheetDescription>
-          </header>
-
-          <div ref={listRef} role="log" aria-label="Conversation" aria-busy={busy} className="min-h-0 flex-1 overflow-y-auto">
-            {messages.length === 0 ? (
-              <div className="grid gap-5 p-4">
-                <div className="grid gap-1">
-                  <p className="text-sm font-medium">How can I help, {firstName(session?.name ?? '')}?</p>
-                  <p className="text-muted-foreground text-xs">
-                    I answer from the live records in {company?.name ?? 'your company'}, within what the {ROLE_LABEL[role]} role can open.
-                    Open me from anywhere with {MOD} J.
-                  </p>
-                </div>
-                <div className="grid gap-1.5">
-                  <p className="text-muted-foreground text-[11px] font-medium">Suggested for {module.id === 'home' ? 'you' : module.name}</p>
-                  {prompts.map((q) => (
-                    <button
-                      key={q}
-                      type="button"
-                      onClick={() => send(q)}
-                      className="bg-card hover:bg-accent/60 focus-visible:ring-ring/40 group flex min-w-0 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-xs outline-none focus-visible:ring-2"
-                    >
-                      <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-                      <span className="min-w-0 flex-1">{q}</span>
-                      <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-5 p-4">
-                {messages.map((m) => (m.role === 'user' ? (
-                  <div key={m.id} className="flex justify-end">
-                    <p className="bg-muted max-w-[85%] rounded-lg rounded-br-sm px-3 py-2 text-[13px] break-words whitespace-pre-wrap">
-                      <span className="sr-only">You said: </span>
-                      {m.text}
-                    </p>
-                  </div>
-                ) : (
-                  <ReplyView key={m.id} reply={m} onOpen={openRecord} onLink={openLink} onAsk={send} />
-                )))}
-              </div>
-            )}
+            </span>
           </div>
+          {messages.length > 0 && <IconAction label="New chat" icon={PencilEdit02Icon} onClick={newChat} />}
+          <SheetDescription className="sr-only">
+            Ask questions about the records in {company?.name ?? 'your company'}. Answers come from the live data.
+          </SheetDescription>
+        </header>
 
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              send(draft)
-            }}
-            className="border-t p-3"
-          >
-            <div className="bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 grid rounded-lg border transition-colors focus-within:ring-2">
-              <Textarea
-                ref={inputRef}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={onKeyDown}
-                rows={1}
-                placeholder={`Ask about ${module.id === 'home' ? 'your company' : module.name}…`}
-                aria-label="Ask a question"
-                className="max-h-40 min-h-11 border-0 bg-transparent px-3 pt-2.5 text-[13px] shadow-none focus-visible:ring-0 md:text-[13px] dark:bg-transparent"
-              />
-              <div className="flex items-center gap-2 px-2 pb-2">
-                <span className="text-muted-foreground hidden min-w-0 flex-1 truncate pl-1 text-[11px] sm:block">Enter to send · Shift + Enter for a new line</span>
-                {busy ? (
-                  <Button type="button" variant="outline" size="sm" className="ml-auto" onClick={() => settle(false)}>
-                    <HugeiconsIcon icon={StopIcon} strokeWidth={2} data-icon="inline-start" />
-                    Stop
-                  </Button>
-                ) : (
-                  <Button type="submit" size="icon-sm" className="ml-auto" aria-label="Send" disabled={!draft.trim()}>
-                    <HugeiconsIcon icon={ArrowUp02Icon} strokeWidth={2} />
-                  </Button>
-                )}
+        <div ref={listRef} role="log" aria-label="Conversation" aria-busy={busy} className="min-h-0 flex-1 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="grid gap-5 p-4">
+              <div className="grid gap-1">
+                <p className="text-sm font-medium">How can I help, {firstName(session?.name ?? '')}?</p>
+                <p className="text-muted-foreground text-xs">
+                  I answer from the live records in {company?.name ?? 'your company'}, within what the {ROLE_LABEL[role]} role can open.
+                  Open me from anywhere with <Shortcut keys={['mod', 'J']} className="align-middle" />.
+                </p>
+              </div>
+              <div className="grid gap-1.5">
+                <p className="text-muted-foreground text-[11px] font-medium">Suggested for {module.id === 'home' ? 'you' : module.name}</p>
+                {prompts.map((q) => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => send(q)}
+                    className="bg-card hover:bg-accent/60 focus-visible:ring-ring/40 group flex min-w-0 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-xs outline-none focus-visible:ring-2"
+                  >
+                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
+                    <span className="min-w-0 flex-1">{q}</span>
+                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
+                  </button>
+                ))}
               </div>
             </div>
-            <p className="text-muted-foreground mt-2 text-center text-[11px]">AI answers can be wrong. Check important numbers.</p>
-          </form>
-        </SheetContent>
-      </Sheet>
-    </>
+          ) : (
+            <div className="grid gap-6 p-4">
+              {messages.map((m) => (m.role === 'user' ? (
+                <UserMessage key={m.id} text={m.text} onCopy={copy} />
+              ) : (
+                <AssistantMessage
+                  key={m.id}
+                  name="Ask AI"
+                  actions={(m.state === 'done' || m.state === 'stopped') && (
+                    <MessageActions
+                      onCopy={() => copy(m.plain)}
+                      onRegenerate={() => regenerate(m)}
+                      regenerateDisabled={busy}
+                      feedback={m.feedback ?? null}
+                      onFeedback={(feedback) => {
+                        patch(m.id, { feedback })
+                        if (feedback) toast('Thanks for the feedback', { description: 'It helps improve Ask AI’s answers.' })
+                      }}
+                    />
+                  )}
+                >
+                  <ThinkingTrail steps={trailOf(m)} live={m.state === 'thinking'} startedAt={m.startedAt} duration={THINK_MS} />
+                  {m.state !== 'thinking' && (
+                    <Markdown text={m.pieces.slice(0, m.shown).join('')} streaming={m.state === 'streaming'} onLink={openLink} />
+                  )}
+                  {m.state === 'stopped' && <StoppedNote>{m.shown ? 'Stopped' : 'Stopped before answering'}</StoppedNote>}
+                  {m.state === 'done' && ((m.links?.length ?? 0) > 0 || (m.followUps?.length ?? 0) > 0) && (
+                    <div className="grid gap-2">
+                      {!!m.links?.length && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {m.links.map((l) => (
+                            <Button key={`${l.module}/${l.page}`} variant="outline" size="sm" onClick={() => openPage(l)}>
+                              {l.label}
+                              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+                      <FollowUps items={m.followUps ?? []} onPick={send} />
+                    </div>
+                  )}
+                </AssistantMessage>
+              )))}
+            </div>
+          )}
+        </div>
+
+        <div className="border-t p-3">
+          <PromptBox
+            ref={promptRef}
+            value={draft}
+            onValueChange={setDraft}
+            onSubmit={(text) => send(text)}
+            running={busy}
+            onStop={() => settle(false)}
+            maxAttachments={0}
+            label="Ask a question"
+            placeholder={`Ask about ${module.id === 'home' ? 'your company' : module.name}…`}
+            footer="AI answers can be wrong. Check important numbers."
+          />
+        </div>
+      </SheetContent>
+    </Sheet>
   )
 }

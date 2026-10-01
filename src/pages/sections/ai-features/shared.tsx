@@ -1,39 +1,11 @@
-import { useCallback, useEffect, useRef, type ReactNode } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { SparklesIcon } from '@hugeicons/core-free-icons'
+import { useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { cn } from 'cn'
-import { Button } from '@/components/ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-// Every piece of AI output on the page carries this label.
-export function AiLabel({ children = 'AI', className }: { children?: ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn(
-        'bg-brand/10 text-brand inline-flex h-4 shrink-0 items-center gap-0.5 rounded-full pr-1.5 pl-1 text-[10px] leading-none font-medium',
-        className,
-      )}
-    >
-      <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-2.5" aria-hidden />
-      {children}
-    </span>
-  )
-}
-
-// `shimmer` is the text sweep utility that ships in shadcn/tailwind.css.
-export function Thinking({ label = 'Thinking…', className }: { label?: string; className?: string }) {
-  return (
-    <span role="status" className={cn('text-muted-foreground inline-flex items-center gap-1.5 text-xs', className)}>
-      <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-brand size-3.5 shrink-0 animate-pulse" />
-      <span className="shimmer">{label}</span>
-    </span>
-  )
-}
-
-export function StreamCaret() {
-  return <span aria-hidden className="bg-brand/70 ml-0.5 inline-block h-3.5 w-1.5 translate-y-0.5 animate-pulse rounded-[1px]" />
-}
+// The AI pieces every panel uses are the kit's components, so AI in the
+// product looks like the AI workspace.
+export { AiLabel } from '@/components/ai-label'
+export { IconAction } from '@/components/icon-action'
+export { StreamCaret, Thinking } from '@/components/thinking-indicator'
 
 // setTimeout that is cleared when the component unmounts.
 export function useTimers() {
@@ -138,34 +110,5 @@ export function DiffText({ parts }: { parts: DiffPart[] }) {
         )
       })}
     </>
-  )
-}
-
-// Icon-only ghost button with a tooltip; `pressed` makes it a toggle.
-export function IconAction({ label, pressed, disabled, onClick, className, children }: {
-  label: string
-  pressed?: boolean
-  disabled?: boolean
-  onClick: () => void
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={label}
-          aria-pressed={pressed}
-          disabled={disabled}
-          onClick={onClick}
-          className={cn('text-muted-foreground', pressed && 'bg-brand/10 text-brand hover:text-brand', className)}
-        >
-          {children}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
   )
 }

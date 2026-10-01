@@ -141,9 +141,7 @@ export function UsagePanel() {
                 className="bg-status-progress/15 h-0.5 [&>[data-slot=progress-indicator]]:bg-status-progress"
               />
             </div>
-            <IconAction label="Hide notice" onClick={() => setBannerHidden(true)} className="-mt-0.5">
-              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-            </IconAction>
+            <IconAction label="Hide notice" onClick={() => setBannerHidden(true)} className="-mt-0.5" icon={Cancel01Icon} />
           </div>
         )}
 

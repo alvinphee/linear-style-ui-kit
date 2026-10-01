@@ -11,6 +11,8 @@ import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet'
 import { Spinner } from '@/components/ui/spinner'
+import { ThinkingTrail, type TrailStep, type TrailStepStatus } from '@/blocks/ai/thinking-trail'
+import { ShimmerText, formatDuration } from '@/components/thinking-indicator'
 import { Panel } from '../shared'
 import { AiLabel, IconAction, copyText } from './shared'
 
@@ -225,7 +227,7 @@ export function AgentRunsPanel() {
           </span>
         </div>
 
-        <ul aria-label="Agent runs" className="divide-y overflow-hidden rounded-lg border">
+        <ul aria-label="Agent runs" className="@container divide-y overflow-hidden rounded-lg border">
           {runs.map((run) => (
             <RunRow
               key={run.id}
@@ -313,9 +315,10 @@ function RunRow({ run, position, blocker, onAct, onLog }: {
     ? position === 1 ? 'next in line' : `#${position} in line`
     : run.status === 'done' ? `took ${duration(run.elapsed)}` : duration(run.elapsed)
   const showProgress = run.status !== 'queued' && run.status !== 'done'
+  // Once a run has started, its steps show as a thinking trail.
+  const started = run.status !== 'queued' && (run.status === 'running' || run.progress > 0)
 
   let detail: ReactNode = null
-  if (run.status === 'running') detail = <span className="shimmer">{run.steps[run.progress]}…</span>
   if (run.status === 'queued') detail = run.approved ? 'Approved. Continues when a slot is free.' : blocker ? `Starts after “${blocker}”` : 'Starts in a moment'
   if (run.status === 'failed') detail = <span className="text-destructive">{run.error}</span>
   if (run.status === 'stopped') detail = run.log[run.log.length - 1]?.text
@@ -341,9 +344,7 @@ function RunRow({ run, position, blocker, onAct, onLog }: {
         </div>
         <div className="ml-auto flex shrink-0 items-center gap-0.5">
           <RunActions run={run} onAct={onAct} />
-          <IconAction label="View log" onClick={onLog}>
-            <HugeiconsIcon icon={LogsIcon} strokeWidth={2} />
-          </IconAction>
+          <IconAction label="View log" onClick={onLog} icon={LogsIcon} />
         </div>
       </div>
 
@@ -363,6 +364,8 @@ function RunRow({ run, position, blocker, onAct, onLog }: {
         </div>
       )}
 
+      {started && <RunTrail run={run} />}
+
       {run.status === 'approval' ? (
         <div className="bg-status-progress/10 ml-6.5 flex items-start gap-1.5 rounded-md px-2 py-1.5 text-xs">
           <AiLabel className="mt-px" />
@@ -372,6 +375,39 @@ function RunRow({ run, position, blocker, onAct, onLog }: {
         detail && <div className="text-muted-foreground min-w-0 pl-6.5 text-[11px] break-words">{detail}</div>
       )}
     </li>
+  )
+}
+
+// The step a run is on: running, failed there, or stopped there.
+const CURRENT_STEP: Partial<Record<RunStatus, TrailStepStatus>> = { running: 'running', failed: 'error', stopped: 'stopped' }
+
+// The run's steps as a thinking trail: one live line while it works, folded
+// to "Worked for 26s · 12 steps" after, the full plan one click away.
+function RunTrail({ run }: { run: Run }) {
+  const steps = run.steps.map((label, i): TrailStep => ({
+    id: String(i),
+    kind: 'plan',
+    label,
+    status: i < run.progress ? 'done' : i === run.progress ? CURRENT_STEP[run.status] ?? 'pending' : 'pending',
+  }))
+  const ms = run.elapsed * 1000
+  return (
+    <div className="min-w-0 pl-6.5">
+      <ThinkingTrail
+        steps={steps}
+        live={run.status === 'running'}
+        activity={`${run.steps[run.progress]}…`}
+        // The row above already counts the time while it runs.
+        duration={run.status === 'running' ? undefined : ms}
+        summary={
+          run.status === 'approval' ? `Paused for approval after ${formatDuration(ms)}`
+            : run.status === 'stopped' ? `Stopped after ${formatDuration(ms)}`
+            : undefined
+        }
+        meta={run.status === 'done' ? `${run.total} steps` : `${run.progress} of ${run.total} steps`}
+        autoOpen={false}
+      />
+    </div>
   )
 }
 
@@ -416,7 +452,7 @@ function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }
           <li className="flex gap-2.5 text-xs">
             <span className="w-14 shrink-0" />
             <Spinner className="text-brand mt-0.5 size-3.5 shrink-0" />
-            <span className="shimmer text-muted-foreground min-w-0">{run.steps[run.progress]}…</span>
+            <ShimmerText className="min-w-0">{run.steps[run.progress]}…</ShimmerText>
           </li>
         )}
       </ol>

@@ -60,6 +60,28 @@ used by most design systems).
 | Sheet / drawer | A panel that slides in from an edge |
 | Skeleton | Grey shapes shown while content loads |
 
+## AI interface
+| Term | Meaning |
+|---|---|
+| Copilot | An AI assistant inside an app, opened beside the work (the ERP's Ask AI) |
+| Prompt box (composer) | Where you type to the AI: attachments, modes, model, Send or Stop |
+| Model picker | Chooses which AI model answers |
+| Mode toggle | Turns on a way of answering, such as web search or deep thinking |
+| Slash command | A "/" shortcut in the prompt box, such as /summarise |
+| Mention | An "@" reference to a person or record in the prompt |
+| Dictation | Speaking a prompt instead of typing it |
+| Thinking trail | The steps the AI took, shown under its reply: thinking, plan, tool calls ("Worked for 6s · 3 steps · 3 tools") |
+| Tool call | One action the AI ran, such as searching jobs or reading a record, with its input and output |
+| Approval card | A step the AI won't take without your yes, with Approve and Deny |
+| Streaming | The reply appearing word by word as it's written |
+| Follow-up suggestions | Next questions offered under a reply, one click to ask |
+| AI label | A small "AI" tag on content the AI wrote, so people know to check it |
+| File chip | An attached file shown as a small pill: type icon, name, size |
+| Citation | A numbered link from a sentence to the source it came from |
+| Artifact | A document, table or code the AI made, opened in its own panel with versions |
+| Chat history | The list of past chats: projects, pinned, grouped by date |
+| Credits meter | How much of the plan's AI usage is left this month |
+
 ## ERP modules
 | Module | Covers |
 |---|---|

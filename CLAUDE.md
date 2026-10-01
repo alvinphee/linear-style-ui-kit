@@ -46,6 +46,9 @@ linear-style-ui-kit/
     ├── App.tsx                theme, tooltip and toast providers
     ├── styles.css             Tailwind + the Linear-style colour tokens
     ├── blocks/                reusable blocks: props in, no sample data
+    │   ├── ai/                prompt box, chat history, artifact panel, thinking
+    │   │                      trail, chat message, markdown (the AI workspace,
+    │   │                      AI in the product and the ERP copilot share them)
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── filter-bar/        filter menu, filter chips, saved views, search
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
@@ -66,7 +69,11 @@ linear-style-ui-kit/
     │   ├── panel.tsx          the kit's titled card
     │   ├── nav-item.tsx       sidebar row, NavHeading
     │   ├── search-trigger.tsx button that looks like search and opens the palette
-    │   └── shortcut.tsx       keyboard keys, ⌘ or Ctrl by platform
+    │   ├── shortcut.tsx       keyboard keys, ⌘ or Ctrl by platform
+    │   ├── ai-label.tsx       "AI" tag for AI-made content
+    │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
+    │   ├── icon-action.tsx    icon button with a tooltip (copy, retry, close…)
+    │   └── file-chip.tsx      attached file: icon, name, size, remove
     ├── lib/
     │   ├── router.ts          hash routes: #/buttons, #/templates/erp
     │   ├── theme.tsx          light / dark / system switch

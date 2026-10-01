@@ -121,9 +121,7 @@ export function MemoryPanel() {
                     <p className="text-xs break-words">{memory.text}</p>
                     <p className="text-muted-foreground text-[11px]">{memory.source}</p>
                   </div>
-                  <IconAction label={`Forget “${memory.text}”`} onClick={() => forget(memory)}>
-                    <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                  </IconAction>
+                  <IconAction label={`Forget “${memory.text}”`} onClick={() => forget(memory)} icon={Cancel01Icon} />
                 </li>
               ))}
             </ul>

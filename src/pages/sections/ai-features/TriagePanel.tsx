@@ -145,9 +145,7 @@ export function TriagePanel() {
                       </button>
                       <span className="min-w-0 flex-1 truncate font-medium">{row.job.title || 'Untitled job'}</span>
                       <Button size="sm" variant="ghost" onClick={() => accept(row)}>Accept</Button>
-                      <IconAction label={`Dismiss suggestions for ${row.job.id}`} onClick={() => dismiss(row)} className="-ml-1">
-                        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                      </IconAction>
+                      <IconAction label={`Dismiss suggestions for ${row.job.id}`} onClick={() => dismiss(row)} className="-ml-1" icon={Cancel01Icon} />
                     </div>
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                       <AiLabel>AI suggests</AiLabel>

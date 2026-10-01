@@ -171,12 +171,8 @@ export function SummaryPanel() {
               )}
               {summary?.phase === 'done' && (
                 <>
-                  <IconAction label="Regenerate" onClick={summarise}>
-                    <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} />
-                  </IconAction>
-                  <IconAction label="Copy summary" onClick={copy}>
-                    <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
-                  </IconAction>
+                  <IconAction label="Regenerate" onClick={summarise} icon={RefreshIcon} />
+                  <IconAction label="Copy summary" onClick={copy} icon={Copy01Icon} />
                 </>
               )}
             </div>
@@ -235,16 +231,14 @@ export function SummaryPanel() {
                 label="Good summary"
                 pressed={summary.feedback === 'up'}
                 onClick={() => patch(selected.id, { feedback: summary.feedback === 'up' ? null : 'up' })}
-              >
-                <HugeiconsIcon icon={ThumbsUpIcon} strokeWidth={2} />
-              </IconAction>
+                icon={ThumbsUpIcon}
+              />
               <IconAction
                 label="Bad summary"
                 pressed={summary.feedback === 'down'}
                 onClick={() => patch(selected.id, { feedback: summary.feedback === 'down' ? null : 'down' })}
-              >
-                <HugeiconsIcon icon={ThumbsDownIcon} strokeWidth={2} />
-              </IconAction>
+                icon={ThumbsDownIcon}
+              />
             </footer>
           )}
         </section>
