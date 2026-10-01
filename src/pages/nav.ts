@@ -5,7 +5,7 @@ import {
   Audit01Icon, SparklesIcon, AiChat02Icon,
   InputTextIcon, KanbanIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
   PaintBoardIcon, Rocket01Icon, Search01Icon, Settings01Icon, Settings02Icon, SlidersHorizontalIcon,
-  Tag01Icon, Task01Icon, TimelineIcon,
+  SidebarLeftIcon, Tag01Icon, Task01Icon, TimelineIcon,
 } from '@hugeicons/core-free-icons'
 
 export type NavItem = { id: string; label: string; icon: IconSvgElement }
@@ -36,6 +36,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Patterns',
     items: [
+      { id: 'app-shell', label: 'App shells', icon: SidebarLeftIcon },
       { id: 'list', label: 'Job list', icon: LeftToRightListBulletIcon },
       { id: 'board', label: 'Board', icon: KanbanIcon },
       { id: 'issue', label: 'Issue detail', icon: Task01Icon },

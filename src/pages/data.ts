@@ -60,7 +60,7 @@ export const ICON_GROUPS: { title: string; note: string; icons: Icons }[] = [
   },
   {
     title: 'Logistics',
-    note: 'PMS jobs, drivers and deliveries',
+    note: 'Jobs, drivers and deliveries',
     icons: {
       TruckIcon, TruckDeliveryIcon, DeliveryTruck01Icon, ContainerTruckIcon, ShippingTruck01Icon,
       ForkliftIcon, ContainerIcon, PackageIcon, DeliveryBox01Icon, WarehouseIcon, Location01Icon,

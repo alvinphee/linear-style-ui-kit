@@ -59,7 +59,7 @@ type Option = { value: string; label: string; visual: ReactNode }
 
 const PRIORITY_ORDER: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
 
-const FIELD_ORDER: FilterField[] = ['status', 'priority', 'assignee', 'label', 'customer']
+export const FIELD_ORDER: FilterField[] = ['status', 'priority', 'assignee', 'label', 'customer']
 
 export const FIELDS: Record<FilterField, { label: string; icon: IconSvgElement; options: Option[] }> = {
   status: {
@@ -282,7 +282,7 @@ export function FilterBar({
   )
 }
 
-function FilterMenu({ filters, onToggle }: { filters: Filters; onToggle: (field: FilterField, value: string) => void }) {
+export function FilterMenu({ filters, onToggle }: { filters: Filters; onToggle: (field: FilterField, value: string) => void }) {
   const [open, setOpen] = useState(false)
   const [field, setField] = useState<FilterField | null>(null)
   const [query, setQuery] = useState('')
@@ -380,7 +380,7 @@ function FilterMenu({ filters, onToggle }: { filters: Filters; onToggle: (field:
 
 const SEGMENT = 'flex items-center border-l outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40'
 
-function FilterChip({ field, values, onChange }: {
+export function FilterChip({ field, values, onChange }: {
   field: FilterField
   values: string[]
   onChange: (values: string[]) => void

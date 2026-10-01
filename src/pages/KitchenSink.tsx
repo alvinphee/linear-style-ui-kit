@@ -15,6 +15,7 @@ import { PRESETS } from '@/lib/theme'
 import { GO_KEYS, NAV, NAV_GROUPS, goTo } from './nav'
 import ShortcutsSheet from './ShortcutsSheet'
 import ShowcaseSidebar from './ShowcaseSidebar'
+import AppShellSection from './sections/AppShellSection'
 import AuditLogSection from './sections/AuditLogSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
 import AiWorkspaceSection from './sections/AiWorkspaceSection'
@@ -192,6 +193,7 @@ export default function KitchenSink() {
           <NavigationSection />
           <ContentSection />
           <DataTableSection />
+          <AppShellSection />
           <JobListSection />
           <BoardSection />
           <IssueSection />

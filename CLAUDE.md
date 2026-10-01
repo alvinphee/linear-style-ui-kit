@@ -2,9 +2,8 @@
 
 ## What this folder is
 A standalone showcase app: how to use **Hugeicons** with **shadcn/ui** to
-build a sleek, Linear-style SaaS interface. It is its own project, not a
-copy of another app. Keep its content generic SaaS: no another app modules,
-screens or data structures. Nothing here ships.
+build a sleek, Linear-style SaaS interface. It is its own project and is
+not tied to any other app. Keep its content generic SaaS. Nothing here ships.
 
 ## Stack
 - React + Vite + TypeScript
@@ -20,8 +19,8 @@ screens or data structures. Nothing here ships.
 npm install
 npm run dev
 ```
-It opens on http://localhost:5180. That is not 5173, so it never clashes
-with another app's client.
+It opens on http://localhost:5180. That is not Vite's default 5173, so it
+never clashes with another Vite app.
 
 Add a shadcn component (it arrives with Hugeicons already):
 ```bash
@@ -73,6 +72,8 @@ linear-style-ui-kit/
             ├── NavigationSection.tsx    breadcrumb, pagination, menus, panes
             ├── ContentSection.tsx    file upload, Markdown editor, reorder list
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
+            ├── AppShellSection.tsx   sidebar and header variations, mixed live
+            ├── app-shell/             its grouped list and board, Display and notifications menus
             ├── JobListSection.tsx    grouped list with bulk select
             ├── FilterBar.tsx         filter chips, saved views, display options
             ├── BoardSection.tsx      Kanban with drag and drop
@@ -161,7 +162,8 @@ Linear name, logo or assets in the app.
 - `CommandDialog` does not wrap its children in `<Command>` in this shadcn
   version. Put `<Command>` inside it yourself, or the page crashes when the
   menu opens.
-- Do not change another app from here. This folder is separate.
+- This folder stands alone. Do not link it to, compare it with, merge it
+  into or change any other project, unless the user names that project.
 - Local only: no git branches, no deploys, no AWS.
 
 ## Reinstalling the skill on Windows
@@ -180,5 +182,4 @@ Put `SKILL.md` in `.claude/skills/hugeicons/`, and put the two lists in
 `.claude/skills/hugeicons/references/`.
 
 ## Findings
-Record what we learn in `docs/findings.md` as we go. That file becomes the
-starting point for a another app spec if we adopt Hugeicons.
+Record what we learn in `docs/findings.md` as we go.

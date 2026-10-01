@@ -103,7 +103,7 @@ export default function IconsSection() {
 
   return (
     <>
-      <Section id="icons" title="Icons" description="Hugeicons free set, grouped for another app modules">
+      <Section id="icons" title="Icons" description="Hugeicons free set, grouped by where you would use them">
         <Panel title="Controls" note="Apply to every icon tile below" wide>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
             <div className="grid w-40 gap-2">
