@@ -21,7 +21,8 @@ import {
 import { LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 // One set of job actions and one side panel, shared by the job list and the
 // board: right-click, the … button and the peek all offer the same things.
@@ -141,7 +142,7 @@ function JobMenuItems({ job, kit, onOpen, onOpenFull }: { job: Job; kit: Kit } &
             </RadioItem>
             {PEOPLE.map((name) => (
               <RadioItem key={name} value={name}>
-                <Initials name={name} className="size-4" /> {name}
+                <UserAvatar name={name} className="size-4" /> {name}
               </RadioItem>
             ))}
           </RadioGroup>
@@ -327,7 +328,7 @@ function JobPeekBody({ job, order, onNavigate, onOpenFull }: {
           <PropertyMenu
             label="Assignee"
             trigger={job.driver
-              ? <><Initials name={job.driver} className="size-4" /> {job.driver}</>
+              ? <><UserAvatar name={job.driver} className="size-4" /> {job.driver}</>
               : <><HugeiconsIcon icon={UserIcon} strokeWidth={2} /> Assign</>}
           >
             <DropdownMenuRadioGroup
@@ -339,7 +340,7 @@ function JobPeekBody({ job, order, onNavigate, onOpenFull }: {
               </DropdownMenuRadioItem>
               {PEOPLE.map((name) => (
                 <DropdownMenuRadioItem key={name} value={name}>
-                  <Initials name={name} className="size-4" /> {name}
+                  <UserAvatar name={name} className="size-4" /> {name}
                 </DropdownMenuRadioItem>
               ))}
             </DropdownMenuRadioGroup>

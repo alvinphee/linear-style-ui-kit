@@ -15,7 +15,8 @@ import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '
 import { Kbd } from '@/components/ui/kbd'
 import type { Status } from '../data'
 import { Panel, Section } from './shared'
-import { Initials, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { StatusIcon } from './StatusSection'
 
 export default function OnboardingSection() {
   return (
@@ -277,7 +278,7 @@ function NoResultsPanel() {
                 <li key={p.name} className="flex h-9 items-center gap-2.5 border-b px-3 text-xs last:border-b-0">
                   <StatusIcon status={p.status} />
                   <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
-                  <Initials name={p.lead} className="size-5" />
+                  <UserAvatar name={p.lead} className="size-5" />
                 </li>
               ))}
             </ul>

@@ -6,7 +6,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/person'
+import { MOD } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Textarea } from '@/components/ui/textarea'
@@ -46,8 +47,6 @@ export type RecordNavigation = {
   onPrevious?: () => void
   onNext?: () => void
 }
-
-const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
 
 const CloseContext = createContext<() => void>(() => {})
 
@@ -204,9 +203,7 @@ export function RecordSheetContent({
                 {items.map((a) => (
                   <li key={a.id} className="text-muted-foreground flex gap-2">
                     {a.avatar ?? (a.actor ? (
-                      <Avatar className="size-4 shrink-0">
-                        <AvatarFallback className="text-[10px]">{a.actor.slice(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar name={a.actor} className="size-4" />
                     ) : (
                       <span aria-hidden="true" className="grid size-4 shrink-0 place-items-center">
                         <span className="bg-muted-foreground/50 size-1.5 rounded-full" />
@@ -293,7 +290,7 @@ function CommentBox({ onComment, placeholder, label }: {
       />
       <div className="flex items-center justify-end gap-1 px-2 pb-2">
         <span className="text-muted-foreground mr-auto hidden pl-1 text-[11px] sm:inline">
-          {IS_MAC ? '⌘' : 'Ctrl'} + Enter to send
+          {MOD} + Enter to send
         </span>
         <Button variant={empty ? 'secondary' : 'default'} disabled={empty} onClick={submit}>
           {label}

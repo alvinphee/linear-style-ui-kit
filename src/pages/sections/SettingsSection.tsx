@@ -22,8 +22,9 @@ import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { PageHeader } from '@/components/page-header'
+import { UserAvatar } from '@/components/person'
 import { Section } from './shared'
-import { Initials } from './StatusSection'
 
 const DEMO = 'Demo only. Nothing was sent.'
 
@@ -94,18 +95,6 @@ export default function SettingsSection() {
   )
 }
 
-function PageHeader({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
-      <div className="min-w-0">
-        <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-        <p className="text-muted-foreground text-xs">{description}</p>
-      </div>
-      {action}
-    </div>
-  )
-}
-
 function SubHeading({ children }: { children: ReactNode }) {
   return <h4 className="mb-2 text-xs font-medium">{children}</h4>
 }
@@ -135,7 +124,7 @@ function ProfilePage() {
         toast.success('Profile saved', { description: DEMO })
       }}
     >
-      <PageHeader title="Profile" description="How you appear to your teammates." />
+      <PageHeader title="Profile" description="How you appear to your teammates." size="sm" as="h3" className="border-b pb-4" />
 
       <div className="flex flex-wrap items-center gap-3">
         <Avatar size="lg">
@@ -229,7 +218,10 @@ function MembersPage({ members, setMembers }: {
       <PageHeader
         title="Members"
         description={`${members.length} of ${SEATS} seats used.`}
-        action={<InviteDialog />}
+        actions={<InviteDialog />}
+        size="sm"
+        as="h3"
+        className="border-b pb-4"
       />
 
       <InputGroup className="sm:max-w-xs">
@@ -260,7 +252,7 @@ function MembersPage({ members, setMembers }: {
               <TableRow key={m.id}>
                 <TableCell className="px-3">
                   <div className="flex items-center gap-2">
-                    <Initials name={m.name} />
+                    <UserAvatar name={m.name} />
                     <div className="grid min-w-0">
                       <span className="font-medium">
                         {m.name}
@@ -406,7 +398,7 @@ function BillingPage({ seats }: { seats: number }) {
 
   return (
     <div className="grid grid-cols-1 gap-5">
-      <PageHeader title="Billing" description="Your plan, usage, payment method and invoices." />
+      <PageHeader title="Billing" description="Your plan, usage, payment method and invoices." size="sm" as="h3" className="border-b pb-4" />
 
       <div className="bg-subtle flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3.5">
         <div className="grid min-w-0 gap-0.5">
@@ -550,7 +542,7 @@ const CHANNELS: {
 function NotificationsPage() {
   return (
     <div className="grid grid-cols-1 max-w-2xl gap-4">
-      <PageHeader title="Notifications" description="Choose what reaches you, and where." />
+      <PageHeader title="Notifications" description="Choose what reaches you, and where." size="sm" as="h3" className="border-b pb-4" />
 
       {CHANNELS.map((c) => (
         <section key={c.id} aria-labelledby={`notif-${c.id}`} className="overflow-hidden rounded-lg border">

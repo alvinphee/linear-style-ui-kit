@@ -1,10 +1,16 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
+import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  ArrowRight01Icon, ArrowTurnBackwardIcon, CheckmarkBadge01Icon, CommandIcon, InboxIcon, Search01Icon,
-  Tag01Icon, Tick02Icon, UserIcon,
+  ArrowRight01Icon, ArrowTurnBackwardIcon, Calculator01Icon, CheckmarkBadge01Icon, CommandIcon, InboxIcon,
+  PackageIcon, Search01Icon, Shield01Icon, ShoppingCart01Icon, Tag01Icon, Target02Icon, Tick02Icon, UserGroupIcon,
+  UserIcon,
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { DeltaBadge } from '@/components/delta-badge'
+import { IconMark, LetterMark } from '@/components/mark'
+import { Person, UserAvatar } from '@/components/person'
+import { Sparkline } from '@/components/sparkline'
+import { StatusBadge, type Tone } from '@/components/status-badge'
 import { Avatar, AvatarBadge, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -35,6 +41,8 @@ type ProgressTone = (typeof PROGRESS_TONES)[number]
 type SkeletonShape = (typeof SKELETON_SHAPES)[number]
 
 const orDefault = (value: string) => (value === 'default' ? undefined : value)
+// Props equal to their default stay out of the snippet.
+const unless = (value: string, fallback: string) => (value === fallback ? undefined : value)
 const capitalise = (s: string) => s[0].toUpperCase() + s.slice(1)
 
 const STATUS_DOT: Record<(typeof STATUSES)[number], { label: string; dot: string }> = {
@@ -85,6 +93,40 @@ function badgeCode(v: Values) {
     : jsx('Badge', { variant }, inner)
   return `${head}\n\n${body}`
 }
+
+// --- StatusBadge ---------------------------------------------------------
+
+const TONES = ['neutral', 'info', 'progress', 'success', 'warning', 'danger'] as const satisfies readonly Tone[]
+const STATUS_BADGE_KINDS = ['soft', 'outline'] as const
+
+type StatusBadgeKind = (typeof STATUS_BADGE_KINDS)[number]
+
+// A status that reads right in each tone. Which status gets which tone is
+// the app's choice; these are the usual ones.
+const TONE_LABEL: Record<Tone, string> = {
+  neutral: 'Draft',
+  info: 'Sent',
+  progress: 'In progress',
+  success: 'Paid',
+  warning: 'Awaiting approval',
+  danger: 'Overdue',
+}
+
+function statusBadgeCode(v: Values) {
+  const body = jsx('StatusBadge', {
+    tone: unless(str(v, 'tone'), 'neutral'),
+    variant: unless(str(v, 'variant'), 'soft'),
+    dot: bool(v, 'dot') ? undefined : '{false}',
+  }, str(v, 'label') || 'Status')
+  return `${imports({ '@/components/status-badge': ['StatusBadge'] })}\n\n${body}`
+}
+
+// --- DeltaBadge ----------------------------------------------------------
+
+const DELTA_DIRECTIONS = ['up', 'down'] as const
+// auto leaves tone out, so it follows the direction: up good, down bad.
+const DELTA_TONES = ['auto', 'positive', 'negative', 'warning', 'neutral'] as const
+const DELTA_TEXT = { up: '+12.4%', down: '−3.1%' }
 
 // --- Avatar --------------------------------------------------------------
 
@@ -140,6 +182,61 @@ function avatarCode(v: Values) {
   return `${head}\n\n${jsx('Avatar', { size: orDefault(size) }, [fallback, badgeTag])}`
 }
 
+// --- UserAvatar and Person -----------------------------------------------
+
+const PERSON_KINDS = ['Person', 'UserAvatar'] as const
+// default is the component's own size: size-6 alone, size-5 beside a name.
+const PERSON_SIZES = ['default', 'size-4', 'size-5', 'size-6', 'size-8'] as const
+
+type PersonKind = (typeof PERSON_KINDS)[number]
+type PersonSize = (typeof PERSON_SIZES)[number]
+
+const sizeClass = (size: string) => (size === 'default' ? undefined : size)
+
+function DemoPerson({ kind, name, size }: { kind: PersonKind; name: string; size: PersonSize }) {
+  if (kind === 'UserAvatar') return <UserAvatar name={name} className={sizeClass(size)} />
+  return <Person name={name} avatarClassName={sizeClass(size)} />
+}
+
+function personCode(v: Values) {
+  const kind = str(v, 'kind') as PersonKind
+  // jsx() drops empty strings, so an empty name is written as an expression.
+  const name = str(v, 'name') || "{''}"
+  const size = sizeClass(str(v, 'size'))
+  const body = kind === 'UserAvatar'
+    ? jsx('UserAvatar', { name, className: size })
+    : jsx('Person', { name, avatarClassName: size })
+  return `${imports({ '@/components/person': [kind] })}\n\n${body}`
+}
+
+// --- LetterMark and IconMark ---------------------------------------------
+
+// The hues the kit's workspaces and ERP modules use, plus the theme accent.
+const MARK_COLOURS = {
+  indigo: 'oklch(0.6 0.17 265)',
+  green: 'oklch(0.64 0.15 155)',
+  amber: 'oklch(0.7 0.14 65)',
+  orange: 'oklch(0.64 0.16 35)',
+  teal: 'oklch(0.62 0.12 200)',
+  pink: 'oklch(0.64 0.16 340)',
+  grey: 'oklch(0.55 0.02 260)',
+  brand: 'var(--brand)',
+} as const
+const MARK_COLOUR_NAMES = Object.keys(MARK_COLOURS) as MarkColour[]
+const LETTER_MARK_SIZES = ['xs', 'sm', 'md', 'lg'] as const
+const ICON_MARK_SIZES = ['sm', 'md', 'lg'] as const
+const MARK_KINDS = ['LetterMark', 'IconMark'] as const
+const MARK_ICONS: Record<string, IconSvgElement> = {
+  Target02Icon, ShoppingCart01Icon, PackageIcon, Calculator01Icon, UserGroupIcon, Shield01Icon,
+}
+
+type MarkColour = keyof typeof MARK_COLOURS
+type LetterMarkSize = (typeof LETTER_MARK_SIZES)[number]
+type IconMarkSize = (typeof ICON_MARK_SIZES)[number]
+
+const markColour = (v: Values) => MARK_COLOURS[str(v, 'colour') as MarkColour]
+const markLetters = (v: Values) => str(v, 'text').trim().slice(0, 3) || 'AT'
+
 // --- Progress ------------------------------------------------------------
 
 // Progress has no tone prop: these recolour its indicator from the root.
@@ -165,6 +262,14 @@ function LiveProgress() {
     </div>
   )
 }
+
+// --- Sparkline -----------------------------------------------------------
+
+// Ten points of this period and the one before. Made up and fixed.
+const SPARK_UP = [12, 14, 13, 17, 16, 19, 22, 21, 24, 27]
+const SPARK_DOWN = [27, 25, 26, 22, 23, 19, 18, 19, 15, 13]
+const SPARK_FLAT = [18, 19, 17, 18, 20, 19, 18, 19, 18, 19]
+const SPARK_PREVIOUS = [15, 16, 15, 17, 18, 17, 19, 18, 19, 20]
 
 // --- Skeleton ------------------------------------------------------------
 
@@ -313,6 +418,41 @@ export default function StatusDemos() {
       />
 
       <Playground
+        title="StatusBadge"
+        description="tone, variant and dot"
+        controls={[
+          { kind: 'select', name: 'tone', label: 'Tone', options: TONES, initial: 'warning' },
+          { kind: 'select', name: 'variant', label: 'Variant', options: STATUS_BADGE_KINDS, initial: 'soft' },
+          { kind: 'switch', name: 'dot', label: 'Dot', initial: true },
+          { kind: 'text', name: 'label', label: 'Label', initial: 'Awaiting approval' },
+        ]}
+        render={(v) => (
+          <StatusBadge tone={str(v, 'tone') as Tone} variant={str(v, 'variant') as StatusBadgeKind} dot={bool(v, 'dot')}>
+            {str(v, 'label') || 'Status'}
+          </StatusBadge>
+        )}
+        code={statusBadgeCode}
+      />
+
+      <Variants
+        title="StatusBadge tones"
+        note="tone × variant. Outline keeps the tone in the dot only."
+        rows={{ name: 'tone', values: TONES }}
+        cols={{ name: 'variant', values: STATUS_BADGE_KINDS }}
+        render={(tone, variant) => <StatusBadge tone={tone} variant={variant}>{TONE_LABEL[tone]}</StatusBadge>}
+      />
+
+      <Variants
+        title="DeltaBadge"
+        note="direction × tone. auto leaves tone out: up is good news, down bad."
+        rows={{ name: 'direction', values: DELTA_DIRECTIONS }}
+        cols={{ name: 'tone', values: DELTA_TONES }}
+        render={(direction, tone) => (
+          <DeltaBadge direction={direction} text={DELTA_TEXT[direction]} tone={tone === 'auto' ? undefined : tone} />
+        )}
+      />
+
+      <Playground
         title="Avatar"
         description="size, fallback and badge (no images)"
         controls={[
@@ -394,6 +534,78 @@ export default function StatusDemos() {
       />
 
       <Playground
+        title="Person"
+        description="UserAvatar, or the avatar with the name. Clear the name for the dash."
+        controls={[
+          { kind: 'select', name: 'kind', label: 'Component', options: PERSON_KINDS, initial: 'Person' },
+          { kind: 'text', name: 'name', label: 'Name', initial: 'Maya Ross' },
+          { kind: 'select', name: 'size', label: 'Avatar size (className)', options: PERSON_SIZES, initial: 'default' },
+        ]}
+        render={(v) => (
+          // A cell-sized box, so a long name truncates the way it does in a table.
+          <div className="flex max-w-48 min-w-0">
+            <DemoPerson kind={str(v, 'kind') as PersonKind} name={str(v, 'name')} size={str(v, 'size') as PersonSize} />
+          </div>
+        )}
+        code={personCode}
+      />
+
+      <Variants
+        title="Person sizes"
+        note="size class × component. Person passes it as avatarClassName."
+        rows={{ name: 'size', values: PERSON_SIZES }}
+        cols={{ name: 'component', values: PERSON_KINDS }}
+        render={(size, kind = 'Person') => <DemoPerson kind={kind} name="Maya Ross" size={size} />}
+      />
+
+      <Playground
+        title="LetterMark"
+        description="letters on a solid colour, for a workspace, company or team"
+        controls={[
+          { kind: 'text', name: 'text', label: 'Letters (up to 3)', initial: 'AT' },
+          { kind: 'select', name: 'colour', label: 'Colour', options: MARK_COLOUR_NAMES, initial: 'indigo' },
+          { kind: 'select', name: 'size', label: 'Size', options: LETTER_MARK_SIZES, initial: 'md' },
+        ]}
+        render={(v) => <LetterMark text={markLetters(v)} colour={markColour(v)} size={str(v, 'size') as LetterMarkSize} />}
+        code={(v) => `${imports({ '@/components/mark': ['LetterMark'] })}\n\n${jsx('LetterMark', {
+          text: markLetters(v),
+          colour: markColour(v),
+          size: unless(str(v, 'size'), 'sm'),
+        })}`}
+      />
+
+      <Playground
+        title="IconMark"
+        description="an icon on a tint of a colour, for a module or app"
+        controls={[
+          { kind: 'select', name: 'icon', label: 'Icon', options: Object.keys(MARK_ICONS), initial: 'Target02Icon' },
+          { kind: 'select', name: 'colour', label: 'Colour', options: MARK_COLOUR_NAMES, initial: 'indigo' },
+          { kind: 'select', name: 'size', label: 'Size', options: ICON_MARK_SIZES, initial: 'md' },
+        ]}
+        render={(v) => <IconMark icon={MARK_ICONS[str(v, 'icon')]} colour={markColour(v)} size={str(v, 'size') as IconMarkSize} />}
+        code={(v) => `${imports({
+          '@hugeicons/core-free-icons': [str(v, 'icon')],
+          '@/components/mark': ['IconMark'],
+        })}\n\n${jsx('IconMark', {
+          icon: `{${str(v, 'icon')}}`,
+          colour: markColour(v),
+          size: unless(str(v, 'size'), 'md'),
+        })}`}
+      />
+
+      <Variants
+        title="Mark sizes"
+        note="size × component. IconMark has no xs."
+        rows={{ name: 'size', values: LETTER_MARK_SIZES }}
+        cols={{ name: 'component', values: MARK_KINDS }}
+        render={(size, kind) => {
+          if (kind === 'LetterMark') return <LetterMark text="AT" colour={MARK_COLOURS.indigo} size={size} />
+          if (size === 'xs') return <span className="text-muted-foreground text-[11px]">—</span>
+          return <IconMark icon={Target02Icon} colour={MARK_COLOURS.indigo} size={size} />
+        }}
+      />
+
+      <Playground
         title="Progress"
         description="value, tone and label"
         controls={[
@@ -461,6 +673,34 @@ export default function StatusDemos() {
             ),
           },
           { label: 'live', node: <LiveProgress /> },
+        ]}
+      />
+
+      <Gallery
+        title="Sparkline"
+        note="The dashed line is the period before. Decorative: keep the number beside it."
+        items={[
+          { label: 'tone="positive"', node: <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} /> },
+          { label: 'no previous', node: <Sparkline data={SPARK_UP} /> },
+          { label: 'tone="negative"', node: <Sparkline data={SPARK_DOWN} previous={SPARK_PREVIOUS} tone="negative" /> },
+          { label: 'tone="warning"', node: <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} tone="warning" /> },
+          { label: 'tone="neutral"', node: <Sparkline data={SPARK_FLAT} previous={SPARK_PREVIOUS} tone="neutral" /> },
+          { label: 'h-12 w-40', node: <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} className="h-12 w-40" /> },
+          {
+            label: 'beside its number',
+            node: (
+              <div className="flex items-end gap-3">
+                <div className="grid gap-0.5">
+                  <span className="text-muted-foreground text-[11px]">Open pipeline</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-base font-semibold tabular-nums">$48.2k</span>
+                    <DeltaBadge direction="up" text="+12.4%" />
+                  </span>
+                </div>
+                <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} />
+              </div>
+            ),
+          },
         ]}
       />
 

@@ -6,7 +6,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import type { Status } from '../data'
 import { Section } from './shared'
-import { Initials, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { StatusIcon } from './StatusSection'
 
 // All dates are UTC midnights so day maths never trips over a DST change.
 const DAY = 86_400_000
@@ -256,7 +257,7 @@ function ProjectRow({ project: p, px, onJump }: { project: Project; px: number; 
       <div className="bg-card sticky left-0 z-20 flex w-(--label-w) shrink-0 items-center gap-2 border-r px-3">
         <StatusIcon status={p.status} />
         <span className="min-w-0 flex-1 truncate text-xs font-medium">{p.name}</span>
-        <Initials name={p.lead} className="hidden size-5 sm:flex" />
+        <UserAvatar name={p.lead} className="hidden size-5 sm:flex" />
       </div>
 
       <div className="relative shrink-0" style={{ width: TOTAL_DAYS * px }}>

@@ -37,7 +37,8 @@ export const daysBetween = (from: string, to: string) =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
 
 // Every status in the template, by tone. A status not listed is neutral.
-export type Tone = 'neutral' | 'info' | 'progress' | 'success' | 'warning' | 'danger'
+export type { Tone } from '@/components/status-badge'
+import type { Tone } from '@/components/status-badge'
 
 const TONES: Record<string, Tone> = {
   // Good outcomes
@@ -58,21 +59,5 @@ const TONES: Record<string, Tone> = {
 
 export const toneOf = (status: string): Tone => TONES[status] ?? 'neutral'
 
-// Badge colours per tone, from the kit's status tokens.
-export const TONE_CLASS: Record<Tone, string> = {
-  neutral: 'bg-muted text-muted-foreground',
-  info: 'bg-[color-mix(in_oklch,var(--brand),transparent_86%)] text-brand',
-  progress: 'bg-[color-mix(in_oklch,var(--status-progress),transparent_85%)] text-status-progress',
-  success: 'bg-[color-mix(in_oklch,var(--status-done),transparent_85%)] text-status-done',
-  warning: 'bg-[color-mix(in_oklch,oklch(0.75_0.15_75),transparent_82%)] text-[oklch(0.62_0.14_70)] dark:text-[oklch(0.8_0.14_80)]',
-  danger: 'bg-destructive/10 text-destructive',
-}
-
-export const TONE_DOT: Record<Tone, string> = {
-  neutral: 'bg-muted-foreground/50',
-  info: 'bg-brand',
-  progress: 'bg-status-progress',
-  success: 'bg-status-done',
-  warning: 'bg-[oklch(0.75_0.15_75)]',
-  danger: 'bg-destructive',
-}
+// Badge and dot colours per tone are the kit's (components/status-badge).
+export { TONE_CLASS, TONE_DOT } from '@/components/status-badge'

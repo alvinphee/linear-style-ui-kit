@@ -17,13 +17,17 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Progress } from '@/components/ui/progress'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { LetterMark } from '@/components/mark'
+import { NavItem } from '@/components/nav-item'
+import { UserAvatar } from '@/components/person'
+import { SearchTrigger } from '@/components/search-trigger'
+import { MOD, Shortcut } from '@/components/shortcut'
 import { PEOPLE, type Job, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { DisplayMenu } from './app-shell/DisplayMenu'
@@ -35,7 +39,6 @@ import { QuickCreateDialog } from './FormModalsSection'
 import { JobPeek, openFullPage } from './JobActions'
 import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
 import { Section } from './shared'
-import { Initials } from './StatusSection'
 
 type SidebarStyle = 'teams' | 'rail' | 'inset' | 'icons' | 'top'
 type HeaderStyle = 'breadcrumb' | 'title' | 'toolbar' | 'search' | 'crumbs-search'
@@ -367,42 +370,6 @@ function Picker({ label, value, options, onChange }: {
 
 // Shared bits
 
-function NavItem({ icon, label, active, count, iconOnly, mark, onClick }: {
-  icon: IconSvgElement
-  label: string
-  active?: boolean
-  count?: number
-  iconOnly?: boolean
-  mark?: ReactNode
-  onClick: () => void
-}) {
-  const button = (
-    <button
-      type="button"
-      onClick={onClick}
-      data-active={!!active}
-      aria-current={active ? 'page' : undefined}
-      aria-label={iconOnly ? label : undefined}
-      className={cn(
-        'hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground focus-visible:ring-ring/50 relative flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2',
-        iconOnly && 'justify-center px-0',
-      )}
-    >
-      {mark ?? <HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5 shrink-0 opacity-80" />}
-      {!iconOnly && <span className="truncate">{label}</span>}
-      {!iconOnly && !!count && <span className="text-muted-foreground ml-auto text-[11px] tabular-nums">{count}</span>}
-      {iconOnly && !!count && <span className="bg-primary absolute top-1 right-1.5 size-1.5 rounded-full" />}
-    </button>
-  )
-  if (!iconOnly) return button
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="right">{label}{count ? ` · ${count}` : ''}</TooltipContent>
-    </Tooltip>
-  )
-}
-
 function Group({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   const [open, setOpen] = useState(true)
   return (
@@ -424,17 +391,6 @@ function Group({ title, children, action }: { title: string; children: ReactNode
   )
 }
 
-function Mark({ short, colour, className }: { short: string; colour: string; className?: string }) {
-  return (
-    <span
-      className={cn('grid size-4 shrink-0 place-items-center rounded-[4px] text-[8px] font-semibold text-white', className)}
-      style={{ background: colour }}
-    >
-      {short}
-    </span>
-  )
-}
-
 type Ws = { workspace: (typeof WORKSPACES)[number]; setWorkspace: (w: (typeof WORKSPACES)[number]) => void }
 
 function WorkspaceMenu({ workspace, setWorkspace, children }: Ws & { children: ReactNode }) {
@@ -445,7 +401,7 @@ function WorkspaceMenu({ workspace, setWorkspace, children }: Ws & { children: R
         <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
         {WORKSPACES.map((w) => (
           <DropdownMenuItem key={w.name} onSelect={() => setWorkspace(w)}>
-            <Mark short={w.name.slice(0, 1)} colour={w.colour} className="size-5 text-[9px]" />
+            <LetterMark size="xs" text={w.name.slice(0, 1)} colour={w.colour} className="size-5 text-[9px]" />
             <span className="flex-1">{w.name}</span>
             {w.name === workspace.name && <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />}
           </DropdownMenuItem>
@@ -456,23 +412,6 @@ function WorkspaceMenu({ workspace, setWorkspace, children }: Ws & { children: R
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
-
-function SearchButton() {
-  return (
-    <button
-      type="button"
-      onClick={() => toast('Search', { description: 'Ctrl+K opens the real command menu.' })}
-      className="text-muted-foreground hover:bg-sidebar-accent flex h-7 w-full items-center gap-2 rounded-md border px-2 text-xs"
-    >
-      <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="size-3.5" />
-      Search…
-      <KbdGroup className="ml-auto">
-        <Kbd>Ctrl</Kbd>
-        <Kbd>K</Kbd>
-      </KbdGroup>
-    </button>
   )
 }
 
@@ -488,7 +427,7 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
             type="button"
             className="hover:bg-sidebar-accent flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-left outline-none focus-visible:ring-2"
           >
-            <Mark short={ws.workspace.name.slice(0, 1)} colour={ws.workspace.colour} className="size-5 text-[9px]" />
+            <LetterMark size="xs" text={ws.workspace.name.slice(0, 1)} colour={ws.workspace.colour} className="size-5 text-[9px]" />
             <span className="truncate text-[13px] font-medium">{ws.workspace.name}</span>
             <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0" />
           </button>
@@ -499,10 +438,15 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
               <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>New issue <span className="ml-1 opacity-70">C</span></TooltipContent>
+          <TooltipContent>New issue <Shortcut keys={['C']} className="ml-1" /></TooltipContent>
         </Tooltip>
       </div>
-      <div className="px-2"><SearchButton /></div>
+      <div className="px-2">
+        <SearchTrigger
+          onClick={() => toast('Search', { description: `${MOD}+K opens the real command menu.` })}
+          className="hover:bg-sidebar-accent hover:text-muted-foreground"
+        />
+      </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         <div className="mt-3 grid gap-px">
@@ -532,7 +476,7 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
                   onClick={() => setClosed((c) => ({ ...c, [team.id]: open }))}
                   className="hover:bg-sidebar-accent flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-xs"
                 >
-                  <Mark short={team.short} colour={team.colour} />
+                  <LetterMark size="xs" text={team.short} colour={team.colour} />
                   <span className="truncate">{team.name}</span>
                   <HugeiconsIcon icon={open ? ArrowDown01Icon : ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3" />
                 </button>
@@ -598,11 +542,11 @@ function RailSidebar({ page, onPage }: Nav) {
   return (
     <>
       <div className="bg-sidebar flex w-12 shrink-0 flex-col items-center gap-1 border-r py-2">
-        <Mark short="A" colour="var(--primary)" className="mb-2 size-6 text-[10px]" />
+        <LetterMark size="xs" text="A" colour="var(--primary)" className="mb-2 size-6 text-[10px]" />
         {RAIL.map(railButton)}
         <div className="mt-auto grid gap-1">
           {railButton(RAIL_SETTINGS)}
-          <Initials name={PEOPLE[0]} className="mt-1" />
+          <UserAvatar name={PEOPLE[0]} className="mt-1" />
         </div>
       </div>
       <aside className="bg-sidebar/40 text-sidebar-foreground flex w-48 shrink-0 flex-col border-r">
@@ -624,7 +568,7 @@ function RailSidebar({ page, onPage }: Nav) {
                 <NavItem
                   key={t.id}
                   icon={Task01Icon}
-                  mark={<Mark short={t.short} colour={t.colour} />}
+                  mark={<LetterMark size="xs" text={t.short} colour={t.colour} />}
                   label={t.name}
                   active={page === `${t.id}:issues` && !current.links.some((l) => l.id === page)}
                   onClick={() => onPage(`${t.id}:issues`)}
@@ -650,7 +594,7 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
             type="button"
             className="hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-md p-1.5 text-left outline-none focus-visible:ring-2"
           >
-            <Mark short={ws.workspace.name.slice(0, 1)} colour={ws.workspace.colour} className="size-7 rounded-md text-xs" />
+            <LetterMark size="xs" text={ws.workspace.name.slice(0, 1)} colour={ws.workspace.colour} className="size-7 rounded-md text-xs" />
             <span className="grid min-w-0 flex-1 leading-tight">
               <span className="truncate text-[13px] font-medium">{ws.workspace.name}</span>
               <span className="text-muted-foreground truncate text-[11px]">{ws.workspace.plan}</span>
@@ -681,7 +625,7 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
             <NavItem
               key={t.id}
               icon={Task01Icon}
-              mark={<Mark short={t.short} colour={t.colour} />}
+              mark={<LetterMark size="xs" text={t.short} colour={t.colour} />}
               label={t.name}
               active={page === `${t.id}:issues`}
               onClick={() => onPage(`${t.id}:issues`)}
@@ -702,7 +646,7 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="hover:bg-sidebar-accent flex items-center gap-2 rounded-md p-1.5 text-left outline-none focus-visible:ring-2">
-              <Initials name={PEOPLE[0]} className="size-7" />
+              <UserAvatar name={PEOPLE[0]} className="size-7" />
               <span className="grid min-w-0 flex-1 leading-tight">
                 <span className="truncate text-xs font-medium">{PEOPLE[0]}</span>
                 <span className="text-muted-foreground truncate text-[11px]">ravi@example.com</span>
@@ -731,7 +675,7 @@ function IconsSidebar({ page, onPage, iconOnly, onToggle }: Nav & { iconOnly: bo
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <div className={cn('flex h-11 shrink-0 items-center gap-2', iconOnly ? 'justify-center' : 'px-3')}>
-        <Mark short="A" colour="var(--primary)" className="size-6 text-[10px]" />
+        <LetterMark size="xs" text="A" colour="var(--primary)" className="size-6 text-[10px]" />
         {!iconOnly && <span className="truncate text-[13px] font-medium">Acme</span>}
       </div>
       <nav className="grid min-h-0 flex-1 content-start gap-px overflow-y-auto px-2">
@@ -782,7 +726,7 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
   return (
     <div className="shrink-0 border-b">
       <div className="flex h-11 items-center gap-1.5 px-3">
-        <Mark short="A" colour="var(--primary)" className="size-6 text-[10px]" />
+        <LetterMark size="xs" text="A" colour="var(--primary)" className="size-6 text-[10px]" />
         <span className="text-muted-foreground/40 px-0.5 text-base font-light">/</span>
         <WorkspaceMenu {...ws}>
           <button type="button" className="hover:bg-accent flex h-7 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-xs font-medium">
@@ -795,7 +739,7 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button type="button" className="hover:bg-accent hidden h-7 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-xs font-medium @md:flex">
-              <Mark short={team.short} colour={team.colour} />
+              <LetterMark size="xs" text={team.short} colour={team.colour} />
               <span className="truncate">{team.name}</span>
               <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3" />
             </button>
@@ -804,7 +748,7 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
             <DropdownMenuLabel>Teams</DropdownMenuLabel>
             {TEAMS.map((t) => (
               <DropdownMenuItem key={t.id} onSelect={() => onPage(`${t.id}:issues`)}>
-                <Mark short={t.short} colour={t.colour} />
+                <LetterMark size="xs" text={t.short} colour={t.colour} />
                 <span className="flex-1">{t.name}</span>
                 {t.id === team.id && <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />}
               </DropdownMenuItem>
@@ -816,7 +760,7 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
             <HugeiconsIcon icon={Message01Icon} strokeWidth={2} data-icon="inline-start" /> Feedback
           </Button>
           <NotificationsMenu notes={notes} onOpenJob={onOpenJob} />
-          <Initials name={PEOPLE[0]} />
+          <UserAvatar name={PEOPLE[0]} />
         </div>
       </div>
       <nav className="flex gap-1 overflow-x-auto px-2 [scrollbar-width:none]" aria-label="Sections">
@@ -1014,7 +958,7 @@ function ContentHeader({ variant, ...p }: HeaderProps & { variant: HeaderStyle }
                 <HugeiconsIcon icon={HelpCircleIcon} strokeWidth={2} />
               </Button>
               <NotificationsMenu notes={p.notes} onOpenJob={p.onOpenJob} />
-              <Initials name={PEOPLE[0]} />
+              <UserAvatar name={PEOPLE[0]} />
             </>
           )}
         </div>
@@ -1031,7 +975,7 @@ function ContentHeader({ variant, ...p }: HeaderProps & { variant: HeaderStyle }
       <Crumbs info={info} long={p.longTrail} onPage={p.onPage} more />
       <div className="ml-auto flex items-center gap-1.5">
         <AvatarGroup className="mr-1 hidden @3xl:flex">
-          {PEOPLE.slice(0, 3).map((name) => <Initials key={name} name={name} className="size-6" />)}
+          {PEOPLE.slice(0, 3).map((name) => <UserAvatar key={name} name={name} className="size-6" />)}
           <AvatarGroupCount className="size-6 text-[10px]">+{PEOPLE.length - 3}</AvatarGroupCount>
         </AvatarGroup>
         <Button variant="outline" size="sm" className="hidden @xl:inline-flex" onClick={() => toast('Link copied', { description: 'Demo only.' })}>
@@ -1108,7 +1052,7 @@ function Crumbs({ info, more, long, onPage }: {
   const trail: Crumb[] = trailFor(info, long).map((c) => ({
     id: c.label,
     label: c.label,
-    icon: c.team && <Mark short={c.team.short} colour={c.team.colour} />,
+    icon: c.team && <LetterMark size="xs" text={c.team.short} colour={c.team.colour} />,
     onSelect: () => (c.page ? onPage(c.page) : toast(c.label, { description: 'Demo only.' })),
   }))
 
@@ -1155,10 +1099,7 @@ function SearchBox({ query, setQuery, issues, autoFocus, className }: {
           <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
         </button>
       ) : (
-        <KbdGroup className="hidden @md:inline-flex">
-          <Kbd>Ctrl</Kbd>
-          <Kbd>K</Kbd>
-        </KbdGroup>
+        <Shortcut keys={['mod', 'K']} className="hidden @md:inline-flex" />
       )}
     </label>
   )

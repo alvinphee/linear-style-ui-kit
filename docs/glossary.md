@@ -24,6 +24,18 @@ used by most design systems).
 ## Interface patterns
 | Term | Meaning |
 |---|---|
+| Avatar | A person's picture, or their initials in a circle when there is none |
+| Person chip | An avatar with the person's name beside it |
+| Status badge | A small pill showing a record's status, coloured by tone (success, warning, danger…) |
+| Tone | The meaning a colour carries: neutral, info, in progress, success, warning, danger |
+| Letter mark / icon mark | A small square standing for a company or team (letters) or a module (an icon) |
+| Delta badge | The change on the period before, with an up or down arrow |
+| Sparkline | A tiny line chart without axes, showing a trend at a glance |
+| Page header | The title row of a page: title, a line of context, actions |
+| Panel | A boxed card with a title bar, grouping one thing on a page |
+| Nav item | One row of sidebar navigation: icon, label, count |
+| Search trigger | A button that looks like a search field and opens the command palette |
+| Keyboard shortcut | Keys that run an action, shown as key caps: ⌘K on a Mac, Ctrl K elsewhere |
 | Navigation rail | A narrow column of icons for the top-level areas (modules) |
 | Sidebar | The wider column listing the pages inside the current area |
 | Inset | The content sits in a card that floats inside the sidebar's background |

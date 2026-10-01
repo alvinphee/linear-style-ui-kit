@@ -16,7 +16,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { STATUS, type Job, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { Section } from './shared'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 type Kind = 'mention' | 'assigned' | 'status' | 'comment' | 'due'
 type Tab = 'all' | 'unread' | 'mentions'
@@ -291,7 +292,7 @@ function Actor({ note, large }: { note: Note; large?: boolean }) {
 
   return (
     <span className="relative shrink-0">
-      <Initials name={note.actor} className={large ? 'size-8' : undefined} />
+      <UserAvatar name={note.actor} className={large ? 'size-8' : undefined} />
       <span className="bg-card ring-border absolute -right-1 -bottom-1 grid size-3.5 place-items-center rounded-full ring-1">
         <HugeiconsIcon icon={badge.icon} strokeWidth={2} className={cn('size-2.5', badge.className)} />
       </span>
@@ -418,7 +419,7 @@ function NoteDetail({ note, job, onBack, onOpenJob, onSnooze, onArchive }: {
               <span>{STATUS[job.status].label}</span>
               {job.customer && <span className="truncate">· {job.customer}</span>}
               {job.due && <span>· Due {job.due}</span>}
-              {job.driver && <Initials name={job.driver} className="ml-auto size-5" />}
+              {job.driver && <UserAvatar name={job.driver} className="ml-auto size-5" />}
             </div>
           </div>
         ) : (

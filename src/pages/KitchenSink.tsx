@@ -12,6 +12,7 @@ import {
   CommandSeparator, CommandShortcut,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Shortcut } from '@/components/shortcut'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PRESETS } from '@/lib/theme'
 import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, goTo } from './nav'
@@ -195,7 +196,7 @@ export default function KitchenSink() {
                   <HugeiconsIcon icon={KeyboardIcon} strokeWidth={2} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Keyboard shortcuts <span className="ml-1 opacity-70">?</span></TooltipContent>
+              <TooltipContent>Keyboard shortcuts <Shortcut keys={['?']} className="ml-1" /></TooltipContent>
             </Tooltip>
             <Popover>
               <PopoverTrigger asChild>

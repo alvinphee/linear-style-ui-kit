@@ -37,7 +37,8 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { PEOPLE, STATUS, type Status } from '../data'
 import { Panel, Row, Section } from './shared'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 export default function OverlaysMoreSection() {
   return (
@@ -102,7 +103,7 @@ function ContextMenuPanel() {
                 <span className="truncate">Orchid Pharma</span>
                 <span aria-hidden>·</span>
                 <span className="whitespace-nowrap">Tomorrow</span>
-                <Initials name="Daniel" className="ml-auto size-5" />
+                <UserAvatar name="Daniel" className="ml-auto size-5" />
               </div>
             </div>
           </div>
@@ -143,7 +144,7 @@ function ContextMenuPanel() {
               <ContextMenuSubContent className="w-40">
                 {PEOPLE.map((name) => (
                   <ContextMenuItem key={name} onSelect={() => toast(`Assigned DO-24812 to ${name}`)}>
-                    <Initials name={name} className="size-5" /> {name}
+                    <UserAvatar name={name} className="size-5" /> {name}
                   </ContextMenuItem>
                 ))}
               </ContextMenuSubContent>
@@ -222,7 +223,7 @@ function JobPeekSheet() {
               <SelectContent position="popper">
                 {PEOPLE.map((name) => (
                   <SelectItem key={name} value={name}>
-                    <Initials name={name} className="size-5" /> {name}
+                    <UserAvatar name={name} className="size-5" /> {name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -331,7 +332,7 @@ function NavigationSheet() {
           {TEAMS.map(item)}
         </nav>
         <div className="flex items-center gap-2 border-t p-3">
-          <Initials name="You" />
+          <UserAvatar name="You" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">You</p>
             <p className="text-muted-foreground truncate text-[11px]">Admin</p>
@@ -509,7 +510,7 @@ function HoverCardPanel() {
   return (
     <Panel title="Hover card" note="HoverCard: hover or tab to the mention" wide>
       <div className="flex gap-2.5">
-        <Initials name="Ravi" />
+        <UserAvatar name="Ravi" />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-baseline gap-x-2 text-xs">
             <span className="font-medium">Ravi</span>

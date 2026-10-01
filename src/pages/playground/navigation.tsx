@@ -1,11 +1,16 @@
 import type { MouseEvent, ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Activity01Icon, Analytics01Icon, BookOpen01Icon, DashboardSquare01Icon, Home01Icon, News01Icon,
-  Settings01Icon, Target02Icon, Task01Icon, UserGroupIcon,
+  Activity01Icon, Analytics01Icon, BookOpen01Icon, CubeIcon, DashboardSquare01Icon, Home01Icon, InboxIcon,
+  News01Icon, PackageIcon, Settings01Icon, ShoppingCart01Icon, StarIcon, Target02Icon, Task01Icon,
+  UserCircleIcon, UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { IconMark, LetterMark } from '@/components/mark'
+import { NavHeading, NavItem } from '@/components/nav-item'
+import { SearchTrigger } from '@/components/search-trigger'
+import { MOD, Shortcut } from '@/components/shortcut'
 import {
   Breadcrumb, BreadcrumbEllipsis, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage,
   BreadcrumbSeparator,
@@ -589,6 +594,226 @@ function NavigationMenuDemos() {
   )
 }
 
+/* Sidebar navigation: NavItem and NavHeading */
+
+const NAV_LEADS = ['icon', 'LetterMark', 'IconMark'] as const
+const NAV_COUNTS = ['none', '3', '12', '128'] as const
+
+type NavLead = (typeof NAV_LEADS)[number]
+
+// Three of the kit's team and module colours.
+const MARK_COLOUR = { indigo: 'oklch(0.6 0.17 265)', green: 'oklch(0.64 0.15 155)', amber: 'oklch(0.7 0.14 65)' }
+
+// The demo rows go nowhere.
+const noop = () => {}
+const lettersOf = (label: string) => label.trim().slice(0, 2).toUpperCase()
+const slug = (label: string) => label.trim().toLowerCase().replace(/\s+/g, '-')
+
+// The sidebar's own background, where the hover and active colours are meant to be seen.
+const SIDEBAR_BOX = 'bg-sidebar text-sidebar-foreground grid gap-px rounded-lg border p-2'
+
+// Rows of the same kind around the one being tried, so the active row has
+// something to stand out from.
+const NAV_NEIGHBOURS: Record<NavLead, { label: string; icon?: IconSvgElement; mark?: ReactNode }[]> = {
+  icon: [
+    { label: 'My issues', icon: UserCircleIcon },
+    { label: 'Projects', icon: CubeIcon },
+  ],
+  LetterMark: [
+    { label: 'Design', mark: <LetterMark text="DE" colour={MARK_COLOUR.green} size="xs" /> },
+    { label: 'Operations', mark: <LetterMark text="OP" colour={MARK_COLOUR.amber} size="xs" /> },
+  ],
+  IconMark: [
+    { label: 'Sales', mark: <IconMark icon={ShoppingCart01Icon} colour={MARK_COLOUR.green} size="sm" /> },
+    { label: 'Inventory', mark: <IconMark icon={PackageIcon} colour={MARK_COLOUR.amber} size="sm" /> },
+  ],
+}
+
+function navLead(lead: NavLead, label: string): { icon?: IconSvgElement; mark?: ReactNode } {
+  if (lead === 'LetterMark') return { mark: <LetterMark text={lettersOf(label)} colour={MARK_COLOUR.indigo} size="xs" /> }
+  if (lead === 'IconMark') return { mark: <IconMark icon={Target02Icon} colour={MARK_COLOUR.indigo} size="sm" /> }
+  return { icon: InboxIcon }
+}
+
+function SidebarNavDemos() {
+  return (
+    <>
+      <Playground
+        title="NavItem"
+        description="Shown above two plain rows, on the sidebar background"
+        controls={[
+          { kind: 'select', name: 'lead', label: 'Icon or mark', options: NAV_LEADS, initial: 'icon' },
+          { kind: 'text', name: 'label', label: 'Label', initial: 'Inbox' },
+          { kind: 'select', name: 'count', label: 'Count', options: NAV_COUNTS, initial: '3' },
+          { kind: 'switch', name: 'active', label: 'Active', initial: true },
+          { kind: 'switch', name: 'iconOnly', label: 'Icon only (tooltip)', initial: false },
+        ]}
+        render={(v) => {
+          const lead = str(v, 'lead') as NavLead
+          const label = str(v, 'label') || 'Inbox'
+          const count = str(v, 'count')
+          const iconOnly = bool(v, 'iconOnly')
+          return (
+            <div className={cn(SIDEBAR_BOX, iconOnly ? 'w-11' : 'w-56')}>
+              <NavItem
+                {...navLead(lead, label)}
+                label={label}
+                count={count === 'none' ? undefined : Number(count)}
+                active={bool(v, 'active')}
+                iconOnly={iconOnly}
+                onClick={noop}
+              />
+              {NAV_NEIGHBOURS[lead].map((n) => (
+                <NavItem key={n.label} icon={n.icon} mark={n.mark} label={n.label} iconOnly={iconOnly} onClick={noop} />
+              ))}
+            </div>
+          )
+        }}
+        code={(v) => {
+          const lead = str(v, 'lead') as NavLead
+          const label = str(v, 'label') || 'Inbox'
+          const count = str(v, 'count')
+          const head = imports({
+            '@hugeicons/core-free-icons': lead === 'icon' ? ['InboxIcon'] : lead === 'IconMark' ? ['Target02Icon'] : [],
+            '@/components/mark': lead === 'icon' ? [] : [lead],
+            '@/components/nav-item': ['NavItem'],
+          })
+          const mark = lead === 'LetterMark'
+            ? `{<LetterMark text="${lettersOf(label)}" colour="${MARK_COLOUR.indigo}" size="xs" />}`
+            : lead === 'IconMark'
+              ? `{<IconMark icon={Target02Icon} colour="${MARK_COLOUR.indigo}" size="sm" />}`
+              : undefined
+          const body = jsx('NavItem', {
+            icon: lead === 'icon' ? '{InboxIcon}' : undefined,
+            mark,
+            label,
+            count: count === 'none' ? undefined : Number(count),
+            active: bool(v, 'active'),
+            iconOnly: bool(v, 'iconOnly'),
+            onClick: `{() => setPage('${slug(label)}')}`,
+          })
+          return `${head}\n\n${body}`
+        }}
+      />
+
+      <Gallery
+        title="NavHeading"
+        note="mt-4 by default, to space groups apart; mt-0 for the first"
+        items={[
+          {
+            label: 'first group, mt-0',
+            node: (
+              <div className={cn(SIDEBAR_BOX, 'w-48')}>
+                <NavHeading className="mt-0">Favourites</NavHeading>
+                <NavItem icon={StarIcon} label="Urgent this week" onClick={noop} />
+                <NavItem icon={Target02Icon} label="Q4 roadmap" onClick={noop} />
+              </div>
+            ),
+          },
+          {
+            label: 'between groups',
+            node: (
+              <div className={cn(SIDEBAR_BOX, 'w-48')}>
+                <NavItem icon={InboxIcon} label="Inbox" count={3} active onClick={noop} />
+                <NavItem icon={UserCircleIcon} label="My issues" onClick={noop} />
+                <NavHeading>Your teams</NavHeading>
+                <NavItem mark={<LetterMark text="EN" colour={MARK_COLOUR.indigo} size="xs" />} label="Engineering" onClick={noop} />
+                <NavItem mark={<LetterMark text="DE" colour={MARK_COLOUR.green} size="xs" />} label="Design" onClick={noop} />
+              </div>
+            ),
+          },
+        ]}
+      />
+    </>
+  )
+}
+
+/* Search: SearchTrigger and Shortcut */
+
+const SEARCH_SIZES = ['sm', 'md', 'lg'] as const
+const SEARCH_SHORTCUTS = ['shortcut', 'no shortcut'] as const
+
+type SearchSize = (typeof SEARCH_SIZES)[number]
+
+// Each size at about the width of the place it is made for: a sidebar, a
+// header, a home page.
+const SEARCH_BOX: Record<SearchSize, string> = { sm: 'w-full max-w-56', md: 'w-full max-w-72', lg: 'w-full max-w-md' }
+const SEARCH_WIDTH: Record<SearchSize, string> = { sm: 'w-48', md: 'w-60', lg: 'w-80' }
+
+const openPalette = () => toast('Command palette', { description: 'Demo only. The trigger opens it; typing happens there.' })
+
+function SearchDemos() {
+  return (
+    <>
+      <Playground
+        title="SearchTrigger"
+        description="A button that looks like a search field and opens the command palette"
+        controls={[
+          { kind: 'text', name: 'label', label: 'Label', initial: 'Search…' },
+          { kind: 'select', name: 'size', label: 'Size', options: SEARCH_SIZES, initial: 'md' },
+          { kind: 'switch', name: 'shortcut', label: 'Shortcut', initial: true },
+        ]}
+        render={(v) => {
+          const size = str(v, 'size') as SearchSize
+          return (
+            <div className={cn('bg-background rounded-lg border p-3', SEARCH_BOX[size])}>
+              <SearchTrigger
+                label={str(v, 'label') || undefined}
+                size={size}
+                shortcut={bool(v, 'shortcut') ? undefined : []}
+                onClick={openPalette}
+              />
+            </div>
+          )
+        }}
+        code={(v) => `${imports({ '@/components/search-trigger': ['SearchTrigger'] })}\n\n${jsx('SearchTrigger', {
+          label: unless(str(v, 'label'), 'Search…'),
+          size: unless(str(v, 'size'), 'sm'),
+          shortcut: bool(v, 'shortcut') ? undefined : '{[]}',
+          onClick: '{openCommandPalette}',
+        })}`}
+      />
+
+      <Variants
+        title="SearchTrigger sizes"
+        note="sm: a sidebar, md: a header, lg: the search on a home page"
+        rows={{ name: 'size', values: SEARCH_SIZES }}
+        cols={{ name: 'shortcut', values: SEARCH_SHORTCUTS }}
+        render={(size, shortcut) => (
+          <SearchTrigger
+            size={size}
+            shortcut={shortcut === 'no shortcut' ? [] : undefined}
+            onClick={openPalette}
+            className={SEARCH_WIDTH[size]}
+          />
+        )}
+      />
+
+      <Gallery
+        title="Shortcut"
+        note={`mod reads ${MOD} here: ⌘ on a Mac, Ctrl elsewhere`}
+        items={[
+          { label: "['mod', 'K']", node: <Shortcut keys={['mod', 'K']} /> },
+          { label: "['mod', 'J']", node: <Shortcut keys={['mod', 'J']} /> },
+          { label: "['mod', 'enter']", node: <Shortcut keys={['mod', 'enter']} /> },
+          { label: "['shift', '?']", node: <Shortcut keys={['shift', '?']} /> },
+          { label: "['esc']", node: <Shortcut keys={['esc']} /> },
+          {
+            label: 'G then B: two Shortcuts',
+            node: (
+              <span className="flex items-center gap-1">
+                <Shortcut keys={['G']} />
+                <span className="text-muted-foreground text-[11px]">then</span>
+                <Shortcut keys={['B']} />
+              </span>
+            ),
+          },
+        ]}
+      />
+    </>
+  )
+}
+
 export default function NavigationDemos() {
   return (
     <Demos>
@@ -596,6 +821,8 @@ export default function NavigationDemos() {
       <BreadcrumbDemos />
       <PaginationDemos />
       <NavigationMenuDemos />
+      <SidebarNavDemos />
+      <SearchDemos />
     </Demos>
   )
 }

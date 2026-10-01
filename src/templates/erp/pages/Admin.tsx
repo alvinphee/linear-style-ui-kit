@@ -7,6 +7,8 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { UserAvatar } from '@/components/person'
+import { Panel as KitPanel } from '@/components/panel'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
   AlertDialogHeader, AlertDialogTitle,
@@ -20,7 +22,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { Initials } from '@/pages/sections/StatusSection'
 import { ROLE_LABEL, type Company } from '../data'
 import { TODAY, addDays, formatDate } from '../format'
 import { MODULES } from '../modules'
@@ -43,6 +44,8 @@ function omit<T>(record: Record<string, T>, key: string) {
 
 // The same box as Card in ../ui, plus a description line, and without the
 // padding when it holds a table or a list.
+// The kit's Panel, as a section with a description line; flush drops the
+// body padding for tables.
 function Panel({ title, description, action, flush, className, children }: {
   title: string
   description?: ReactNode
@@ -52,16 +55,9 @@ function Panel({ title, description, action, flush, className, children }: {
   children: ReactNode
 }) {
   return (
-    <section className={cn('bg-card min-w-0 rounded-lg border', className)}>
-      <header className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 border-b px-3.5 py-2.5">
-        <div className="grid min-w-0 gap-0.5">
-          <h2 className="text-xs font-medium">{title}</h2>
-          {description && <p className="text-muted-foreground text-[11px]">{description}</p>}
-        </div>
-        {action && <div className="flex shrink-0 flex-wrap items-center gap-1.5">{action}</div>}
-      </header>
-      <div className={cn(!flush && 'p-3.5')}>{children}</div>
-    </section>
+    <KitPanel as="section" headingAs="h2" title={title} description={description} action={action} className={className} bodyClassName={flush ? 'p-0' : undefined}>
+      {children}
+    </KitPanel>
   )
 }
 
@@ -294,7 +290,7 @@ export function RolesPermissions() {
             {members.length ? (
               <>
                 <div className="flex -space-x-1.5" aria-hidden="true">
-                  {members.slice(0, 6).map((u) => <Initials key={u.id} name={String(u.name)} className="ring-card size-5 ring-2" />)}
+                  {members.slice(0, 6).map((u) => <UserAvatar key={u.id} name={String(u.name)} className="ring-card size-5 ring-2" />)}
                 </div>
                 <span className="text-muted-foreground min-w-0 truncate text-[11px]">
                   {members.slice(0, 2).map((u) => String(u.name)).join(', ')}

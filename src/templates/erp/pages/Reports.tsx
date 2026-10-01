@@ -4,6 +4,7 @@ import { Download01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { StatusBadge as KitStatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import {
   ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig,
@@ -12,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useErp } from '../store'
-import { TODAY, TONE_CLASS, formatDate, formatMoney, formatMoneyShort, formatNumber } from '../format'
+import { TODAY, formatDate, formatMoney, formatMoneyShort, formatNumber } from '../format'
 import type { Row } from '../types'
 import { Card, PageHeader, StatusBadge } from '../ui'
 
@@ -376,11 +377,12 @@ export function FinancialReports() {
   )
 }
 
+// The kit's status badge with a tick in place of the dot, a size up.
 function BalancedBadge() {
   return (
-    <span className={cn('inline-flex h-6 items-center gap-1 rounded-md px-2 text-xs font-medium', TONE_CLASS.success)}>
+    <KitStatusBadge tone="success" dot={false} className="h-6 gap-1 px-2 text-xs">
       <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="size-3.5" /> Balanced
-    </span>
+    </KitStatusBadge>
   )
 }
 
@@ -420,16 +422,9 @@ function Change({ current, prior, better }: { current: number; prior: number; be
   )
 }
 
+// A Card whose statement table runs to its edges.
 function StatementCard({ title, caption, children }: { title: string; caption: string; children: ReactNode }) {
-  return (
-    <section className="bg-card min-w-0 overflow-hidden rounded-lg border">
-      <header className="flex items-center justify-between gap-3 border-b px-3.5 py-2.5">
-        <h2 className="text-xs font-medium">{title}</h2>
-        <span className="text-muted-foreground truncate text-[11px]">{caption}</span>
-      </header>
-      {children}
-    </section>
-  )
+  return <Card title={title} note={caption} className="overflow-hidden" bodyClassName="p-0">{children}</Card>
 }
 
 const INDENT = ['pl-3.5', 'pl-6', 'pl-9'] as const

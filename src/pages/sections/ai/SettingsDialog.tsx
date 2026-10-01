@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { useTheme } from '@/lib/theme'
-import { Initials } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
 import { useActions } from './context'
 import { MODELS, USER } from './data'
 import type { ModelId } from './types'
@@ -287,7 +287,7 @@ function Account() {
   return (
     <>
       <div className="flex items-center gap-3 border-b py-3">
-        <Initials name={USER.name} className="size-10" />
+        <UserAvatar name={USER.name} className="size-10" />
         <div className="grid min-w-0 flex-1 gap-0.5">
           <span className="truncate text-xs font-medium">{USER.name}</span>
           <span className="text-muted-foreground truncate text-[11px]">{USER.email}</span>

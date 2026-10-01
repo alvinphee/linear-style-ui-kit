@@ -21,7 +21,8 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { STATUS, type Status } from '../data'
 import { Panel, Row, Section } from './shared'
-import { Initials, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { StatusIcon } from './StatusSection'
 
 export default function OverlaysSection({ onOpenCommand }: { onOpenCommand: () => void }) {
   const [status, setStatus] = useState<Status>('progress')
@@ -58,7 +59,7 @@ export default function OverlaysSection({ onOpenCommand }: { onOpenCommand: () =
                   <DropdownMenuSubContent>
                     {['Ravi', 'Mei Ling', 'Daniel', 'Siti'].map((n) => (
                       <DropdownMenuItem key={n}>
-                        <Initials name={n} className="size-4" /> {n}
+                        <UserAvatar name={n} className="size-4" /> {n}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>

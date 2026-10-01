@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Panel, Section } from './shared'
-import { Initials } from './StatusSection'
+import { UserAvatar } from '@/components/person'
 
 type Range = '7d' | '30d' | '90d'
 const RANGES: { value: Range; label: string; short: string; days: number }[] = [
@@ -381,7 +381,7 @@ function ActivityPanel() {
       <ul className="-my-1 divide-y">
         {ACTIVITY.map((a) => (
           <li key={a.id} className="flex min-w-0 items-center gap-2.5 py-2">
-            <Initials name={a.who} className="size-6" />
+            <UserAvatar name={a.who} className="size-6" />
             <p className="text-muted-foreground min-w-0 flex-1 text-xs text-pretty">
               {b(a.who)} {a.text}
             </p>

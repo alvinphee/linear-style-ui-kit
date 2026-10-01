@@ -10,7 +10,8 @@ import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
 import { LabelDot } from '../FilterBar'
 import { Panel } from '../shared'
-import { Initials, PriorityIcon, StatusIcon } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from '../StatusSection'
 import { AiLabel, IconAction, useTimers } from './shared'
 import { describe, patchFor, suggestFor, type Suggestion } from './triage'
 
@@ -203,7 +204,7 @@ function SuggestionPill({ item, onApply }: { item: Suggestion; onApply: () => vo
           className="bg-card hover:bg-accent focus-visible:ring-ring/30 inline-flex h-6 max-w-full min-w-0 items-center gap-1.5 rounded-full border pr-1 pl-2 text-xs transition-colors outline-none focus-visible:ring-2"
         >
           {item.field === 'label' && label && <LabelDot colour={label.colour} />}
-          {item.field === 'assignee' && <Initials name={item.value} className="size-4" />}
+          {item.field === 'assignee' && <UserAvatar name={item.value} className="size-4" />}
           {item.field === 'priority' && <PriorityIcon priority={item.value as Priority} />}
           <span className="text-muted-foreground hidden sm:inline">{field}</span>
           <span className="truncate font-medium">{value}</span>

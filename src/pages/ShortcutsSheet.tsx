@@ -1,3 +1,4 @@
+import { keyLabel } from '@/components/shortcut'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { GO_KEYS, NAV } from './nav'
@@ -8,7 +9,7 @@ const GROUPS: { title: string; rows: { keys: string[]; label: string; then?: boo
   {
     title: 'General',
     rows: [
-      { keys: ['Ctrl', 'K'], label: 'Open the command menu' },
+      { keys: ['mod', 'K'], label: 'Open the command menu' },
       { keys: ['?'], label: 'Show keyboard shortcuts' },
       { keys: ['C'], label: 'Create a job' },
       { keys: ['Esc'], label: 'Close a menu or dialog' },
@@ -40,7 +41,7 @@ export default function ShortcutsSheet({ open, onOpenChange }: { open: boolean; 
                       {row.keys.map((k, i) => (
                         <span key={k} className="flex items-center gap-1">
                           {row.then && i > 0 && <span className="text-muted-foreground text-[10px]">then</span>}
-                          <Kbd>{k}</Kbd>
+                          <Kbd>{keyLabel(k)}</Kbd>
                         </span>
                       ))}
                     </KbdGroup>

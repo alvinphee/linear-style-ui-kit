@@ -23,7 +23,7 @@ import {
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Progress } from '@/components/ui/progress'
 import { Spinner } from '@/components/ui/spinner'
-import { Initials } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
 import { useActions } from './context'
 import { DAY, USER, now } from './data'
 import type { Chat, Project, View } from './types'
@@ -444,7 +444,7 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
               type="button"
               className="hover:bg-accent/60 focus-visible:ring-ring/30 aria-expanded:bg-accent flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-1.5 text-left outline-none focus-visible:ring-2"
             >
-              <Initials name={USER.name} />
+              <UserAvatar name={USER.name} />
               <span className="grid min-w-0 flex-1 leading-4">
                 <span className="truncate text-xs font-medium">{USER.name}</span>
                 <span className="text-muted-foreground truncate text-[11px]">{USER.plan}</span>

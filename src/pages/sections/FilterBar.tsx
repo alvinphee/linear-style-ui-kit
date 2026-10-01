@@ -16,7 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch'
 import { Toggle } from '@/components/ui/toggle'
 import { CUSTOMERS, LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 // The job pages' filter set-up: the fields, saved views, matching and
 // ordering. The filter bar itself is the block in src/blocks/filter-bar.
@@ -83,7 +84,7 @@ export const FIELDS: Record<FilterField, { label: string; icon: IconSvgElement; 
     icon: UserCircleIcon,
     options: [
       { value: UNASSIGNED, label: 'No assignee', visual: <NoAssignee /> },
-      ...PEOPLE.map((name) => ({ value: name, label: name, visual: <Initials name={name} className="size-4" /> })),
+      ...PEOPLE.map((name) => ({ value: name, label: name, visual: <UserAvatar name={name} className="size-4" /> })),
     ],
   },
   label: {

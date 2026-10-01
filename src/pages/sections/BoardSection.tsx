@@ -11,7 +11,8 @@ import {
 } from './FilterBar'
 import { Section } from './shared'
 import { JobContextMenu, JobDropdownMenu, JobPeek, openFullPage } from './JobActions'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 const COLUMNS: Status[] = ['backlog', 'todo', 'progress', 'done']
 const ALL_STATUSES: Status[] = [...COLUMNS, 'cancelled']
@@ -159,7 +160,7 @@ function BoardCard({ job, display, card, selected, onOpen, onOpenFull }: {
               )}
               {show.assignee && (
                 <span className="ml-auto" title={job.driver || 'No assignee'}>
-                  {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
+                  {job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
                   <span className="sr-only">{job.driver ? `Assigned to ${job.driver}` : 'No assignee'}</span>
                 </span>
               )}

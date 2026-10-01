@@ -24,7 +24,8 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/componen
 import { Textarea } from '@/components/ui/textarea'
 import { LABELS, PRIORITY, STATUS, type Priority, type Status } from '../data'
 import { Panel, Section } from './shared'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { Person, UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 // Demo links stay on the page instead of jumping to the top.
 const stay = (e: MouseEvent) => e.preventDefault()
@@ -336,7 +337,7 @@ function ResizablePanesPanel() {
               <ResizablePanel defaultSize="68%" minSize="30%">
                 <article className="h-full min-w-0 overflow-y-auto p-3">
                   <div className="text-muted-foreground mb-1 flex min-w-0 items-center gap-1.5 text-[11px]">
-                    <Initials name={item.from} className="size-4" />
+                    <UserAvatar name={item.from} className="size-4" />
                     <span className="truncate">{item.from} · {item.time}</span>
                   </div>
                   <h4 className="mb-2 text-sm font-medium tracking-tight">{item.title}</h4>
@@ -389,9 +390,8 @@ function ResizablePanesPanel() {
                 </div>
                 <div className="grid gap-1">
                   <dt className="text-muted-foreground text-[11px]">Reporter</dt>
-                  <dd className="flex min-w-0 items-center gap-1.5">
-                    <Initials name={item.from} className="size-4" />
-                    <span className="truncate">{item.from}</span>
+                  <dd className="min-w-0">
+                    <Person name={item.from} className="gap-1.5" avatarClassName="size-4" />
                   </dd>
                 </div>
                 {item.labels.length > 0 && (

@@ -15,7 +15,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { PEOPLE } from '../data'
 import { FacetFilter } from './DataTableSection'
 import { Section } from './shared'
-import { Initials } from './StatusSection'
+import { UserAvatar } from '@/components/person'
 
 type Action = 'created' | 'updated' | 'deleted' | 'invited' | 'signed_in'
 
@@ -316,7 +316,7 @@ export default function AuditLogSection() {
           <FacetFilter
             title="Actor"
             options={PEOPLE.map((name) => ({
-              value: name, label: name, count: actorCounts.get(name) ?? 0, visual: <Initials name={name} className="size-4" />,
+              value: name, label: name, count: actorCounts.get(name) ?? 0, visual: <UserAvatar name={name} className="size-4" />,
             }))}
             selected={actors}
             onChange={setActors}
@@ -415,7 +415,7 @@ function EventRow({ event, open, onToggle }: { event: AuditEvent; open: boolean;
           strokeWidth={2}
           className={cn('text-muted-foreground size-3 shrink-0 transition-transform', open && 'rotate-90')}
         />
-        <Initials name={event.actor} className="size-5" />
+        <UserAvatar name={event.actor} className="size-5" />
         <span className="min-w-0 flex-1 truncate">
           <span className="font-medium">{event.actor}</span>{' '}
           <span className="text-muted-foreground">

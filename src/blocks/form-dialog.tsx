@@ -2,6 +2,7 @@ import { Fragment, useId, useRef, useState, type FormEvent, type KeyboardEvent, 
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { IS_MAC, MOD, keyLabel } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
@@ -51,8 +52,8 @@ export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 export const DIALOG_PANEL = 'flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0'
 export const DIALOG_BODY = 'min-h-0 flex-1 overflow-y-auto p-4'
 
-const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-const SHORTCUT = IS_MAC ? '⌘ ↵' : 'Ctrl ↵'
+// One key cap ("⌘ ↵"), tinted to sit on the primary button.
+const SHORTCUT = `${MOD} ${keyLabel('enter')}`
 const SHORTCUT_ARIA = IS_MAC ? 'Meta+Enter' : 'Control+Enter'
 const isSubmitKey = (e: KeyboardEvent) => e.key === 'Enter' && (e.ctrlKey || e.metaKey)
 

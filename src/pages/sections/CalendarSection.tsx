@@ -23,7 +23,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Section } from './shared'
-import { Initials } from './StatusSection'
+import { UserAvatar } from '@/components/person'
 
 type Colour = 'blue' | 'violet' | 'green' | 'amber' | 'rose'
 
@@ -272,7 +272,7 @@ function EventPopover({ event, onDelete, children }: {
             <li className="flex items-center gap-2">
               <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} className="size-3.5 shrink-0" />
               <AvatarGroup className="-space-x-1.5">
-                {event.people.map((p) => <Initials key={p} name={p} className="size-5" />)}
+                {event.people.map((p) => <UserAvatar key={p} name={p} className="size-5" />)}
               </AvatarGroup>
               <span className="truncate">{event.people.join(', ')}</span>
             </li>

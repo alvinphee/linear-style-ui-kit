@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Notification03Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { UserAvatar } from '@/components/person'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
@@ -31,8 +31,6 @@ export type NotificationItem = {
   // In place of the initials.
   avatar?: ReactNode
 }
-
-const initials = (name: string) => name.slice(0, 2).toUpperCase()
 
 export function NotificationsMenu<T extends NotificationItem>({
   items,
@@ -129,11 +127,7 @@ export function NotificationsMenu<T extends NotificationItem>({
                     }}
                     className="hover:bg-accent focus-visible:bg-accent flex w-full items-start gap-2.5 px-3 py-2 text-left outline-none"
                   >
-                    {item.avatar ?? (
-                      <Avatar className="mt-0.5 size-6">
-                        <AvatarFallback className="text-[10px]">{initials(item.actor)}</AvatarFallback>
-                      </Avatar>
-                    )}
+                    {item.avatar ?? <UserAvatar name={item.actor} className="mt-0.5" />}
                     <span className="grid min-w-0 flex-1 gap-0.5">
                       <span className={cn('text-xs', !fresh && 'text-muted-foreground')}>
                         <span className={cn('font-medium', fresh && 'text-foreground')}>{item.actor}</span> {item.text}

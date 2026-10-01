@@ -293,20 +293,20 @@ function ListCard({ title, module, page, items, empty }: {
   empty: string
 }) {
   const { openPeek } = useErp()
-  const headingId = useId()
   const more = items.length - MAX_ROWS
   return (
-    <section aria-labelledby={headingId} className="bg-card min-w-0 rounded-lg border">
-      <header className="flex items-center gap-2 border-b px-3.5 py-2.5">
-        <h2 id={headingId} className="text-xs font-medium">{title}</h2>
-        <span className="text-muted-foreground text-[11px] tabular-nums">{items.length}</span>
+    <Card
+      title={<>{title}<span className="text-muted-foreground ml-2 text-[11px] font-normal tabular-nums">{items.length}</span></>}
+      action={
         <a
           href={erpHref(module, page)}
-          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/40 ml-auto inline-flex items-center gap-1 rounded text-[11px] outline-none focus-visible:ring-2"
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/40 inline-flex shrink-0 items-center gap-1 rounded text-[11px] outline-none focus-visible:ring-2"
         >
           View all <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3" />
         </a>
-      </header>
+      }
+      bodyClassName="p-0"
+    >
       {items.length ? (
         <ul className="divide-y">
           {items.slice(0, MAX_ROWS).map((it) => (
@@ -332,7 +332,7 @@ function ListCard({ title, module, page, items, empty }: {
           {more} more in <a href={erpHref(module, page)} className="hover:text-foreground underline underline-offset-2">the full list</a>
         </p>
       )}
-    </section>
+    </Card>
   )
 }
 

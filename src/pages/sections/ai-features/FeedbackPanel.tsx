@@ -16,7 +16,8 @@ import { PRIORITY, type Job, type Priority } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
 import { Panel } from '../shared'
-import { Initials, PriorityIcon } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon } from '../StatusSection'
 import { IconAction, Thinking, copyText, useTimers } from './shared'
 
 const QUESTION = 'Which jobs could run late today?'
@@ -133,7 +134,7 @@ export function FeedbackPanel() {
                         <span className="text-muted-foreground shrink-0 tabular-nums">
                           {p.total ? `${p.done}/${p.total}` : '—'}
                         </span>
-                        {job.driver && <Initials name={job.driver} className="size-5" />}
+                        {job.driver && <UserAvatar name={job.driver} className="size-5" />}
                       </li>
                     )
                   })}

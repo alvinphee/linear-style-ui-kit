@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Camera01Icon, Tag01Icon } from '@hugeicons/core-free-icons'
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
-import { cn } from 'cn'
+import { UserAvatar } from '@/components/person'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -19,15 +19,9 @@ export function PriorityIcon({ priority }: { priority: Priority }) {
   return <HugeiconsIcon icon={p.icon} strokeWidth={2} className={`size-3.5 shrink-0 ${p.className}`} />
 }
 
-// Sized with a plain size-* class rather than size="sm": the avatar's own
-// data-[size=sm] rule would otherwise beat a size passed in by the caller.
-export function Initials({ name, className }: { name: string; className?: string }) {
-  return (
-    <Avatar className={cn('size-6', className)}>
-      <AvatarFallback className="text-[10px]">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
-    </Avatar>
-  )
-}
+// The initials avatar is the kit's UserAvatar component; Initials is its
+// old name here, kept for the code outside the kit pages that imports it.
+export { UserAvatar as Initials }
 
 export default function StatusSection() {
   const [progress, setProgress] = useState(20)
@@ -90,7 +84,7 @@ export default function StatusSection() {
           <Row className="gap-3">
             <AvatarGroup>
               {['Ravi', 'Mei Ling', 'Daniel', 'Siti'].map((n) => (
-                <Initials key={n} name={n} />
+                <UserAvatar key={n} name={n} />
               ))}
               <AvatarGroupCount className="size-6 text-[10px]">+3</AvatarGroupCount>
             </AvatarGroup>

@@ -4,10 +4,10 @@ import { Add01Icon, Calendar03Icon, KanbanIcon, ListViewIcon } from '@hugeicons/
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import { KanbanBoard, KanbanCardMenu, type KanbanCardState, type KanbanColumn } from '@/blocks/kanban-board'
+import { UserAvatar } from '@/components/person'
 import { Button } from '@/components/ui/button'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Initials } from '@/pages/sections/StatusSection'
 import { ListPage } from '../ListPage'
 import { LISTS } from '../modules'
 import { useErp } from '../store'
@@ -176,7 +176,7 @@ function OpportunityCard({ row, card, selected, onOpen }: {
           )}
           {owner && (
             <span title={owner} className={cn(!close && 'ml-auto')}>
-              <Initials name={owner} className="size-5" />
+              <UserAvatar name={owner} className="size-5" />
               <span className="sr-only">Owner: {owner}</span>
             </span>
           )}

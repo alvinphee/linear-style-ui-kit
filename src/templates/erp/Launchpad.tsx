@@ -1,15 +1,15 @@
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Add01Icon, ArrowRight01Icon, Search01Icon, StarIcon } from '@hugeicons/core-free-icons'
+import { Add01Icon, ArrowRight01Icon, StarIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { SearchTrigger } from '@/components/search-trigger'
 import { Button } from '@/components/ui/button'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { formatDate, formatMoney, TODAY } from './format'
 import { MODULES, pageFor } from './modules'
 import { go } from './route'
 import { useErp } from './store'
 import type { EntityId, Role, Row } from './types'
-import { MOD, ModuleMark, StatusBadge } from './ui'
+import { Card, ModuleMark, StatusBadge } from './ui'
 
 // The launchpad: the first screen after sign-in. Your modules as tiles with
 // live numbers, what needs your approval, what you opened last, and quick
@@ -66,15 +66,7 @@ export default function Launchpad() {
           <h1 className="text-xl font-semibold tracking-tight">{greeting()}, {session?.name.split(' ')[0]}</h1>
           <p className="text-muted-foreground text-sm">{today} · {company?.name}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setPaletteOpen(true)}
-          className="bg-card text-muted-foreground hover:border-foreground/15 focus-visible:ring-ring/40 flex h-10 w-full max-w-2xl items-center gap-2.5 rounded-lg border px-3 text-sm outline-none focus-visible:ring-2"
-        >
-          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="size-4" />
-          Search records, pages and actions
-          <KbdGroup className="ml-auto"><Kbd>{MOD}</Kbd><Kbd>K</Kbd></KbdGroup>
-        </button>
+        <SearchTrigger size="lg" label="Search records, pages and actions" onClick={() => setPaletteOpen(true)} className="max-w-2xl" />
       </header>
 
       <section aria-labelledby="lp-modules" className="grid gap-3">
@@ -129,11 +121,11 @@ export default function Launchpad() {
       </section>
 
       <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <section aria-labelledby="lp-attention" className="bg-card min-w-0 rounded-lg border">
-          <header className="flex items-center justify-between border-b px-3.5 py-2.5">
-            <h2 id="lp-attention" className="text-xs font-medium">Needs your attention</h2>
-            <span className="text-muted-foreground text-[11px] tabular-nums">{approvals.length}</span>
-          </header>
+        <Card
+          title="Needs your attention"
+          action={<span className="text-muted-foreground text-[11px] tabular-nums">{approvals.length}</span>}
+          bodyClassName="p-0"
+        >
           {approvals.length ? (
             <ul className="divide-y">
               {approvals.map((a) => {
@@ -174,26 +166,20 @@ export default function Launchpad() {
           ) : (
             <p className="text-muted-foreground px-3.5 py-8 text-center text-xs">You're all caught up.</p>
           )}
-        </section>
+        </Card>
 
         <div className="grid min-w-0 content-start gap-3">
-          <section aria-labelledby="lp-create" className="bg-card rounded-lg border">
-            <header className="border-b px-3.5 py-2.5">
-              <h2 id="lp-create" className="text-xs font-medium">Create</h2>
-            </header>
-            <div className="flex flex-wrap gap-1.5 p-3.5">
+          <Card title="Create">
+            <div className="flex flex-wrap gap-1.5">
               {QUICK.filter((q) => q.roles.includes(role)).map((q) => (
                 <Button key={q.entity} variant="outline" size="sm" onClick={() => startCreate(q.entity)}>
                   <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> {q.label}
                 </Button>
               ))}
             </div>
-          </section>
+          </Card>
 
-          <section aria-labelledby="lp-recent" className="bg-card rounded-lg border">
-            <header className="border-b px-3.5 py-2.5">
-              <h2 id="lp-recent" className="text-xs font-medium">Recently opened</h2>
-            </header>
+          <Card title="Recently opened" bodyClassName="p-0">
             {recent.length ? (
               <ul className="py-1">
                 {recent.map((r) => {
@@ -220,7 +206,7 @@ export default function Launchpad() {
             ) : (
               <p className="text-muted-foreground px-3.5 py-6 text-center text-xs">Records you open show up here.</p>
             )}
-          </section>
+          </Card>
         </div>
       </div>
     </div>

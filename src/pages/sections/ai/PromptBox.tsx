@@ -15,7 +15,7 @@ import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PEOPLE } from '../../data'
 import { useJobs } from '../../jobs-store'
-import { Initials } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
 import { useActions } from './context'
 import { SLASH_COMMANDS, now, toFileRef } from './data'
 import { FileChip, IconAction } from './Message'
@@ -292,7 +292,7 @@ export function PromptBox({ running, modes, projects, placeholder, focusKey = 0,
                   {items.filter((i) => i.group === group).map((item) => (
                     <CommandItem key={item.value} value={item.value} onMouseDown={(e) => e.preventDefault()} onSelect={() => pick(item)}>
                       {item.group === 'People'
-                        ? <Initials name={item.label} className="size-5" />
+                        ? <UserAvatar name={item.label} className="size-5" />
                         : item.icon && <HugeiconsIcon icon={item.icon} strokeWidth={2} style={item.colour ? { color: item.colour } : undefined} />}
                       <span className={cn('shrink-0', item.group !== 'People' && 'font-medium', item.group === 'Commands' && 'font-mono')}>{item.label}</span>
                       {item.hint && <span className="text-muted-foreground min-w-0 truncate text-[11px]">{item.hint}</span>}

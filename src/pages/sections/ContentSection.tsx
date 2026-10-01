@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { cn } from 'cn'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { Shortcut } from '@/components/shortcut'
 import { Kbd } from '@/components/ui/kbd'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -16,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PEOPLE } from '../data'
 import { Panel, Section } from './shared'
-import { Initials } from './StatusSection'
+import { UserAvatar } from '@/components/person'
 
 export default function ContentSection() {
   return (
@@ -455,7 +456,7 @@ function ReorderPanel() {
               <span className="text-muted-foreground hidden w-14 shrink-0 font-mono text-[11px] sm:inline">{item.key}</span>
               <span className="min-w-0 flex-1 truncate">{item.title}</span>
               <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">{item.points} pt</span>
-              <Initials name={item.owner} className="size-5" />
+              <UserAvatar name={item.owner} className="size-5" />
             </li>
           ))}
         </ol>
@@ -679,7 +680,7 @@ function EditorPanel() {
                         </TooltipTrigger>
                         <TooltipContent>
                           {tool.label}
-                          {tool.key && <Kbd className="ml-1">Ctrl {tool.key.toUpperCase()}</Kbd>}
+                          {tool.key && <Shortcut keys={['mod', tool.key.toUpperCase()]} className="ml-1" />}
                         </TooltipContent>
                       </Tooltip>
                     ))}

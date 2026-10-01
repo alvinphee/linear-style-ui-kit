@@ -2,6 +2,8 @@ import { createContext, useContext, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { PageHeader } from '@/components/page-header'
+import { Panel as KitPanel } from '@/components/panel'
 import { goTo } from '../nav'
 
 // The playgrounds and variant grids for the page being shown, if it has any.
@@ -38,10 +40,7 @@ export function Section({ id, title, description, children }: {
   }
   return (
     <section id={id} aria-labelledby={`${id}-title`}>
-      <header className="mb-6 grid gap-1">
-        <h1 id={`${id}-title`} className="text-xl font-semibold tracking-tight">{title}</h1>
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </header>
+      <PageHeader id={`${id}-title`} title={title} description={description} size="lg" className="mb-6" />
       {demos && (
         <>
           <div className="mb-10">{demos}</div>
@@ -53,6 +52,7 @@ export function Section({ id, title, description, children }: {
   )
 }
 
+// The kit's Panel component, spanning both columns of a section when wide.
 export function Panel({ title, note, children, className, wide }: {
   title: string
   note?: string
@@ -60,15 +60,7 @@ export function Panel({ title, note, children, className, wide }: {
   className?: string
   wide?: boolean
 }) {
-  return (
-    <article className={cn('bg-card rounded-lg border', wide && 'lg:col-span-2', className)}>
-      <header className="flex items-baseline justify-between gap-3 border-b px-3.5 py-2.5">
-        <h3 className="text-xs font-medium">{title}</h3>
-        {note && <span className="text-muted-foreground truncate text-[11px]">{note}</span>}
-      </header>
-      <div className="p-3.5">{children}</div>
-    </article>
-  )
+  return <KitPanel title={title} note={note} className={cn(wide && 'lg:col-span-2', className)}>{children}</KitPanel>
 }
 
 export function Row({ children, className }: { children: ReactNode; className?: string }) {

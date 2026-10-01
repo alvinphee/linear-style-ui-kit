@@ -2,11 +2,13 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, Alert02Icon, AlertCircleIcon, Attachment01Icon, Cancel01Icon, CheckmarkCircle02Icon, Clock01Icon,
-  CloudAlertIcon, CreditCardIcon, FolderAddIcon, InboxCheckIcon, InformationCircleIcon, Message01Icon,
+  CloudAlertIcon, CreditCardIcon, Download01Icon, FolderAddIcon, InboxCheckIcon, InformationCircleIcon, Message01Icon,
   MoreHorizontalIcon, Notification03Icon, RefreshIcon, Search01Icon, Settings02Icon, SquareLock02Icon, UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { PageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
@@ -16,6 +18,7 @@ import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTi
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Demos, Gallery, Playground, Variants, bool, imports, jsx, str, type Values } from './Playground'
 
 const ALERT_VARIANTS = ['default', 'destructive'] as const
@@ -30,13 +33,22 @@ const ACCORDION_TYPES = ['single', 'multiple'] as const
 const CARD_SIZES = ['default', 'sm'] as const
 const CARD_LAYOUTS = ['plain', 'divided'] as const
 const ORIENTATIONS = ['horizontal', 'vertical'] as const
+const PAGE_HEADER_SIZES = ['lg', 'md', 'sm'] as const
+const HEADING_LEVELS = ['h1', 'h2', 'h3'] as const
+const PANEL_TRAILING = ['note', 'action', 'none'] as const
 
 type AlertVariant = (typeof ALERT_VARIANTS)[number]
 type SpinnerColour = (typeof SPINNER_COLOURS)[number]
 type EmptyMediaKind = (typeof EMPTY_MEDIA)[number]
 type CardSize = (typeof CARD_SIZES)[number]
+type PageHeaderSize = (typeof PAGE_HEADER_SIZES)[number]
+type HeadingLevel = (typeof HEADING_LEVELS)[number]
+type PanelTrailing = (typeof PANEL_TRAILING)[number]
 
 const orDefault = (value: string) => (value === 'default' ? undefined : value)
+// Props equal to their default stay out of the snippet.
+const unless = (value: string, fallback: string) => (value === fallback ? undefined : value)
+const indent = (code: string) => code.replace(/^/gm, '  ')
 const demoOnly = (title: string) => toast(title, { description: 'Demo only. Nothing was changed.' })
 
 // --- Alert ---------------------------------------------------------------
@@ -372,6 +384,115 @@ function cardCode(v: Values) {
       ])
       : '',
   ])
+  return `${head}\n\n${body}`
+}
+
+// --- PageHeader ----------------------------------------------------------
+
+const PAGE_DESCRIPTION = '12 active projects across 4 teams.'
+const PAGE_TABS = [
+  { value: 'all', label: 'All', body: 'All 18 projects, newest first.' },
+  { value: 'active', label: 'Active', body: '12 projects with work in the current cycle.' },
+  { value: 'backlog', label: 'Backlog', body: '6 projects not started yet.' },
+]
+// A slice of page for the header to sit at the top of.
+const PAGE_BOX = 'bg-background w-full max-w-xl rounded-lg border p-4'
+
+function DemoPageHeader({ size, as, title, description, actions, tabs }: {
+  size: PageHeaderSize
+  as: HeadingLevel
+  title: string
+  description: boolean
+  actions: boolean
+  tabs: boolean
+}) {
+  const header = (
+    <PageHeader
+      size={size}
+      as={as}
+      title={title}
+      description={description ? PAGE_DESCRIPTION : undefined}
+      actions={actions && (
+        <>
+          <Button variant="outline" size="sm" onClick={() => demoOnly('Export')}>
+            <HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" />
+            Export
+          </Button>
+          <Button size="sm" onClick={() => demoOnly('New project')}>
+            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
+            New project
+          </Button>
+        </>
+      )}
+    >
+      {tabs && (
+        <TabsList variant="line">
+          {PAGE_TABS.map((t) => <TabsTrigger key={t.value} value={t.value}>{t.label}</TabsTrigger>)}
+        </TabsList>
+      )}
+    </PageHeader>
+  )
+  if (!tabs) return <div className={PAGE_BOX}>{header}</div>
+  // The tabs switch the content under the header, so Tabs wraps both.
+  return (
+    <Tabs defaultValue="all" className={cn(PAGE_BOX, 'gap-4')}>
+      {header}
+      {PAGE_TABS.map((t) => <TabsContent key={t.value} value={t.value} className="text-muted-foreground">{t.body}</TabsContent>)}
+    </Tabs>
+  )
+}
+
+function pageHeaderCode(v: Values) {
+  const title = str(v, 'title') || 'Projects'
+  const actions = bool(v, 'actions')
+  const tabs = bool(v, 'tabs')
+  const head = imports({
+    '@hugeicons/react': actions ? ['HugeiconsIcon'] : [],
+    '@hugeicons/core-free-icons': actions ? ['Add01Icon', 'Download01Icon'] : [],
+    '@/components/page-header': ['PageHeader'],
+    '@/components/ui/button': actions ? ['Button'] : [],
+    '@/components/ui/tabs': tabs ? ['Tabs', 'TabsContent', 'TabsList', 'TabsTrigger'] : [],
+  })
+  const actionsCode = actions
+    ? `const actions = (\n${indent(jsx('', {}, [
+      jsx('Button', { variant: 'outline', size: 'sm' }, ['<HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" />', 'Export']),
+      jsx('Button', { size: 'sm' }, ['<HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />', 'New project']),
+    ]))}\n)\n\n`
+    : ''
+  const header = jsx('PageHeader', {
+    size: unless(str(v, 'size'), 'md'),
+    as: unless(str(v, 'as'), 'h1'),
+    title,
+    description: bool(v, 'description') ? PAGE_DESCRIPTION : undefined,
+    actions: actions ? '{actions}' : undefined,
+  }, tabs ? jsx('TabsList', { variant: 'line' }, PAGE_TABS.map((t) => jsx('TabsTrigger', { value: t.value }, t.label))) : undefined)
+  const body = tabs
+    ? jsx('Tabs', { defaultValue: 'all' }, [header, ...PAGE_TABS.map((t) => jsx('TabsContent', { value: t.value }, t.body))])
+    : header
+  return `${head}\n\n${actionsCode}${body}`
+}
+
+// --- Panel ---------------------------------------------------------------
+
+const PANEL_NOTE = 'Last 7 days'
+
+// -my-0.5 keeps the title bar as tall as it is with a note.
+function PanelAction() {
+  return <Button variant="ghost" size="xs" className="-my-0.5" onClick={() => demoOnly('View all')}>View all</Button>
+}
+
+function panelCode(v: Values) {
+  const title = str(v, 'title')
+  const trailing = title ? (str(v, 'trailing') as PanelTrailing) : 'none'
+  const head = imports({
+    '@/components/panel': ['Panel'],
+    '@/components/ui/button': trailing === 'action' ? ['Button'] : [],
+  })
+  const body = jsx('Panel', {
+    title: title || undefined,
+    note: trailing === 'note' ? PANEL_NOTE : undefined,
+    action: trailing === 'action' ? '{<Button variant="ghost" size="xs" className="-my-0.5">View all</Button>}' : undefined,
+  }, `<p className="text-muted-foreground">${str(v, 'body') || 'Body'}</p>`)
   return `${head}\n\n${body}`
 }
 
@@ -772,6 +893,70 @@ export default function DisplayDemos() {
             ),
           },
         ]}
+      />
+
+      <Playground
+        title="PageHeader"
+        description="size, heading level, description, actions and tabs"
+        controls={[
+          { kind: 'select', name: 'size', label: 'Size', options: PAGE_HEADER_SIZES, initial: 'md' },
+          { kind: 'select', name: 'as', label: 'Heading (as)', options: HEADING_LEVELS, initial: 'h2' },
+          { kind: 'text', name: 'title', label: 'Title', initial: 'Projects' },
+          { kind: 'switch', name: 'description', label: 'Description', initial: true },
+          { kind: 'switch', name: 'actions', label: 'Actions', initial: true },
+          { kind: 'switch', name: 'tabs', label: 'Tabs under it', initial: false },
+        ]}
+        render={(v) => (
+          <DemoPageHeader
+            size={str(v, 'size') as PageHeaderSize}
+            as={str(v, 'as') as HeadingLevel}
+            title={str(v, 'title') || 'Projects'}
+            description={bool(v, 'description')}
+            actions={bool(v, 'actions')}
+            tabs={bool(v, 'tabs')}
+          />
+        )}
+        code={pageHeaderCode}
+      />
+
+      <Variants
+        title="PageHeader sizes"
+        note="lg: a kit page, md: an app page, sm: a section inside a page"
+        rows={{ name: 'size', values: PAGE_HEADER_SIZES }}
+        render={(size) => (
+          <PageHeader
+            size={size}
+            as="h3"
+            title="Projects"
+            description={PAGE_DESCRIPTION}
+            actions={<Button size="sm" onClick={() => demoOnly('New project')}>New project</Button>}
+            className="w-96"
+          />
+        )}
+      />
+
+      <Playground
+        title="Panel"
+        description="the kit's titled card. Clear the title for a plain box."
+        controls={[
+          { kind: 'text', name: 'title', label: 'Title', initial: 'Recent activity' },
+          { kind: 'select', name: 'trailing', label: 'Right of the title', options: PANEL_TRAILING, initial: 'note' },
+          { kind: 'text', name: 'body', label: 'Body', initial: '4 new comments and 2 files added since Monday.' },
+        ]}
+        render={(v) => {
+          const trailing = str(v, 'trailing') as PanelTrailing
+          return (
+            <Panel
+              title={str(v, 'title') || undefined}
+              note={trailing === 'note' ? PANEL_NOTE : undefined}
+              action={trailing === 'action' ? <PanelAction /> : undefined}
+              className="w-full max-w-sm"
+            >
+              <p className="text-muted-foreground">{str(v, 'body') || 'Body'}</p>
+            </Panel>
+          )
+        }}
+        code={panelCode}
       />
 
       <Variants

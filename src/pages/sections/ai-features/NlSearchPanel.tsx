@@ -15,7 +15,8 @@ import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
 import { LabelDot, NoAssignee, sortJobs } from '../FilterBar'
 import { Panel } from '../shared'
-import { Initials, PriorityIcon, StatusIcon } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from '../StatusSection'
 import { UNASSIGNED, matchesFilter, parseQuery, valueLabel, type NlField, type NlFilter } from './nl-search'
 import { AiLabel, Thinking, useTimers } from './shared'
 
@@ -222,7 +223,7 @@ export function NlSearchPanel() {
 function ChipVisual({ field, value }: { field: NlField; value: string }) {
   if (field === 'status') return <StatusIcon status={value as Status} />
   if (field === 'priority') return <PriorityIcon priority={value as Priority} />
-  if (field === 'assignee') return value === UNASSIGNED ? <NoAssignee /> : <Initials name={value} className="size-4" />
+  if (field === 'assignee') return value === UNASSIGNED ? <NoAssignee /> : <UserAvatar name={value} className="size-4" />
   if (field === 'label') {
     const label = LABELS.find((l) => l.id === value)
     return label ? <LabelDot colour={label.colour} /> : null
@@ -281,7 +282,7 @@ function ResultRow({ job, onOpen }: { job: Job; onOpen: () => void }) {
         <span className="min-w-0 flex-1 truncate font-medium">{job.title || 'Untitled job'}</span>
         <Labels labels={labels} />
         <span className="text-muted-foreground hidden w-16 shrink-0 text-right sm:inline">{job.due}</span>
-        {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
+        {job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
       </button>
     </li>
   )

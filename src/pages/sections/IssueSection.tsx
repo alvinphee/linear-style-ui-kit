@@ -36,7 +36,8 @@ import {
 } from '../data'
 import { useJobs, type Activity } from '../jobs-store'
 import { Section } from './shared'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { Person, UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 const SMALL_AVATAR = 'size-5'
 const TRIGGER = 'w-full min-w-0 justify-start gap-2 px-1.5 font-normal'
@@ -368,7 +369,7 @@ function ActivityFeed({ job }: { job: Job }) {
         {entries.map((entry) =>
           entry.kind === 'comment' ? (
             <li key={entry.id} className="flex items-start gap-2.5">
-              <Initials name={entry.actor} className="mt-1" />
+              <UserAvatar name={entry.actor} className="mt-1" />
               <div className="bg-subtle min-w-0 flex-1 rounded-lg border px-3 py-2">
                 <div className="flex flex-wrap items-baseline gap-x-2 text-xs">
                   <span className="font-medium">{entry.actor}</span>
@@ -453,8 +454,7 @@ function Properties({ job }: { job: Job }) {
       </PropertyRow>
       <PropertyRow label="Created by">
         <ReadOnly>
-          <Initials name={job.createdBy} className={SMALL_AVATAR} />
-          <span className="truncate">{job.createdBy}</span>
+          <Person name={job.createdBy} />
         </ReadOnly>
       </PropertyRow>
       <PropertyRow label="Created">
@@ -542,7 +542,7 @@ function AssigneePicker({ job }: { job: Job }) {
       <PopoverTrigger asChild>
         <Button variant="ghost" className={TRIGGER} aria-label={`Assignee: ${job.driver || 'Unassigned'}`}>
           {job.driver ? (
-            <Initials name={job.driver} className={SMALL_AVATAR} />
+            <UserAvatar name={job.driver} className={SMALL_AVATAR} />
           ) : (
             <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-4" />
           )}
@@ -561,7 +561,7 @@ function AssigneePicker({ job }: { job: Job }) {
               </CommandItem>
               {PEOPLE.map((person) => (
                 <CommandItem key={person} value={person} data-checked={job.driver === person} onSelect={() => pick(person)}>
-                  <Initials name={person} className={SMALL_AVATAR} />
+                  <UserAvatar name={person} className={SMALL_AVATAR} />
                   {person}
                 </CommandItem>
               ))}

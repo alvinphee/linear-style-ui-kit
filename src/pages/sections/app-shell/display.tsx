@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react'
 import { PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../../data'
 import { NoAssignee, UNASSIGNED, sortJobs, type Ordering } from '../FilterBar'
-import { Initials, PriorityIcon, StatusIcon } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from '../StatusSection'
 
 // What the Display menu controls, and how the jobs are grouped for the list
 // and the board.
@@ -86,7 +87,7 @@ function groupDefs(grouping: Exclude<Grouping, 'none'>, layout: Layout, showComp
   }
   return [
     ...PEOPLE.map((name) => ({
-      key: name, label: name, visual: <Initials name={name} className="size-4" />, patch: { driver: name },
+      key: name, label: name, visual: <UserAvatar name={name} className="size-4" />, patch: { driver: name },
       match: (j: Job) => j.driver === name,
     })),
     {

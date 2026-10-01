@@ -1,11 +1,13 @@
 import type { ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
-import { ArrowDownRight01Icon, ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
-import { Line, LineChart, YAxis } from 'recharts'
 import { cn } from 'cn'
-import { Badge } from '@/components/ui/badge'
-import { ChartContainer, type ChartConfig } from '@/components/ui/chart'
+import { DeltaBadge, TONE_TEXT, deltaTone, type KpiDelta, type KpiTone } from '@/components/delta-badge'
+import { Sparkline } from '@/components/sparkline'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+
+// The badge and the sparkline are kit components; re-exported for blocks
+// and pages that took them from here.
+export { DeltaBadge, Sparkline, type KpiDelta, type KpiTone }
 
 // A KPI card: a headline number with its label and icon, and optionally the
 // change on the period before (a delta badge), a sparkline of the period,
@@ -15,88 +17,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 // Lay several out with KpiGrid: one column on a phone, two, then four.
 // Inside an app whose content area is narrower than the window, use
 // breakpoints="container" under an @container element.
-
-// positive and negative are good and bad news; warning needs a look;
-// neutral is a change that is neither.
-export type KpiTone = 'positive' | 'negative' | 'warning' | 'neutral'
-
-export type KpiDelta = {
-  direction: 'up' | 'down'
-  // Such as "+12.4%" or "−0.31 pts".
-  text: ReactNode
-  // Defaults to positive when up and negative when down. Pass it when down
-  // is good news (costs, churn) or the change is neither.
-  tone?: KpiTone
-}
-
-const TONE_TEXT: Record<KpiTone, string> = {
-  positive: 'text-status-done',
-  negative: 'text-destructive',
-  // Plain amber is too faint for 11px text on a light card; a little foreground
-  // darkens it in light mode and lightens it in dark.
-  warning: 'text-[color-mix(in_oklch,var(--status-progress),var(--foreground)_25%)]',
-  neutral: 'text-muted-foreground',
-}
-
-const TONE_LINE: Record<KpiTone, string> = {
-  positive: 'var(--chart-1)',
-  negative: 'var(--destructive)',
-  warning: 'var(--status-progress)',
-  neutral: 'var(--chart-1)',
-}
-
-const toneOf = (delta: KpiDelta): KpiTone => delta.tone ?? (delta.direction === 'up' ? 'positive' : 'negative')
-
-export function DeltaBadge({ className, ...delta }: KpiDelta & { className?: string }) {
-  return (
-    <Badge variant="outline" className={cn('tabular-nums', TONE_TEXT[toneOf(delta)], className)}>
-      <HugeiconsIcon icon={delta.direction === 'up' ? ArrowUpRight01Icon : ArrowDownRight01Icon} strokeWidth={2} data-icon="inline-start" />
-      {delta.text}
-    </Badge>
-  )
-}
-
-const sparkConfig = (tone: KpiTone) => ({
-  value: { label: 'This period', color: TONE_LINE[tone] },
-  previous: { label: 'Previous period', color: 'var(--muted-foreground)' },
-}) satisfies ChartConfig
-
-export function Sparkline({ data, previous, tone = 'positive', className }: {
-  data: number[]
-  // The period before, drawn dashed behind. Leave it out to hide it.
-  previous?: number[]
-  tone?: KpiTone
-  className?: string
-}) {
-  const points = data.map((value, i) => ({ i, value, previous: previous?.[i] }))
-  return (
-    <ChartContainer config={sparkConfig(tone)} className={cn('aspect-auto h-9 w-24 shrink-0', className)} aria-hidden>
-      <LineChart data={points} margin={{ top: 3, right: 2, bottom: 3, left: 2 }} accessibilityLayer={false}>
-        <YAxis hide domain={['dataMin', 'dataMax']} />
-        {previous && (
-          <Line
-            dataKey="previous"
-            type="monotone"
-            stroke="var(--color-previous)"
-            strokeWidth={1}
-            strokeDasharray="2 2"
-            strokeOpacity={0.7}
-            dot={false}
-            isAnimationActive={false}
-          />
-        )}
-        <Line
-          dataKey="value"
-          type="monotone"
-          stroke="var(--color-value)"
-          strokeWidth={1.5}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
-    </ChartContainer>
-  )
-}
 
 export type KpiCardProps = {
   label: string
@@ -143,7 +63,7 @@ export function KpiCard({
           ) : badge}
         </div>
         {sparkline && (
-          <Sparkline data={sparkline.data} previous={sparkline.previous} tone={delta ? toneOf(delta) : undefined} />
+          <Sparkline data={sparkline.data} previous={sparkline.previous} tone={delta ? deltaTone(delta) : undefined} />
         )}
       </div>
     </>

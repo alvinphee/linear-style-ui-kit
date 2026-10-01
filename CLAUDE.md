@@ -56,7 +56,17 @@ linear-style-ui-kit/
     │   ├── period-picker.tsx  period switch, compare, date range picker
     │   └── record-sheet.tsx   side panel (peek) for one record
     ├── components/
-    │   └── ui/                shadcn components (ours to edit)
+    │   ├── ui/                shadcn components (ours to edit)
+    │   ├── person.tsx         UserAvatar (initials), Person (avatar and name)
+    │   ├── status-badge.tsx   status pill with a tone and a dot
+    │   ├── mark.tsx           LetterMark, IconMark
+    │   ├── delta-badge.tsx    the change on the period before
+    │   ├── sparkline.tsx      tiny line chart
+    │   ├── page-header.tsx    title, description, actions
+    │   ├── panel.tsx          the kit's titled card
+    │   ├── nav-item.tsx       sidebar row, NavHeading
+    │   ├── search-trigger.tsx button that looks like search and opens the palette
+    │   └── shortcut.tsx       keyboard keys, ⌘ or Ctrl by platform
     ├── lib/
     │   ├── router.ts          hash routes: #/buttons, #/templates/erp
     │   ├── theme.tsx          light / dark / system switch
@@ -219,6 +229,10 @@ Linear name, logo or assets in the app.
   ```
 
 ## Rules
+- Build each level only from the level below (atomic design, see the
+  glossary). A small part used in more than one place is a component in
+  `src/components/` (shown on its kit page with a playground); a bigger
+  composition is a block.
 - A block used in more than one place lives in `src/blocks/`, takes its
   data as props and holds no sample data. Kit pages and templates import it
   from there instead of keeping their own copy. These are what the shadcn

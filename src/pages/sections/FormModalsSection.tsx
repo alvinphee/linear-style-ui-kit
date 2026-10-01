@@ -43,7 +43,8 @@ import { DUE_OPTIONS, LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority,
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
 import { Panel, Row, Section } from './shared'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 export default function FormModalsSection() {
   return (
@@ -116,8 +117,8 @@ const ASSIGNEE_OPTIONS: PropertyOption[] = [
   },
   ...PEOPLE.map((person) => ({
     value: person, label: person,
-    icon: <Initials name={person} className="size-5" />,
-    pillIcon: <Initials name={person} className="size-4" />,
+    icon: <UserAvatar name={person} className="size-5" />,
+    pillIcon: <UserAvatar name={person} className="size-4" />,
   })),
 ]
 const LABEL_OPTIONS: PropertyOption[] = LABELS.map((l) => ({

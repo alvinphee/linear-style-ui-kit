@@ -1,31 +1,22 @@
 import type { ReactNode } from 'react'
-import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
+import { HugeiconsIcon } from '@hugeicons/react'
 import { Tick02Icon } from '@hugeicons/core-free-icons'
-import { cn } from 'cn'
-import { Initials } from '@/pages/sections/StatusSection'
-import { TONE_CLASS, TONE_DOT, formatDate, formatMoney, formatNumber, toneOf } from './format'
+import { IconMark } from '@/components/mark'
+import { PageHeader as KitPageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
+import { Person } from '@/components/person'
+import { StatusBadge as KitStatusBadge } from '@/components/status-badge'
+import { formatDate, formatMoney, formatNumber, toneOf } from './format'
 import type { Column, Value } from './types'
 
-// Small pieces every ERP page shares, so lists, panels and dashboards read alike.
+// The ERP's names for kit components, with its own data rules on top
+// (which status reads as which tone, page padding). The look is the kit's.
+
+export { Person }
+export { IS_MAC, MOD } from '@/components/shortcut'
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
-  const tone = toneOf(status)
-  return (
-    <span className={cn('inline-flex h-5 shrink-0 items-center gap-1.5 rounded-md px-1.5 text-[11px] font-medium whitespace-nowrap', TONE_CLASS[tone], className)}>
-      <span className={cn('size-1.5 rounded-full', TONE_DOT[tone])} />
-      {status}
-    </span>
-  )
-}
-
-export function Person({ name, className }: { name: string; className?: string }) {
-  if (!name) return <span className="text-muted-foreground">—</span>
-  return (
-    <span className={cn('flex min-w-0 items-center gap-2', className)}>
-      <Initials name={name} className="size-5" />
-      <span className="truncate">{name}</span>
-    </span>
-  )
+  return <KitStatusBadge tone={toneOf(status)} className={className}>{status}</KitStatusBadge>
 }
 
 // One cell, formatted by its column's kind.
@@ -63,69 +54,27 @@ export function CellValue({ column, value }: { column: Column; value: Value | un
 export const isNumeric = (column: Column) => column.kind === 'money' || column.kind === 'number' || column.kind === 'percent'
 
 // A module's icon on a tint of its colour.
-export function ModuleMark({ icon, colour, size = 'md', className }: {
-  icon: IconSvgElement
-  colour: string
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
-}) {
-  return (
-    <span
-      className={cn(
-        'grid shrink-0 place-items-center rounded-md',
-        size === 'sm' && 'size-5 [&_svg]:size-3',
-        size === 'md' && 'size-7 [&_svg]:size-4',
-        size === 'lg' && 'size-9 rounded-lg [&_svg]:size-5',
-        className,
-      )}
-      style={{ background: `color-mix(in oklch, ${colour} 16%, transparent)`, color: colour }}
-    >
-      <HugeiconsIcon icon={icon} strokeWidth={2} />
-    </span>
-  )
-}
+export const ModuleMark = IconMark
 
-// The title row at the top of a page: name, a line of context, and actions.
+// The kit's page header, padded for an app page.
 export function PageHeader({ title, description, actions, children }: {
   title: string
   description?: ReactNode
   actions?: ReactNode
   children?: ReactNode
 }) {
-  return (
-    <div className="grid gap-3 px-4 pt-5 pb-3 @2xl:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="grid min-w-0 gap-0.5">
-          <h1 className="text-lg font-semibold tracking-tight">{title}</h1>
-          {description && <p className="text-muted-foreground text-xs">{description}</p>}
-        </div>
-        {actions && <div className="flex shrink-0 flex-wrap items-center gap-1.5">{actions}</div>}
-      </div>
-      {children}
-    </div>
-  )
+  return <KitPageHeader title={title} description={description} actions={actions} className="px-4 pt-5 pb-3 @2xl:px-6">{children}</KitPageHeader>
 }
 
-// A boxed area on a dashboard or settings page.
-export function Card({ title, action, children, className }: {
-  title?: string
+// A boxed area on a dashboard or settings page: the kit's Panel.
+// bodyClassName="p-0" for a list or table that runs to the edges.
+export function Card({ title, note, action, children, className, bodyClassName }: {
+  title?: ReactNode
+  note?: ReactNode
   action?: ReactNode
   children: ReactNode
   className?: string
+  bodyClassName?: string
 }) {
-  return (
-    <section className={cn('bg-card min-w-0 rounded-lg border', className)}>
-      {title && (
-        <header className="flex items-center justify-between gap-3 border-b px-3.5 py-2.5">
-          <h2 className="text-xs font-medium">{title}</h2>
-          {action}
-        </header>
-      )}
-      <div className="p-3.5">{children}</div>
-    </section>
-  )
+  return <Panel as="section" title={title} note={note} action={action} className={className} bodyClassName={bodyClassName}>{children}</Panel>
 }
-
-// Shortcut text that matches the platform: ⌘K on a Mac, Ctrl K elsewhere.
-export const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)
-export const MOD = IS_MAC ? '⌘' : 'Ctrl'

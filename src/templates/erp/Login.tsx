@@ -4,12 +4,13 @@ import {
   ArrowRight01Icon, FingerPrintIcon, Key01Icon, Mail01Icon, LockIcon, Tick02Icon, ViewIcon, ViewOffIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { LetterMark } from '@/components/mark'
+import { UserAvatar } from '@/components/person'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
-import { Initials } from '@/pages/sections/StatusSection'
 import { COMPANIES, DEMO_USERS, ROLE_LABEL } from './data'
 import { MODULES } from './modules'
 import { go, goScreen } from './route'
@@ -22,7 +23,8 @@ import { ModuleMark } from './ui'
 function Brand() {
   return (
     <div className="flex items-center gap-2">
-      <span className="bg-primary text-primary-foreground grid size-7 place-items-center rounded-lg text-xs font-semibold">A</span>
+      {/* The primary colour, so it follows the theme (and black/white buttons). */}
+      <LetterMark text="A" colour="var(--primary)" size="md" className="text-primary-foreground rounded-lg text-xs" />
       <span className="text-sm font-semibold tracking-tight">Acme ERP</span>
     </div>
   )
@@ -168,7 +170,7 @@ export function Login() {
                   }}
                   className="hover:bg-accent/60 focus-visible:ring-ring/40 flex items-center gap-2.5 rounded-md border px-2.5 py-1.5 text-left text-xs outline-none focus-visible:ring-2 disabled:opacity-50"
                 >
-                  <Initials name={u.name} className="size-6" />
+                  <UserAvatar name={u.name} />
                   <span className="grid min-w-0 flex-1">
                     <span className="truncate font-medium">{u.name}</span>
                     <span className="text-muted-foreground truncate text-[11px]">{u.title}</span>
@@ -244,7 +246,7 @@ export function Companies() {
                   }}
                   className="hover:bg-accent/60 hover:border-foreground/15 focus-visible:ring-ring/40 flex w-full items-center gap-3 rounded-lg border p-2.5 text-left outline-none focus-visible:ring-2"
                 >
-                  <span className="grid size-9 shrink-0 place-items-center rounded-lg text-xs font-semibold text-white" style={{ background: c.colour }}>{c.short}</span>
+                  <LetterMark text={c.short} colour={c.colour} size="lg" />
                   <span className="grid min-w-0 flex-1 gap-0.5">
                     <span className="truncate text-[13px] font-medium">{c.name}</span>
                     <span className="text-muted-foreground truncate text-[11px]">{c.country} · {c.currency} · {c.members} members</span>

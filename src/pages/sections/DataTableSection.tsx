@@ -11,14 +11,14 @@ import {
   BulkDelete, DataTable, RangeFilter, actionsColumn, copyText, dataTableColumns, listNames, plural, selectColumn,
   setColumnFilter, useDataTable, type DataTableRowAction,
 } from '@/blocks/data-table'
-import { Badge } from '@/components/ui/badge'
+import { Person, UserAvatar } from '@/components/person'
+import { StatusBadge, TONE_DOT, type Tone } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import {
   Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
 } from '@/components/ui/sheet'
 import { PEOPLE } from '../data'
 import { Section } from './shared'
-import { Initials } from './StatusSection'
 
 // The faceted filter now lives in the data table block; other kit pages still import it from here.
 export { FacetFilter, type FacetOption } from '@/blocks/data-table'
@@ -50,12 +50,15 @@ const PLANS: Record<Plan, { label: string; price: number; rank: number }> = {
 }
 const PLAN_KEYS = Object.keys(PLANS) as Plan[]
 
-const STATUSES: Record<AccountStatus, { label: string; dot: string; rank: number }> = {
-  active: { label: 'Active', dot: 'bg-status-done', rank: 0 },
-  trialing: { label: 'Trialing', dot: 'bg-status-progress', rank: 1 },
-  past_due: { label: 'Past due', dot: 'bg-status-blocked', rank: 2 },
-  canceled: { label: 'Canceled', dot: 'bg-status-todo', rank: 3 },
+// `dot` overrides the tone's dot: Canceled keeps the kit's "todo" grey, a
+// shade darker than the neutral tone's dot.
+const STATUSES: Record<AccountStatus, { label: string; tone: Tone; dot?: string; rank: number }> = {
+  active: { label: 'Active', tone: 'success', rank: 0 },
+  trialing: { label: 'Trialing', tone: 'progress', rank: 1 },
+  past_due: { label: 'Past due', tone: 'danger', rank: 2 },
+  canceled: { label: 'Canceled', tone: 'neutral', dot: 'bg-status-todo', rank: 3 },
 }
+const dotOf = (s: AccountStatus) => STATUSES[s].dot ?? TONE_DOT[STATUSES[s].tone]
 const STATUS_KEYS = Object.keys(STATUSES) as AccountStatus[]
 
 const FIRST = [
@@ -148,12 +151,7 @@ const columns = col.columns([
   col.accessor('name', {
     header: 'Customer',
     sortFn: 'text',
-    cell: ({ getValue }) => (
-      <span className="flex min-w-0 items-center gap-2">
-        <Initials name={getValue()} className="size-5" />
-        <span className="truncate font-medium">{getValue()}</span>
-      </span>
-    ),
+    cell: ({ getValue }) => <Person name={getValue()} className="font-medium" avatarClassName="font-normal" />,
     meta: { label: 'Customer' },
   }),
   col.accessor('email', {
@@ -176,7 +174,7 @@ const columns = col.columns([
     filterFn: 'oneOf',
     sortFn: (a, b, id) =>
       STATUSES[a.getValue<AccountStatus>(id)].rank - STATUSES[b.getValue<AccountStatus>(id)].rank,
-    cell: ({ getValue }) => <StatusBadge status={getValue()} />,
+    cell: ({ getValue }) => <CustomerStatus status={getValue()} />,
     meta: { label: 'Status' },
   }),
   col.accessor('amount', {
@@ -203,12 +201,7 @@ const columns = col.columns([
     header: 'Owner',
     filterFn: 'oneOf',
     sortFn: 'text',
-    cell: ({ getValue }) => (
-      <span className="flex items-center gap-2">
-        <Initials name={getValue()} className="size-5" />
-        {getValue()}
-      </span>
-    ),
+    cell: ({ getValue }) => <Person name={getValue()} />,
     meta: { label: 'Owner' },
   }),
   actionsColumn<Customer>(),
@@ -234,14 +227,14 @@ const FACETS = [
     column: 'status',
     title: 'Status',
     options: STATUS_KEYS.map((s) => ({
-      value: s, label: STATUSES[s].label, visual: <span className={cn('size-1.5 rounded-full', STATUSES[s].dot)} />,
+      value: s, label: STATUSES[s].label, visual: <span className={cn('size-1.5 rounded-full', dotOf(s))} />,
     })),
   },
   { column: 'plan', title: 'Plan', options: PLAN_KEYS.map((p) => ({ value: p, label: PLANS[p].label })) },
   {
     column: 'owner',
     title: 'Owner',
-    options: PEOPLE.map((name) => ({ value: name, label: name, visual: <Initials name={name} className="size-4" /> })),
+    options: PEOPLE.map((name) => ({ value: name, label: name, visual: <UserAvatar name={name} className="size-4" /> })),
   },
 ]
 
@@ -356,13 +349,18 @@ export default function DataTableSection() {
 
 /* ---------- Pieces ---------- */
 
-function StatusBadge({ status }: { status: AccountStatus }) {
+// The kit's outline status badge, kept at this table's pill shape and 10px text.
+function CustomerStatus({ status }: { status: AccountStatus }) {
   const s = STATUSES[status]
   return (
-    <Badge variant="outline" className="gap-1.5 font-normal">
-      <span className={cn('size-1.5 rounded-full', s.dot)} />
+    <StatusBadge
+      tone={s.tone}
+      variant="outline"
+      dotClassName={s.dot}
+      className="bg-input/20 dark:bg-input/30 rounded-full px-2 text-[10px]"
+    >
       {s.label}
-    </Badge>
+    </StatusBadge>
   )
 }
 
@@ -414,7 +412,7 @@ function CustomerPeek({ customer, rows, onOpen, onClose, onRemove }: {
                 </Button>
               </div>
               <div className="mt-2 flex items-center gap-3">
-                <Initials name={customer.name} className="size-10 text-sm" />
+                <UserAvatar name={customer.name} className="size-10 text-sm" />
                 <div className="min-w-0">
                   <SheetTitle className="truncate text-base">{customer.name}</SheetTitle>
                   <SheetDescription className="truncate">{customer.email}</SheetDescription>
@@ -425,7 +423,7 @@ function CustomerPeek({ customer, rows, onOpen, onClose, onRemove }: {
             <div className="grid flex-1 content-start gap-5 overflow-y-auto p-4">
               <dl className="grid grid-cols-[6.5rem_1fr] items-center gap-x-3 gap-y-2.5 text-xs">
                 <dt className="text-muted-foreground">Status</dt>
-                <dd><StatusBadge status={customer.status} /></dd>
+                <dd><CustomerStatus status={customer.status} /></dd>
                 <dt className="text-muted-foreground">Plan</dt>
                 <dd>{PLANS[customer.plan].label}</dd>
                 <dt className="text-muted-foreground">Amount</dt>
@@ -436,9 +434,7 @@ function CustomerPeek({ customer, rows, onOpen, onClose, onRemove }: {
                   {customer.seats}
                 </dd>
                 <dt className="text-muted-foreground">Owner</dt>
-                <dd className="flex items-center gap-1.5">
-                  <Initials name={customer.owner} className="size-5" /> {customer.owner}
-                </dd>
+                <dd><Person name={customer.owner} className="gap-1.5" /></dd>
                 <dt className="text-muted-foreground">Created</dt>
                 <dd className="flex items-center gap-1.5 tabular-nums">
                   <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />

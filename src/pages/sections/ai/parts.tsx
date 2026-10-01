@@ -11,7 +11,8 @@ import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Spinner } from '@/components/ui/spinner'
 import { PRIORITY, STATUS, type Priority, type Status } from '../../data'
-import { Initials, PriorityIcon, StatusIcon } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from '../StatusSection'
 import { formatDuration, now } from './data'
 import { Caret } from './markdown'
 import type { ArtifactKind, Change, PartOf, Source, StepState, ToolName } from './types'
@@ -316,7 +317,7 @@ function ChangeValue({ field, value, before }: { field: Change['field']; value: 
     return <span className="inline-flex min-w-0 items-center gap-1"><PriorityIcon priority={PRIORITY_BY_LABEL[value]} />{text}</span>
   }
   if (field === 'Assignee' && value !== 'Unassigned') {
-    return <span className="inline-flex min-w-0 items-center gap-1"><Initials name={value} className="size-4" />{text}</span>
+    return <span className="inline-flex min-w-0 items-center gap-1"><UserAvatar name={value} className="size-4" />{text}</span>
   }
   return text
 }

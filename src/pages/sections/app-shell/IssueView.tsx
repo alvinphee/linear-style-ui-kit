@@ -9,7 +9,8 @@ import { LABELS, type Job } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { NoAssignee } from '../FilterBar'
 import { JobContextMenu, JobDropdownMenu } from '../JobActions'
-import { Initials, PriorityIcon, StatusIcon } from '../StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from '../StatusSection'
 import type { Group, ListDisplay } from './display'
 
 type Openers = {
@@ -130,7 +131,7 @@ function IssueRow({ job, display, selectedId, onOpen, onOpenFull }: Openers & { 
             </span>
           )}
           {p.due && <span className="text-muted-foreground hidden w-16 shrink-0 text-right text-[11px] @lg:inline">{job.due}</span>}
-          {p.assignee && (job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />)}
+          {p.assignee && (job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />)}
           <JobDropdownMenu job={job} onOpen={open} onOpenFull={openFull} />
         </div>
       </JobContextMenu>
@@ -198,7 +199,7 @@ function IssueCard({ job, display, card, selectedId, onOpen, onOpenFull }: Opene
           {p.id && job.id}
           <span className="ml-auto flex items-center gap-1">
             <JobDropdownMenu job={job} onOpen={open} onOpenFull={openFull} />
-            {p.assignee && (job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />)}
+            {p.assignee && (job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />)}
           </span>
         </div>
         <span className="line-clamp-2 font-medium">{job.title}</span>

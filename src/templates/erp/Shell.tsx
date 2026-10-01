@@ -1,30 +1,33 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ComputerIcon, DashboardSquare01Icon, LayoutTopIcon, Logout01Icon, Menu01Icon, Moon02Icon,
   Search01Icon, SidebarLeftIcon, SparklesIcon, Sun03Icon, Tick02Icon, UnfoldMoreIcon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { LetterMark } from '@/components/mark'
+import { NavHeading, NavItem } from '@/components/nav-item'
+import { UserAvatar } from '@/components/person'
+import { SearchTrigger } from '@/components/search-trigger'
+import { Shortcut } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
 import { NotificationsMenu } from '@/blocks/notifications-menu'
 import { useTheme } from '@/lib/theme'
-import { Initials } from '@/pages/sections/StatusSection'
 import { COMPANIES, DEMO_USERS, ROLE_LABEL } from './data'
 import { formatMoney } from './format'
 import { MODULES } from './modules'
 import { go, goScreen } from './route'
 import { useErp, type HeaderStyle } from './store'
 import type { EntityId, ErpModule, ErpPage, Role } from './types'
-import { MOD, ModuleMark } from './ui'
+import { ModuleMark } from './ui'
 
 export const allowedModules = (role: Role | undefined) => MODULES.filter((m) => role && m.roles.includes(role))
 
@@ -81,9 +84,7 @@ function CompanySwitcher() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="hover:bg-sidebar-accent focus-visible:ring-ring/40 flex w-full min-w-0 items-center gap-2 rounded-md p-1.5 text-left outline-none focus-visible:ring-2">
-          <span className="grid size-7 shrink-0 place-items-center rounded-md text-[10px] font-semibold text-white" style={{ background: company.colour }}>
-            {company.short}
-          </span>
+          <LetterMark text={company.short} colour={company.colour} size="md" />
           <span className="grid min-w-0 flex-1 leading-tight">
             <span className="truncate text-[13px] font-medium">{company.name}</span>
             <span className="text-muted-foreground truncate text-[11px]">{session ? ROLE_LABEL[session.role] : ''} · {company.country}</span>
@@ -101,7 +102,7 @@ function CompanySwitcher() {
               if (c.id !== company.id) toast(`Switched to ${c.name}`, { description: 'Demo data is shared between companies.' })
             }}
           >
-            <span className="grid size-5 shrink-0 place-items-center rounded text-[9px] font-semibold text-white" style={{ background: c.colour }}>{c.short}</span>
+            <LetterMark text={c.short} colour={c.colour} />
             <span className="flex-1 truncate">{c.name}</span>
             {c.id === company.id && <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />}
           </DropdownMenuItem>
@@ -145,32 +146,6 @@ function ModuleMenu({ module, onNavigate, children }: { module: ErpModule; onNav
   )
 }
 
-function NavLink({ icon, label, badge, active, onClick }: {
-  icon?: IconSvgElement
-  label: string
-  badge?: number
-  active?: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-current={active ? 'page' : undefined}
-      data-active={active}
-      className="hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground focus-visible:ring-ring/40 flex h-7 w-full min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2 data-[active=true]:font-medium"
-    >
-      {icon && <HugeiconsIcon icon={icon} strokeWidth={2} className="size-3.5 shrink-0 opacity-80" />}
-      <span className="truncate">{label}</span>
-      {!!badge && <span className="text-muted-foreground ml-auto text-[11px] tabular-nums">{badge}</span>}
-    </button>
-  )
-}
-
-function SidebarHeading({ children }: { children: ReactNode }) {
-  return <h3 className="text-muted-foreground mt-4 mb-0.5 px-2 text-[11px] font-medium">{children}</h3>
-}
-
 function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; page: ErpPage; onNavigate?: () => void; showSearch: boolean }) {
   const { data, recent, openPeek, setPaletteOpen } = useErp()
   const open = (m: string, p: string) => {
@@ -205,28 +180,29 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
         </ModuleMenu>
         {/* One search at a time: here only when the header has none. */}
         {showSearch && (
-          <button
-            type="button"
+          <SearchTrigger
+            label="Search or jump to…"
             onClick={() => setPaletteOpen(true)}
-            className="text-muted-foreground hover:bg-sidebar-accent flex h-7 w-full items-center gap-2 rounded-md px-2 text-xs"
-          >
-            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="size-3.5" />
-            Search or jump to…
-            <KbdGroup className="ml-auto">
-              <Kbd>{MOD}</Kbd>
-              <Kbd>K</Kbd>
-            </KbdGroup>
-          </button>
+            className="hover:bg-sidebar-accent border-transparent"
+          />
         )}
       </div>
 
       <nav aria-label={`${module.name} pages`} className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {groups.map((g, i) => (
           <div key={g.title ?? i} className={cn(!g.title && i === 0 && 'mt-1')}>
-            {g.title && <SidebarHeading>{g.title}</SidebarHeading>}
+            {g.title && <NavHeading>{g.title}</NavHeading>}
             <div className="grid gap-px">
               {g.pages.map((p) => (
-                <NavLink key={p.id} icon={p.icon} label={p.label} badge={p.badge?.(data)} active={p.id === page.id} onClick={() => open(module.id, p.id)} />
+                <NavItem
+                  key={p.id}
+                  icon={p.icon}
+                  label={p.label}
+                  count={p.badge?.(data)}
+                  active={p.id === page.id}
+                  onClick={() => open(module.id, p.id)}
+                  className="data-[active=true]:font-medium"
+                />
               ))}
             </div>
           </div>
@@ -234,21 +210,18 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
 
         {recent.length > 0 && (
           <>
-            <SidebarHeading>Recent</SidebarHeading>
+            <NavHeading>Recent</NavHeading>
             <div className="grid gap-px">
               {recent.slice(0, 5).map((r) => (
-                <button
+                <NavItem
                   key={r.id}
-                  type="button"
+                  mark={<span className="text-muted-foreground shrink-0 font-mono text-[10.5px]">{r.id}</span>}
+                  label={r.label}
                   onClick={() => {
                     openPeek(r.entity as EntityId, r.id)
                     onNavigate?.()
                   }}
-                  className="hover:bg-sidebar-accent focus-visible:ring-ring/40 flex h-7 min-w-0 items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2"
-                >
-                  <span className="text-muted-foreground shrink-0 font-mono text-[10.5px]">{r.id}</span>
-                  <span className="truncate">{r.label}</span>
-                </button>
+                />
               ))}
             </div>
           </>
@@ -260,21 +233,6 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
         <AccountMenu />
       </footer>
     </div>
-  )
-}
-
-function SearchPill({ className }: { className?: string }) {
-  const { setPaletteOpen } = useErp()
-  return (
-    <button
-      type="button"
-      onClick={() => setPaletteOpen(true)}
-      className={cn('bg-muted/40 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/40 h-8 w-full min-w-0 items-center gap-2 rounded-md border px-2.5 text-xs whitespace-nowrap outline-none focus-visible:ring-2', className)}
-    >
-      <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="size-3.5 shrink-0" />
-      <span className="truncate">Search records, pages and actions</span>
-      <KbdGroup className="ml-auto"><Kbd>{MOD}</Kbd><Kbd>K</Kbd></KbdGroup>
-    </button>
   )
 }
 
@@ -297,7 +255,7 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
     ...(company ? [{
       id: 'company',
       label: company.name,
-      icon: <span className="grid size-4 shrink-0 place-items-center rounded-[4px] text-[8px] font-semibold text-white" style={{ background: company.colour }}>{company.short}</span>,
+      icon: <LetterMark text={company.short} colour={company.colour} size="xs" />,
       onSelect: () => goScreen('companies'),
     }] : []),
     ...(module.id !== 'home' ? [{
@@ -324,7 +282,7 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
               <HugeiconsIcon icon={SidebarLeftIcon} strokeWidth={2} />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{collapsed ? 'Show sidebar' : 'Hide sidebar'} <span className="ml-1 opacity-70">[</span></TooltipContent>
+          <TooltipContent>{collapsed ? 'Show sidebar' : 'Hide sidebar'} <Shortcut keys={['[']} className="ml-1" /></TooltipContent>
         </Tooltip>
         {/* With the sidebar hidden, the module switcher moves up here. */}
         {collapsed && (
@@ -336,7 +294,14 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
         )}
         <FoldingBreadcrumb trail={trail} current={page.label} />
       </div>
-      {withSearch && <SearchPill className="hidden md:flex" />}
+      {withSearch && (
+        <SearchTrigger
+          size="md"
+          label="Search records, pages and actions"
+          onClick={() => setPaletteOpen(true)}
+          className="bg-muted/40 hover:bg-accent hidden md:flex"
+        />
+      )}
       <div className="flex shrink-0 items-center justify-end gap-1">
         <Button variant="ghost" size="icon" className={cn(withSearch && 'md:hidden')} aria-label="Search" onClick={() => setPaletteOpen(true)}>
           <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
@@ -348,7 +313,7 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
               <span className="hidden sm:inline">Ask AI</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Ask AI <span className="ml-1 opacity-70">{MOD} J</span></TooltipContent>
+          <TooltipContent>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></TooltipContent>
         </Tooltip>
         <div className="md:hidden"><Notifications variant="icon" /></div>
       </div>
@@ -398,7 +363,7 @@ function AccountMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="hover:bg-sidebar-accent focus-visible:ring-ring/40 aria-expanded:bg-sidebar-accent mt-1 flex h-10 w-full min-w-0 items-center gap-2 rounded-md px-1.5 text-left outline-none focus-visible:ring-2">
-          <Initials name={session.name} className="size-7" />
+          <UserAvatar name={session.name} className="size-7" />
           <span className="grid min-w-0 flex-1 leading-tight">
             <span className="truncate text-xs font-medium">{session.name}</span>
             <span className="text-muted-foreground truncate text-[11px]">{session.title}</span>

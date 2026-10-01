@@ -24,7 +24,8 @@ import { PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '
 import { useJobs } from '../jobs-store'
 import { Section } from './shared'
 import { JobContextMenu, JobDropdownMenu, JobPeek, openFullPage } from './JobActions'
-import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon, StatusIcon } from './StatusSection'
 
 const ORDER: Status[] = ['progress', 'todo', 'backlog', 'done', 'cancelled']
 const PRIORITY_ORDER: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
@@ -307,7 +308,7 @@ function BulkToolbar({ jobs, onStatus, onPriority, onAssign, onDelete, onClear }
           >
             {PEOPLE.map((name) => (
               <DropdownMenuRadioItem key={name} value={name}>
-                <Initials name={name} className="size-5" /> {name}
+                <UserAvatar name={name} className="size-5" /> {name}
               </DropdownMenuRadioItem>
             ))}
             <DropdownMenuSeparator />
@@ -432,7 +433,7 @@ function JobRow({ job, selected, picked, selecting, onSelect, onOpenFull, onTogg
           </span>
         )}
         <span className="text-muted-foreground hidden w-16 text-right sm:inline">{job.due}</span>
-        {job.driver ? <Initials name={job.driver} className="size-5" /> : <NoAssignee />}
+        {job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee />}
         <JobDropdownMenu job={job} onOpen={onSelect} onOpenFull={onOpenFull} />
       </div>
     </JobContextMenu>
