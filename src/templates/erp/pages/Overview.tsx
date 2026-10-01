@@ -1,7 +1,7 @@
 import { useId, useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, Agreement01Icon, Alert02Icon, ArrowDownRight01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Award01Icon,
+  Add01Icon, Agreement01Icon, Alert02Icon, ArrowRight01Icon, Award01Icon,
   BankIcon, Briefcase01Icon, Calendar03Icon, Clock01Icon, Coins01Icon, DeliveryTruck01Icon, Exchange01Icon,
   Invoice01Icon, Invoice03Icon, PackageIcon, PackageReceiveIcon, PackageRemoveIcon, PercentCircleIcon, QuoteDownIcon,
   ReceiptTextIcon, Target02Icon, UserAdd01Icon, UserMultipleIcon, Wallet01Icon,
@@ -9,11 +9,12 @@ import {
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { KpiCard, KpiGrid, type KpiDelta, type KpiTone } from '@/blocks/kpi-card'
+import { PeriodPicker } from '@/blocks/period-picker'
 import { Button } from '@/components/ui/button'
 import {
   ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig,
 } from '@/components/ui/chart'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { TODAY, addDays, daysBetween, formatDate, formatMoney, formatMoneyShort, formatNumber } from '../format'
 import { moduleById, specFor } from '../modules'
 import { erpHref } from '../route'
@@ -57,19 +58,13 @@ function groupSum(rows: Row[], by: string, value: (r: Row) => number = () => 1) 
   return [...totals].map(([label, t]) => ({ label, ...t })).sort((a, b) => b.value - a.value)
 }
 
-type Tone = 'danger' | 'warning'
-const TONE_TEXT: Record<Tone, string> = {
-  danger: 'text-destructive',
-  warning: 'text-[oklch(0.62_0.14_70)] dark:text-[oklch(0.8_0.14_80)]',
-}
-
 // ---------------------------------------------------------------------------
 // Page frame
 
 const PERIODS = [
-  { id: '30d', label: '30 days' },
-  { id: 'quarter', label: 'Quarter' },
-  { id: 'year', label: 'Year' },
+  { value: '30d', label: '30 days' },
+  { value: 'quarter', label: 'Quarter' },
+  { value: 'year', label: 'Year' },
 ]
 
 function Header({ mod, description, create }: { mod: ErpModule; description: string; create: EntityId }) {
@@ -82,19 +77,7 @@ function Header({ mod, description, create }: { mod: ErpModule; description: str
       description={`${description}, as of ${formatDate(TODAY, true)}.`}
       actions={
         <>
-          <ToggleGroup
-            type="single"
-            variant="outline"
-            size="sm"
-            spacing={0}
-            value={period}
-            onValueChange={(v) => v && setPeriod(v)}
-            aria-label="Period"
-          >
-            {PERIODS.map((p) => (
-              <ToggleGroupItem key={p.id} value={p.id} className="px-2 text-[11px]">{p.label}</ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+          <PeriodPicker periods={PERIODS} value={period} onChange={setPeriod} size="sm" aria-label="Period" />
           <Button size="sm" onClick={() => startCreate(create)}>
             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> New {specFor(create)?.singular ?? 'record'}
           </Button>
@@ -107,49 +90,16 @@ function Header({ mod, description, create }: { mod: ErpModule; description: str
 type Kpi = {
   label: string
   value: string
-  sub: ReactNode
+  sub: string
   icon: IconSvgElement
   // The module page the card links to.
   page?: string
-  tone?: Tone
+  // Colours the sub line.
+  tone?: KpiTone
+  // A change, shown as a badge before the sub line.
+  delta?: KpiDelta
   // The exact figure, shown on hover when the value is rounded.
   title?: string
-}
-
-function KpiCard({ module, kpi }: { module: string; kpi: Kpi }) {
-  const body = (
-    <>
-      <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
-        <HugeiconsIcon icon={kpi.icon} strokeWidth={2} className="size-3.5 shrink-0" />
-        <span className="truncate">{kpi.label}</span>
-      </span>
-      <span className="truncate text-xl leading-tight font-semibold tracking-tight tabular-nums" title={kpi.title}>
-        {kpi.value}
-      </span>
-      <span className={cn('text-muted-foreground truncate text-[11px] tabular-nums', kpi.tone && TONE_TEXT[kpi.tone])}>
-        {kpi.sub}
-      </span>
-    </>
-  )
-  const box = 'bg-card grid min-w-0 content-start gap-1.5 rounded-lg border p-3.5'
-  if (!kpi.page) return <div className={box}>{body}</div>
-  return (
-    <a
-      href={erpHref(module, kpi.page)}
-      className={cn(box, 'hover:border-foreground/15 focus-visible:ring-ring/40 transition-colors outline-none focus-visible:ring-2')}
-    >
-      {body}
-    </a>
-  )
-}
-
-function Trend({ up, neutral, children }: { up: boolean; neutral?: boolean; children: ReactNode }) {
-  return (
-    <span className={cn('inline-flex items-center gap-0.5', !neutral && (up ? 'text-status-done' : 'text-destructive'))}>
-      <HugeiconsIcon icon={up ? ArrowUpRight01Icon : ArrowDownRight01Icon} strokeWidth={2} className="size-3" />
-      {children}
-    </span>
-  )
 }
 
 const Note = ({ children }: { children: ReactNode }) => (
@@ -169,9 +119,21 @@ function Overview({ mod, description, create, kpis, chart, side, list }: {
     <div className="pb-8">
       <Header mod={mod} description={description} create={create} />
       <div className="grid gap-3 px-4 @2xl:px-6">
-        <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-4">
-          {kpis.map((k) => <KpiCard key={k.label} module={mod.id} kpi={k} />)}
-        </div>
+        <KpiGrid breakpoints="container">
+          {kpis.map((k) => (
+            <KpiCard
+              key={k.label}
+              label={k.label}
+              value={k.value}
+              valueTitle={k.title}
+              icon={k.icon}
+              delta={k.delta}
+              footnote={k.sub}
+              footnoteTone={k.tone}
+              href={k.page && erpHref(mod.id, k.page)}
+            />
+          ))}
+        </KpiGrid>
         <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           {chart}
           {side}
@@ -535,7 +497,7 @@ function SalesOverview({ mod }: { mod: ErpModule }) {
         },
         {
           label: 'Deliveries to pick', value: formatNumber(toPick.length), icon: DeliveryTruck01Icon, page: 'deliveries',
-          sub: late ? `${late} past the scheduled date` : 'All on schedule', tone: late ? 'danger' : undefined,
+          sub: late ? `${late} past the scheduled date` : 'All on schedule', tone: late ? 'negative' : undefined,
         },
       ]}
       chart={
@@ -626,7 +588,7 @@ function InventoryOverview({ mod }: { mod: ErpModule }) {
         },
         {
           label: 'Out of stock', value: formatNumber(out.length), icon: PackageRemoveIcon, page: 'items',
-          sub: `${count(emptyLines, 'warehouse stock line')} at zero`, tone: out.length ? 'danger' : undefined,
+          sub: `${count(emptyLines, 'warehouse stock line')} at zero`, tone: out.length ? 'negative' : undefined,
         },
         {
           label: 'Transfers in transit', value: formatNumber(transit), icon: Exchange01Icon, page: 'transfers',
@@ -846,7 +808,7 @@ function AccountingOverview({ mod }: { mod: ErpModule }) {
         },
         {
           label: 'Overdue receivables', value: formatMoneyShort(overdueValue), title: money(overdueValue), icon: Alert02Icon, page: 'invoices',
-          sub: `${count(overdue.length, 'invoice')} past due · ${pct(overdueValue, ar)}% of AR`, tone: overdue.length ? 'danger' : undefined,
+          sub: `${count(overdue.length, 'invoice')} past due · ${pct(overdueValue, ar)}% of AR`, tone: overdue.length ? 'negative' : undefined,
         },
         {
           label: 'Accounts payable', value: formatMoneyShort(sum(payable, 'amount')), title: money(sum(payable, 'amount')), icon: Invoice03Icon, page: 'bills',
@@ -854,7 +816,8 @@ function AccountingOverview({ mod }: { mod: ErpModule }) {
         },
         {
           label: 'Cash position', value: formatMoneyShort(cash), title: money(cash), icon: BankIcon, page: 'ledger',
-          sub: <><Trend up={net >= 0}>{formatMoneyShort(Math.abs(net))}</Trend> net payments, last 30 days</>,
+          delta: { direction: net >= 0 ? 'up' : 'down', text: formatMoneyShort(Math.abs(net)) },
+          sub: 'net payments, last 30 days',
         },
       ]}
       chart={
@@ -956,14 +919,12 @@ function HrOverview({ mod }: { mod: ErpModule }) {
           title: last ? money(num(last, 'gross')) : undefined,
           icon: Wallet01Icon,
           page: 'payroll',
-          sub: last ? (
-            <>
-              {change !== null && previous && (
-                <><Trend up={change >= 0} neutral>{Math.abs(change).toFixed(1)}%</Trend> on {monthOf(str(previous, 'period'))} · </>
-              )}
-              {monthOf(str(last, 'period'))} payroll run
-            </>
-          ) : 'No payroll run yet',
+          delta: change !== null && previous
+            ? { direction: change >= 0 ? 'up' : 'down', tone: 'neutral', text: `${Math.abs(change).toFixed(1)}%` }
+            : undefined,
+          sub: last
+            ? `${change !== null && previous ? `on ${monthOf(str(previous, 'period'))} · ` : ''}${monthOf(str(last, 'period'))} payroll run`
+            : 'No payroll run yet',
         },
       ]}
       chart={

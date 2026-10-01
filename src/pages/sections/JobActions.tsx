@@ -1,15 +1,11 @@
-import { useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { useRef, type ComponentType, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  ArrowDown01Icon, ArrowUp01Icon, Calendar03Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon,
-  SquareArrowExpand01Icon, UserIcon, ViewIcon,
+  Calendar03Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, SquareArrowExpand01Icon, UserIcon, ViewIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { RecordSheet, RecordSheetContent } from '@/blocks/record-sheet'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -22,7 +18,6 @@ import {
   DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent,
   DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
@@ -252,102 +247,65 @@ export function JobPeek({ jobId, order, onNavigate, onClose }: {
   onNavigate: (id: string) => void
   onClose: () => void
 }) {
-  const { jobs, activity, select, updateJob, toggleSubtask } = useJobs()
+  const { jobs, select } = useJobs()
   const job = jobId ? jobs.find((j) => j.id === jobId) : undefined
-  const [confirming, setConfirming] = useState(false)
   const leaving = useRef(false)
-  const index = job ? order.indexOf(job.id) : -1
-  const prev = index > 0 ? order[index - 1] : undefined
-  const next = index >= 0 && index < order.length - 1 ? order[index + 1] : undefined
-  const done = job ? job.subtasks.filter((s) => s.done).length : 0
-  const recent = job ? activity.filter((a) => a.jobId === job.id).slice(-4).reverse() : []
 
   return (
-    <Sheet open={!!job} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent
-        side="right"
-        className="w-full gap-0 sm:max-w-md"
-        onCloseAutoFocus={(e) => {
-          if (leaving.current) e.preventDefault()
-          leaving.current = false
-        }}
-      >
-        {job && (
-          <JobPeekBody
-            job={job}
-            index={index}
-            total={order.length}
-            prev={prev}
-            next={next}
-            done={done}
-            recent={recent}
-            onNavigate={onNavigate}
-            onTitle={(title) => updateJob(job.id, { title })}
-            onToggleSubtask={(id) => toggleSubtask(job.id, id)}
-            onOpenFull={() => {
-              leaving.current = true
-              onClose()
-              openFullPage(select, job.id)
-            }}
-            onDelete={() => setConfirming(true)}
-          />
-        )}
-      </SheetContent>
+    <RecordSheet
+      open={!!job}
+      onOpenChange={(open) => !open && onClose()}
+      onCloseAutoFocus={(e) => {
+        if (leaving.current) e.preventDefault()
+        leaving.current = false
+      }}
+    >
       {job && (
-        <DeleteConfirm
+        <JobPeekBody
           job={job}
-          open={confirming}
-          onOpenChange={setConfirming}
-          onDeleted={onClose}
+          order={order}
+          onNavigate={onNavigate}
+          onOpenFull={() => {
+            leaving.current = true
+            onClose()
+            openFullPage(select, job.id)
+          }}
         />
       )}
-    </Sheet>
+    </RecordSheet>
   )
 }
 
-function JobPeekBody({ job, index, total, prev, next, done, recent, onNavigate, onTitle, onToggleSubtask, onOpenFull, onDelete }: {
+function JobPeekBody({ job, order, onNavigate, onOpenFull }: {
   job: Job
-  index: number
-  total: number
-  prev?: string
-  next?: string
-  done: number
-  recent: ReturnType<typeof useJobs>['activity']
+  order: string[]
   onNavigate: (id: string) => void
-  onTitle: (title: string) => void
-  onToggleSubtask: (id: string) => void
   onOpenFull: () => void
-  onDelete: () => void
 }) {
+  const { activity, updateJob, toggleSubtask } = useJobs()
   const commands = useJobCommands(job)
+  const index = order.indexOf(job.id)
+  const prev = index > 0 ? order[index - 1] : undefined
+  const next = index >= 0 && index < order.length - 1 ? order[index + 1] : undefined
+  const done = job.subtasks.filter((s) => s.done).length
+  const recent = activity.filter((a) => a.jobId === job.id).slice(-4).reverse()
   const labels = job.labels.map((id) => LABEL_BY_ID[id]).filter(Boolean)
 
   return (
-    <>
-      <SheetHeader className="gap-3 border-b pr-12">
-        <div className="flex items-center gap-1">
-          <span className="text-muted-foreground text-xs tabular-nums">{job.id}</span>
-          {index >= 0 && (
-            <span className="text-muted-foreground ml-auto text-[11px] tabular-nums">
-              {index + 1} / {total}
-            </span>
-          )}
-          <Button variant="ghost" size="icon-xs" className={index < 0 ? 'ml-auto' : undefined} aria-label="Previous job" disabled={!prev} onClick={() => prev && onNavigate(prev)}>
-            <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} />
-          </Button>
-          <Button variant="ghost" size="icon-xs" aria-label="Next job" disabled={!next} onClick={() => next && onNavigate(next)}>
-            <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
-          </Button>
-        </div>
-        <SheetTitle className="sr-only">{job.title}</SheetTitle>
-        <SheetDescription className="sr-only">Job details. Changes save as you make them.</SheetDescription>
-        <input
-          value={job.title}
-          onChange={(e) => onTitle(e.target.value)}
-          aria-label="Title"
-          className="w-full bg-transparent text-base font-semibold outline-none"
-        />
-        <div className="flex flex-wrap gap-1.5">
+    <RecordSheetContent
+      number={job.id}
+      title={job.title}
+      onTitleChange={(title) => updateJob(job.id, { title })}
+      description="Job details. Changes save as you make them."
+      noun="job"
+      navigation={{
+        index,
+        total: order.length,
+        onPrevious: prev ? () => onNavigate(prev) : undefined,
+        onNext: next ? () => onNavigate(next) : undefined,
+      }}
+      properties={
+        <>
           <PropertyMenu label="Status" trigger={<><StatusIcon status={job.status} /> {STATUS[job.status].label}</>}>
             <DropdownMenuRadioGroup value={job.status} onValueChange={(v) => commands.setStatus(v as Status)}>
               {STATUS_ORDER.map((s) => (
@@ -396,69 +354,57 @@ function JobPeekBody({ job, index, total, prev, next, done, recent, onNavigate, 
               <span className="size-1.5 rounded-full" style={{ background: l.colour }} /> {l.name}
             </span>
           ))}
+        </>
+      }
+      activityTitle="Latest activity"
+      activity={recent.map((a) => ({
+        id: a.id,
+        actor: a.actor,
+        text: a.kind === 'comment' ? `commented: “${a.text}”` : a.text,
+        at: a.at,
+      }))}
+      footer={
+        <>
+          <Button size="sm" onClick={onOpenFull}>
+            <HugeiconsIcon icon={SquareArrowExpand01Icon} strokeWidth={2} data-icon="inline-start" />
+            Open full page
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => copyId(job.id)}>
+            <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />
+            Copy ID
+          </Button>
+        </>
+      }
+      onDelete={commands.remove}
+      deleteTitle={`Delete ${job.id}?`}
+      deleteDescription={`“${job.title}” and its activity go with it.`}
+    >
+      <p className={cn('leading-relaxed', !job.description && 'text-muted-foreground italic')}>
+        {job.description || 'No description yet.'}
+      </p>
+
+      {job.subtasks.length > 0 && (
+        <div className="grid gap-2">
+          <div className="flex items-center gap-2">
+            <span className="font-medium">Sub-tasks</span>
+            <span className="text-muted-foreground tabular-nums">{done}/{job.subtasks.length}</span>
+            <span className="bg-muted relative h-1 w-16 overflow-hidden rounded-full">
+              <span className="bg-brand absolute inset-y-0 left-0" style={{ width: `${(done / job.subtasks.length) * 100}%` }} />
+            </span>
+          </div>
+          <ul className="grid gap-1">
+            {job.subtasks.map((s) => (
+              <li key={s.id}>
+                <label className="hover:bg-accent/60 flex h-7 cursor-pointer items-center gap-2 rounded-md px-1.5">
+                  <Checkbox checked={s.done} onCheckedChange={() => toggleSubtask(job.id, s.id)} />
+                  <span className={cn(s.done && 'text-muted-foreground line-through')}>{s.title}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
         </div>
-      </SheetHeader>
-
-      <div className="grid flex-1 content-start gap-5 overflow-y-auto p-4 text-xs">
-        <p className={cn('leading-relaxed', !job.description && 'text-muted-foreground italic')}>
-          {job.description || 'No description yet.'}
-        </p>
-
-        {job.subtasks.length > 0 && (
-          <div className="grid gap-2">
-            <div className="flex items-center gap-2">
-              <span className="font-medium">Sub-tasks</span>
-              <span className="text-muted-foreground tabular-nums">{done}/{job.subtasks.length}</span>
-              <span className="bg-muted relative h-1 w-16 overflow-hidden rounded-full">
-                <span className="bg-brand absolute inset-y-0 left-0" style={{ width: `${(done / job.subtasks.length) * 100}%` }} />
-              </span>
-            </div>
-            <ul className="grid gap-1">
-              {job.subtasks.map((s) => (
-                <li key={s.id}>
-                  <label className="hover:bg-accent/60 flex h-7 cursor-pointer items-center gap-2 rounded-md px-1.5">
-                    <Checkbox checked={s.done} onCheckedChange={() => onToggleSubtask(s.id)} />
-                    <span className={cn(s.done && 'text-muted-foreground line-through')}>{s.title}</span>
-                  </label>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {recent.length > 0 && (
-          <div className="grid gap-2">
-            <span className="font-medium">Latest activity</span>
-            <ul className="grid gap-2">
-              {recent.map((a) => (
-                <li key={a.id} className="text-muted-foreground flex gap-2">
-                  <Initials name={a.actor} className="size-4 shrink-0" />
-                  <span className="min-w-0">
-                    <b className="text-foreground font-medium">{a.actor}</b>{' '}
-                    {a.kind === 'comment' ? `commented: “${a.text}”` : a.text} · {a.at}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
-
-      <SheetFooter className="flex-row flex-wrap border-t">
-        <Button size="sm" onClick={onOpenFull}>
-          <HugeiconsIcon icon={SquareArrowExpand01Icon} strokeWidth={2} data-icon="inline-start" />
-          Open full page
-        </Button>
-        <Button variant="outline" size="sm" onClick={() => copyId(job.id)}>
-          <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />
-          Copy ID
-        </Button>
-        <Button variant="destructive" size="sm" className="ml-auto" onClick={onDelete}>
-          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} data-icon="inline-start" />
-          Delete
-        </Button>
-      </SheetFooter>
-    </>
+      )}
+    </RecordSheetContent>
   )
 }
 
@@ -475,35 +421,5 @@ function PropertyMenu({ label, trigger, children }: { label: string; trigger: Re
         {children}
       </DropdownMenuContent>
     </DropdownMenu>
-  )
-}
-
-function DeleteConfirm({ job, open, onOpenChange, onDeleted }: {
-  job: Job
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onDeleted: () => void
-}) {
-  const commands = useJobCommands(job)
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent size="sm">
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete {job.id}?</AlertDialogTitle>
-          <AlertDialogDescription>“{job.title}” and its activity go with it.</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => {
-              if (commands.remove()) onDeleted()
-            }}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
   )
 }

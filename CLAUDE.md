@@ -46,7 +46,15 @@ linear-style-ui-kit/
     ├── App.tsx                theme, tooltip and toast providers
     ├── styles.css             Tailwind + the Linear-style colour tokens
     ├── blocks/                reusable blocks: props in, no sample data
-    │   └── folding-breadcrumb.tsx  used by App shells and the ERP header
+    │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
+    │   ├── filter-bar/        filter menu, filter chips, saved views, search
+    │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
+    │   ├── form-dialog.tsx    field-driven dialog, quick create, property pills
+    │   ├── kanban-board.tsx   columns, drag and drop, "Move to…" menu
+    │   ├── kpi-card.tsx       KPI card, delta badge, sparkline, grid
+    │   ├── notifications-menu.tsx  the bell's popover
+    │   ├── period-picker.tsx  period switch, compare, date range picker
+    │   └── record-sheet.tsx   side panel (peek) for one record
     ├── components/
     │   └── ui/                shadcn components (ours to edit)
     ├── lib/

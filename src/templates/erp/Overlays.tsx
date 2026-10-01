@@ -1,138 +1,128 @@
-import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Copy01Icon, Delete02Icon, SentIcon } from '@hugeicons/core-free-icons'
+import { Copy01Icon, Mail01Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { FormDialog, type FormField, type FormValues } from '@/blocks/form-dialog'
+import { RecordSheet, RecordSheetContent, type RecordActivity } from '@/blocks/record-sheet'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
-import { Initials } from '@/pages/sections/StatusSection'
 import { TODAY, formatDate } from './format'
 import { specFor } from './modules'
 import { useErp } from './store'
-import type { ListSpec, Row, Value } from './types'
+import type { Field, ListSpec, Row, Value } from './types'
 import { CellValue, StatusBadge } from './ui'
 
 const title = (spec: ListSpec) => spec.singular[0].toUpperCase() + spec.singular.slice(1)
 
+// "2026-10-01 14:05" → "1 Oct, 14:05".
+function when(at: Value) {
+  const [date, time] = String(at).split(' ')
+  return time ? `${formatDate(date)}, ${time}` : formatDate(date)
+}
+
 // The side panel ("peek"): a record opened beside the list, from a row, the
-// command palette or the launchpad.
+// command palette or the launchpad. Previous / next step through all of
+// that list's records in stored order, not the list's current filter or sort.
 export function RecordPeek() {
-  const { peek, closePeek, data, update, remove, session } = useErp()
+  const { peek, closePeek, openPeek, data, update, remove, session } = useErp()
   const spec = peek ? specFor(peek.entity) : undefined
   const row = peek && spec ? data[spec.entity].find((r) => r.id === peek.id) : undefined
-  const [notes, setNotes] = useState<{ id: number; text: string }[]>([])
-  const [draft, setDraft] = useState('')
-
-  useEffect(() => {
-    setNotes([])
-    setDraft('')
-  }, [peek?.id])
-
-  const statusColumn = spec?.columns.find((c) => c.kind === 'status')
-  const events = row ? data.audit.filter((e) => e.target === row.id).slice(0, 6) : []
-
-  function addNote(e: FormEvent) {
-    e.preventDefault()
-    if (!draft.trim()) return
-    setNotes((n) => [{ id: Date.now(), text: draft.trim() }, ...n])
-    setDraft('')
-  }
+  // Notes stay with their record for this visit, so stepping away and back keeps them.
+  const [notes, setNotes] = useState<Record<string, { id: number; text: string }[]>>({})
 
   return (
-    <Sheet open={!!row} onOpenChange={(open) => !open && closePeek()}>
-      <SheetContent side="right" className="gap-0 overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-md">
-        {row && spec && (
-          <>
-            <SheetHeader className="gap-1 border-b pr-12">
-              <span className="text-muted-foreground font-mono text-[11px]">{title(spec)} · {row.id}</span>
-              <SheetTitle className="text-base">{String(row[spec.primary] ?? row.id)}</SheetTitle>
-              <SheetDescription className="sr-only">Details and activity for {row.id}.</SheetDescription>
-              <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                {statusColumn && <StatusBadge status={String(row[statusColumn.key])} />}
-                <div className="ml-auto flex flex-wrap gap-1">
-                  {spec.bulk?.map((b) => (
-                    <Button key={b.label} variant="outline" size="sm" onClick={() => {
-                      update(spec.entity, [row.id], b.patch)
-                      toast.success(`${b.label}: ${row.id}`)
-                    }}>
-                      {b.label}
-                    </Button>
-                  ))}
-                  <Button variant="ghost" size="icon-sm" aria-label="Copy number" onClick={() => {
-                    navigator.clipboard?.writeText(row.id).catch(() => {})
-                    toast(`Copied ${row.id}`)
-                  }}>
-                    <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} />
-                  </Button>
-                  <Button variant="ghost" size="icon-sm" className="text-destructive" aria-label={`Delete ${row.id}`} onClick={() => {
-                    remove(spec.entity, [row.id])
-                    toast(`Deleted ${row.id}`)
-                  }}>
-                    <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                  </Button>
-                </div>
-              </div>
-            </SheetHeader>
-
-            <section aria-label="Details" className="border-b p-4">
-              <dl className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-x-3 gap-y-2.5 text-xs">
-                {spec.columns.filter((c) => c.key !== spec.primary && c.kind !== 'status').map((c) => (
-                  <div key={c.key} className="contents">
-                    <dt className="text-muted-foreground">{c.label}</dt>
-                    <dd className="min-w-0 truncate"><CellValue column={c} value={row[c.key]} /></dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
-
-            <section aria-label="Activity" className="grid gap-3 p-4">
-              <h3 className="text-xs font-medium">Activity</h3>
-              <form onSubmit={addNote} className="grid gap-2">
-                <Textarea
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Add a note for your team"
-                  aria-label="Add a note"
-                  rows={2}
-                  className="field-sizing-fixed min-h-0"
-                />
-                <Button type="submit" size="sm" variant="outline" className="justify-self-end" disabled={!draft.trim()}>
-                  <HugeiconsIcon icon={SentIcon} strokeWidth={2} data-icon="inline-start" /> Add note
-                </Button>
-              </form>
-              <ol className="grid gap-3">
-                {notes.map((n) => (
-                  <li key={n.id} className="flex gap-2.5 text-xs">
-                    <Initials name={session?.name ?? 'You'} className="size-5" />
-                    <div className="grid gap-0.5">
-                      <span><span className="font-medium">{session?.name ?? 'You'}</span> <span className="text-muted-foreground">added a note · just now</span></span>
-                      <p>{n.text}</p>
-                    </div>
-                  </li>
-                ))}
-                {events.map((e) => (
-                  <li key={e.id} className="flex gap-2.5 text-xs">
-                    <Initials name={String(e.actor)} className="size-5" />
-                    <span>
-                      <span className="font-medium">{String(e.actor)}</span> <span className="text-muted-foreground">{String(e.action)} · {String(e.at)}</span>
-                    </span>
-                  </li>
-                ))}
-                <li className="text-muted-foreground flex gap-2.5 text-xs">
-                  <span className="bg-muted grid size-5 shrink-0 place-items-center rounded-full text-[9px]">•</span>
-                  Record created{row.created || row.issued || row.ordered || row.date ? ` · ${formatDate(String(row.created || row.issued || row.ordered || row.date), true)}` : ''}
-                </li>
-              </ol>
-            </section>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
+    <RecordSheet open={!!row} onOpenChange={(open) => !open && closePeek()}>
+      {row && spec && (
+        <RecordSheetContent
+          key={row.id}
+          {...peekProps(spec, row)}
+          actions={spec.bulk?.length ? spec.bulk.map((b) => {
+            const applied = Object.entries(b.patch).every(([k, v]) => row[k] === v)
+            return (
+              <Button
+                key={b.label}
+                variant="outline"
+                size="sm"
+                disabled={applied}
+                onClick={() => {
+                  update(spec.entity, [row.id], b.patch)
+                  toast.success(`${b.label}: ${row.id}`)
+                }}
+              >
+                {b.label}
+              </Button>
+            )
+          }) : undefined}
+          navigation={navigation(data[spec.entity], row.id, (id) => openPeek(spec.entity, id))}
+          activity={[
+            ...(notes[row.id] ?? []).map((n): RecordActivity => ({
+              id: `note-${n.id}`, actor: session?.name ?? 'You', text: `added a note: “${n.text}”`, at: 'just now',
+            })),
+            ...data.audit.filter((e) => e.target === row.id).slice(0, 6).map((e): RecordActivity => ({
+              // The audit trail names the record; here it is the record.
+              id: e.id, actor: String(e.actor), text: String(e.action).replace(/ (on|of)$/, ''), at: when(e.at),
+            })),
+            { id: 'created', text: 'Record created', at: createdOn(row) },
+          ]}
+          onComment={(text) => setNotes((all) => ({ ...all, [row.id]: [{ id: Date.now(), text }, ...(all[row.id] ?? [])] }))}
+          commentLabel="Add note"
+          commentPlaceholder="Add a note for your team"
+          footer={
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                navigator.clipboard?.writeText(row.id).catch(() => {})
+                toast(`Copied ${row.id}`)
+              }}
+            >
+              <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />
+              Copy number
+            </Button>
+          }
+          onDelete={() => {
+            remove(spec.entity, [row.id])
+            toast(`Deleted ${row.id}`)
+          }}
+          deleteTitle={`Delete ${row.id}?`}
+          deleteDescription={`It is removed from ${spec.plural.toLowerCase()} for everyone in this company.`}
+        />
+      )}
+    </RecordSheet>
   )
+}
+
+function peekProps(spec: ListSpec, row: Row) {
+  const status = spec.columns.find((c) => c.kind === 'status')
+  return {
+    number: row.id,
+    badge: status && row[status.key] ? <StatusBadge status={String(row[status.key])} /> : undefined,
+    title: String(row[spec.primary] ?? row.id),
+    description: `${title(spec)} ${row.id}: details and activity.`,
+    noun: spec.singular,
+    // Names the record's type here rather than beside the number, which must never be cut off.
+    detailsTitle: `${title(spec)} details`,
+    // The number and status are in the header already.
+    details: spec.columns
+      .filter((c) => c.key !== spec.primary && c.key !== 'id' && c.kind !== 'status')
+      .map((c) => ({ label: c.label, value: <CellValue column={c} value={row[c.key]} /> })),
+  }
+}
+
+function navigation(rows: Row[], id: string, open: (id: string) => void) {
+  const index = rows.findIndex((r) => r.id === id)
+  const prev = index > 0 ? rows[index - 1].id : undefined
+  const next = index >= 0 && index < rows.length - 1 ? rows[index + 1].id : undefined
+  return {
+    index,
+    total: rows.length,
+    onPrevious: prev ? () => open(prev) : undefined,
+    onNext: next ? () => open(next) : undefined,
+  }
+}
+
+function createdOn(row: Row) {
+  const date = row.created || row.issued || row.ordered || row.date
+  return date ? formatDate(String(date), true) : undefined
 }
 
 // The next number for a new record: INV-2026-0430 → INV-2026-0431.
@@ -144,113 +134,82 @@ function nextId(rows: Row[], prefix: string) {
   return `${prefix}${String(highest + 1).padStart(width, '0')}`
 }
 
+// A blank optional field falls back to the spec's default, else today for a
+// date or the first option. The form starts with that filled in, so what you
+// see is what gets saved.
+function fallback(spec: ListSpec, f: Field): Value {
+  return spec.create?.defaults?.[f.key] ?? (f.type === 'date' ? TODAY : f.options?.[0] ?? '')
+}
+
+function toFormField(f: Field): FormField {
+  return {
+    key: f.key,
+    label: f.label,
+    type: f.type,
+    required: f.required,
+    placeholder: f.placeholder,
+    options: f.options?.map((o) => ({ value: o, label: o })),
+    icon: f.type === 'email' ? Mail01Icon : undefined,
+    hint: !f.required && f.type !== 'select' && f.type !== 'date' ? 'Optional' : undefined,
+  }
+}
+
 // Quick create, for any list with a `create` spec. Opened from the list's
 // New button, the command palette or the launchpad.
 export function CreateDialog() {
   const { creating, endCreate, data, add, openPeek } = useErp()
-  const spec = creating ? specFor(creating.entity) : undefined
-  const id = useId()
-  const [values, setValues] = useState<Record<string, string>>({})
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  // The last request stays on screen while the dialog fades out.
+  const [shown, setShown] = useState(creating)
+  if (creating && creating !== shown) setShown(creating)
+  const spec = shown ? specFor(shown.entity) : undefined
+  if (!shown || !spec?.create) return null
+  const { fields } = spec.create
 
-  useEffect(() => {
-    if (!creating) return
-    setValues(Object.fromEntries(Object.entries(creating.values ?? {}).map(([k, v]) => [k, String(v)])))
-    setErrors({})
-  }, [creating])
+  const initialValues: FormValues = Object.fromEntries(fields.map((f) => {
+    const given = shown.values?.[f.key]
+    if (given !== undefined) return [f.key, String(given)]
+    return [f.key, f.required ? '' : String(fallback(spec, f))]
+  }))
 
-  if (!spec?.create) return null
-  const fields = spec.create.fields
-
-  function submit(e: FormEvent) {
-    e.preventDefault()
+  function submit(values: FormValues) {
     if (!spec?.create) return
-    const missing = Object.fromEntries(
-      fields.filter((f) => f.required && !values[f.key]?.trim()).map((f) => [f.key, `Enter ${f.label.toLowerCase()}.`]),
-    )
-    for (const f of fields) {
-      if (f.type === 'email' && values[f.key] && !/^\S+@\S+\.\S+$/.test(values[f.key])) missing[f.key] = 'Enter a valid email address.'
-      if (f.type === 'number' && values[f.key] && Number.isNaN(Number(values[f.key]))) missing[f.key] = 'Enter a number.'
-    }
-    setErrors(missing)
-    if (Object.keys(missing).length) {
-      document.getElementById(`${id}-${Object.keys(missing)[0]}`)?.focus()
-      return
-    }
     const rows = data[spec.entity]
     const row: Row = {
       id: spec.prefix ? nextId(rows, spec.prefix) : `${spec.entity}-${rows.length + 1}`,
       ...spec.create.defaults,
       ...Object.fromEntries(fields.map((f) => {
-        const raw = values[f.key] ?? ''
-        // Left blank: the spec's default, else today for a date or the first option.
-        const fallback = spec.create?.defaults?.[f.key] ?? (f.type === 'date' ? TODAY : f.options?.[0] ?? '')
-        const value: Value = f.type === 'number' ? Number(raw || fallback || 0) : raw || fallback
+        const raw = String(values[f.key] ?? '')
+        const value: Value = f.type === 'number' ? Number(raw || fallback(spec, f) || 0) : raw || fallback(spec, f)
         return [f.key, value]
       })),
     }
     // An unpaid invoice owes its total.
     if (spec.entity === 'invoices') row.balance = row.amount
     add(spec.entity, row)
-    endCreate()
     toast.success(`Created ${row.id}`, {
       description: String(row[spec.primary] ?? ''),
-      action: { label: 'Open', onClick: () => openPeek(spec.entity, row.id) },
+      action: {
+        label: 'Open',
+        onClick: () => {
+          endCreate()
+          openPeek(spec.entity, row.id)
+        },
+      },
     })
   }
 
   return (
-    <Dialog open={!!creating} onOpenChange={(open) => !open && endCreate()}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} noValidate className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>New {spec.singular}</DialogTitle>
-            <DialogDescription>It is saved as a draft where the record has one. You can edit it afterwards.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3">
-            {fields.map((f) => {
-              const field = `${id}-${f.key}`
-              const error = errors[f.key]
-              return (
-                <div key={f.key} className="grid gap-1.5">
-                  <Label htmlFor={field}>
-                    {f.label}{f.required && <span className="text-muted-foreground font-normal"> (required)</span>}
-                  </Label>
-                  {f.type === 'select' ? (
-                    <Select value={values[f.key] ?? ''} onValueChange={(v) => setValues((s) => ({ ...s, [f.key]: v }))}>
-                      <SelectTrigger id={field} className="w-full" aria-invalid={!!error} aria-describedby={error ? `${field}-error` : undefined}>
-                        <SelectValue placeholder={`Choose ${f.label.toLowerCase()}`} />
-                      </SelectTrigger>
-                      <SelectContent position="popper">
-                        {f.options?.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Input
-                      id={field}
-                      type={f.type === 'number' ? 'text' : f.type}
-                      inputMode={f.type === 'number' ? 'decimal' : undefined}
-                      value={values[f.key] ?? ''}
-                      onChange={(e) => {
-                        setValues((s) => ({ ...s, [f.key]: e.target.value }))
-                        if (error) setErrors((s) => ({ ...s, [f.key]: '' }))
-                      }}
-                      placeholder={f.placeholder}
-                      aria-invalid={!!error}
-                      aria-describedby={error ? `${field}-error` : undefined}
-                    />
-                  )}
-                  {error && <p id={`${field}-error`} className="text-destructive text-[11px]">{error}</p>}
-                </div>
-              )
-            })}
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={endCreate}>Cancel</Button>
-            <Button type="submit">Create {spec.singular}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      key={shown.entity}
+      open={!!creating}
+      onOpenChange={(open) => !open && endCreate()}
+      title={`New ${spec.singular}`}
+      description="It is saved as a draft where the record has one. You can edit it afterwards."
+      fields={fields.map(toFormField)}
+      initialValues={initialValues}
+      submitLabel={`Create ${spec.singular}`}
+      createMore
+      onSubmit={submit}
+    />
   )
 }

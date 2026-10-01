@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  ComputerIcon, DashboardSquare01Icon, LayoutTopIcon, Logout01Icon, Menu01Icon, Moon02Icon, Notification03Icon,
+  ComputerIcon, DashboardSquare01Icon, LayoutTopIcon, Logout01Icon, Menu01Icon, Moon02Icon,
   Search01Icon, SidebarLeftIcon, SparklesIcon, Sun03Icon, Tick02Icon, UnfoldMoreIcon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
@@ -12,10 +12,10 @@ import {
   DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
+import { NotificationsMenu } from '@/blocks/notifications-menu'
 import { useTheme } from '@/lib/theme'
 import { Initials } from '@/pages/sections/StatusSection'
 import { COMPANIES, DEMO_USERS, ROLE_LABEL } from './data'
@@ -361,78 +361,32 @@ function useAlerts() {
   const { data } = useErp()
   return useMemo(() => [
     ...data.purchaseOrders.filter((r) => r.status === 'Awaiting approval').slice(0, 2).map((r) => ({
-      id: r.id, entity: 'purchaseOrders' as EntityId, who: String(r.buyer), text: `asked you to approve ${r.id} for ${formatMoney(Number(r.amount))}`, when: '12 min ago',
+      id: r.id, entity: 'purchaseOrders' as EntityId, actor: String(r.buyer), text: `asked you to approve ${r.id} for ${formatMoney(Number(r.amount))}`, time: '12 min ago',
     })),
     ...data.leave.filter((r) => r.status === 'Pending').slice(0, 2).map((r) => ({
-      id: r.id, entity: 'leave' as EntityId, who: String(r.employee), text: `requested ${r.days} ${Number(r.days) === 1 ? 'day' : 'days'} of ${String(r.type).toLowerCase()}`, when: '1 h ago',
+      id: r.id, entity: 'leave' as EntityId, actor: String(r.employee), text: `requested ${r.days} ${Number(r.days) === 1 ? 'day' : 'days'} of ${String(r.type).toLowerCase()}`, time: '1 h ago',
     })),
     ...data.invoices.filter((r) => r.status === 'Overdue').slice(0, 1).map((r) => ({
-      id: r.id, entity: 'invoices' as EntityId, who: 'Accounts receivable', text: `${r.id} from ${r.customer} is overdue`, when: '3 h ago',
+      id: r.id, entity: 'invoices' as EntityId, actor: 'Accounts receivable', text: `${r.id} from ${r.customer} is overdue`, time: '3 h ago',
     })),
     ...data.items.filter((r) => r.status === 'Out of stock').slice(0, 1).map((r) => ({
-      id: r.id, entity: 'items' as EntityId, who: 'Inventory', text: `${r.name} is out of stock`, when: 'Yesterday',
+      id: r.id, entity: 'items' as EntityId, actor: 'Inventory', text: `${r.name} is out of stock`, time: 'Yesterday',
     })),
-  ], [data])
+  ].map((alert) => ({ ...alert, unread: true })), [data])
 }
 
+// The shared notifications block. It keeps the read state itself, so every
+// alert starts unread.
 function Notifications({ variant }: { variant: 'row' | 'icon' }) {
   const { openPeek } = useErp()
   const alerts = useAlerts()
-  const [read, setRead] = useState<Set<string>>(() => new Set())
-  const [open, setOpen] = useState(false)
-  const unread = alerts.filter((a) => !read.has(a.id)).length
-  const label = unread ? `Notifications, ${unread} unread` : 'Notifications'
-
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        {variant === 'row' ? (
-          <button type="button" aria-label={label} className="hover:bg-sidebar-accent focus-visible:ring-ring/40 aria-expanded:bg-sidebar-accent flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2">
-            <HugeiconsIcon icon={Notification03Icon} strokeWidth={2} className="size-3.5 opacity-80" />
-            Notifications
-            {unread > 0 && <span className="bg-primary text-primary-foreground ml-auto grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] font-semibold tabular-nums">{unread}</span>}
-          </button>
-        ) : (
-          <Button variant="ghost" size="icon" className="relative" aria-label={label}>
-            <HugeiconsIcon icon={Notification03Icon} strokeWidth={2} />
-            {unread > 0 && <span className="bg-primary text-primary-foreground absolute top-0.5 right-0.5 grid h-3.5 min-w-3.5 place-items-center rounded-full px-1 text-[9px] font-semibold tabular-nums">{unread}</span>}
-          </Button>
-        )}
-      </PopoverTrigger>
-      <PopoverContent side={variant === 'row' ? 'right' : 'bottom'} align="end" className="w-80 max-w-[calc(100vw-2rem)] gap-0 p-0">
-        <div className="flex items-center justify-between border-b py-1.5 pr-1.5 pl-3">
-          <span className="text-xs font-medium">Notifications</span>
-          <Button variant="ghost" size="sm" className="text-muted-foreground" disabled={!unread} onClick={() => setRead(new Set(alerts.map((a) => a.id)))}>
-            Mark all read
-          </Button>
-        </div>
-        <ul className="max-h-80 overflow-y-auto py-1">
-          {alerts.map((a) => {
-            const isUnread = !read.has(a.id)
-            return (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setRead((r) => new Set(r).add(a.id))
-                    setOpen(false)
-                    openPeek(a.entity, a.id)
-                  }}
-                  className="hover:bg-accent focus-visible:bg-accent flex w-full items-start gap-2.5 px-3 py-2 text-left outline-none"
-                >
-                  <Initials name={a.who} className="mt-0.5 size-6" />
-                  <span className={cn('min-w-0 flex-1 text-xs', !isUnread && 'text-muted-foreground')}>
-                    <span className="font-medium">{a.who}</span> {a.text}
-                    <span className="text-muted-foreground block text-[11px]">{a.when}</span>
-                  </span>
-                  {isUnread && <span className="bg-primary mt-1.5 size-1.5 shrink-0 rounded-full"><span className="sr-only">Unread</span></span>}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      </PopoverContent>
-    </Popover>
+    <NotificationsMenu
+      variant={variant}
+      side={variant === 'row' ? 'right' : 'bottom'}
+      items={alerts}
+      onOpen={(a) => openPeek(a.entity, a.id)}
+    />
   )
 }
 

@@ -231,3 +231,10 @@ Hugeicons names for 145 common Lucide icons, checked on 2026-09-30.
 - **A one-thumb `Slider` has no accessible name.** Radix names the thumbs of
   a range only, and the wrapper has no prop to label a thumb. Needs a fix in
   `slider.tsx` before a slider ships in a real form.
+
+## TanStack Table v9 (added 2026-10-01)
+- `globalFilterFn` accepts a function, which makes "search every column of a
+  row" a one-liner. The data-table block uses it for its search box.
+- `tableFeatures({ columnMeta })` types each column's `meta` without global
+  declaration merging, so a block can carry its own column options (label,
+  alignment, hide below a container width).

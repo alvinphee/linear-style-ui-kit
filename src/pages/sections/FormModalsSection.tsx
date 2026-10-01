@@ -12,31 +12,27 @@ import {
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import {
+  DIALOG_BODY, DIALOG_PANEL, EMAIL_PATTERN, FormDialog, PropertyComboboxPill,
+  PropertyMultiPill, PropertyPill, QuickCreateDialog as QuickCreate, useFieldErrors, type FormField,
+  type FormValues, type PropertyOption,
+} from '@/blocks/form-dialog'
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
   Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSeparator,
-  FieldSet, FieldTitle,
+  FieldSet,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
-import { Label } from '@/components/ui/label'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Spinner } from '@/components/ui/spinner'
@@ -64,20 +60,15 @@ export default function FormModalsSection() {
 
 /* ---------- Shared bits ---------- */
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 const WORKSPACE = 'acme-studio'
-
-// Tall modals scroll inside themselves, so they fit a 375px phone screen.
-const MODAL = 'flex max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-hidden p-0'
-const BODY = 'min-h-0 flex-1 overflow-y-auto p-4'
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 function emailError(value: string) {
   const email = value.trim()
   if (!email) return 'Enter an email address.'
-  if (!EMAIL.test(email)) return 'Enter an email like name@example.com.'
+  if (!EMAIL_PATTERN.test(email)) return 'Enter an email like name@example.com.'
   return undefined
 }
 
@@ -89,46 +80,10 @@ function Code({ children }: { children: ReactNode }) {
   return <code className="bg-muted text-foreground rounded px-1 py-px font-mono text-[11px]">{children}</code>
 }
 
-type Errors<F extends string> = Partial<Record<F, string>>
-
-// An error shows once its field has been left with something in it, or after
-// a submit. From then on it follows the value as the person types.
-function useFieldErrors<F extends string>(all: Errors<F>, order: F[]) {
-  const [touched, setTouched] = useState<Record<string, boolean>>({})
-  const [submitted, setSubmitted] = useState(false)
-  const elements = useRef<Record<string, HTMLElement | null>>({})
-
-  const shown: Errors<F> = {}
-  for (const field of order) if (submitted || touched[field]) shown[field] = all[field]
-
-  return {
-    shown,
-    register: (field: F) => (el: HTMLElement | null) => {
-      elements.current[field] = el
-    },
-    focus: (field: F) => elements.current[field]?.focus(),
-    blur(field: F, value: string) {
-      if (value.trim()) setTouched((t) => ({ ...t, [field]: true }))
-    },
-    // True when everything is valid. Otherwise the first bad field gets focus.
-    check() {
-      setSubmitted(true)
-      const first = order.find((field) => all[field])
-      if (first) elements.current[first]?.focus()
-      return !first
-    },
-    reset() {
-      setTouched({})
-      setSubmitted(false)
-    },
-  }
-}
-
 /* ---------- 1. Quick create ---------- */
 
+// The pills' values. Title and description live in the dialog block.
 type Draft = {
-  title: string
-  description: string
   status: Status
   priority: Priority
   driver: string
@@ -136,24 +91,40 @@ type Draft = {
   due: string
 }
 
-const EMPTY_DRAFT: Draft = { title: '', description: '', status: 'todo', priority: 'none', driver: '', labels: [], due: '' }
-const PILL = 'max-w-44 font-normal'
+const EMPTY_DRAFT: Draft = { status: 'todo', priority: 'none', driver: '', labels: [], due: '' }
 const NO_DUE = 'none'
 
-const STATUS_OPTIONS = (Object.keys(STATUS) as Status[]).map((s) => ({
+const STATUS_OPTIONS: PropertyOption<Status>[] = (Object.keys(STATUS) as Status[]).map((s) => ({
   value: s, label: STATUS[s].label, icon: <StatusIcon status={s} />,
 }))
-const PRIORITY_OPTIONS = (Object.keys(PRIORITY) as Priority[]).map((p) => ({
+const PRIORITY_OPTIONS: PropertyOption<Priority>[] = (Object.keys(PRIORITY) as Priority[]).map((p) => ({
   value: p, label: PRIORITY[p].label, icon: <PriorityIcon priority={p} />,
 }))
 const CALENDAR_ICON = <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-const DUE_MENU = [
+const DUE_MENU: PropertyOption[] = [
   ...DUE_OPTIONS.map((d) => ({ value: d, label: d, icon: CALENDAR_ICON })),
   {
     value: NO_DUE, label: 'No due date',
     icon: <HugeiconsIcon icon={CalendarRemove01Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />,
   },
 ]
+const ASSIGNEE_OPTIONS: PropertyOption[] = [
+  {
+    value: '', label: 'Unassigned',
+    icon: <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-4" />,
+    pillIcon: <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-3.5" />,
+  },
+  ...PEOPLE.map((person) => ({
+    value: person, label: person,
+    icon: <Initials name={person} className="size-5" />,
+    pillIcon: <Initials name={person} className="size-4" />,
+  })),
+]
+const LABEL_OPTIONS: PropertyOption[] = LABELS.map((l) => ({
+  value: l.id, label: l.name,
+  icon: <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: l.colour }} />,
+  pillIcon: <span className="size-2 rounded-full" style={{ backgroundColor: l.colour }} />,
+}))
 
 function QuickCreatePanel() {
   const { jobs, select } = useJobs()
@@ -224,133 +195,73 @@ export function QuickCreateDialog({ open, onOpenChange, onCreated, trigger }: {
   trigger?: ReactNode
 }) {
   const { addJob, updateJob, select } = useJobs()
-  const uid = useId()
   // Kept when the dialog is dismissed, like a draft, and cleared on create.
   const [draft, setDraft] = useState(EMPTY_DRAFT)
-  const [createMore, setCreateMore] = useState(false)
-  const [error, setError] = useState('')
-  const titleRef = useRef<HTMLInputElement>(null)
-  const descriptionRef = useRef<HTMLTextAreaElement>(null)
-  const errorId = `${uid}-title-error`
 
   function set<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((d) => ({ ...d, [key]: value }))
   }
 
-  function change(next: boolean) {
-    if (!next) setError('')
-    onOpenChange(next)
-  }
-
-  function submit() {
-    const title = draft.title.trim()
-    if (!title) {
-      setError('A job needs a title.')
-      titleRef.current?.focus()
-      return
-    }
-    const job = addJob(draft.status, title)
-    const { priority, driver, labels, due } = draft
-    updateJob(job.id, { priority, driver, labels, due, description: draft.description.trim() })
-    onCreated?.(job)
-    toast.success(`Created ${job.id}`, {
-      description: title,
-      action: {
-        label: 'Open',
-        onClick: () => {
-          onOpenChange(false)
-          select(job.id)
-          goTo('issue')
-        },
-      },
-    })
-    if (createMore) {
-      setDraft((d) => ({ ...d, title: '', description: '' }))
-      titleRef.current?.focus()
-    } else {
-      setDraft(EMPTY_DRAFT)
-      onOpenChange(false)
-    }
-  }
-
   return (
-    <Dialog open={open} onOpenChange={change}>
-      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent
-        className={cn(MODAL, 'sm:max-w-2xl')}
-        onOpenAutoFocus={(e) => {
-          e.preventDefault()
-          titleRef.current?.focus()
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault()
-            submit()
-          }
-        }}
-      >
-        <DialogHeader className="min-h-6 flex-row items-center gap-1.5 px-3 pt-2 pr-10">
-          <span className="bg-muted/60 inline-flex h-6 min-w-0 items-center gap-1.5 rounded-md border px-1.5 text-[11px] font-medium">
-            <span
-              aria-hidden="true"
-              className="bg-brand text-primary-foreground grid size-4 shrink-0 place-items-center rounded-[4px] text-[8px] font-semibold"
-            >
-              OP
-            </span>
-            Operations
-          </span>
-          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0" />
-          <DialogTitle className="text-xs">New job</DialogTitle>
-          <DialogDescription className="sr-only">
-            A title is required. Everything else is optional. Press Control Enter to create the job.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4 pb-3">
-          <input
-            ref={titleRef}
-            aria-label="Job title"
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? errorId : undefined}
-            placeholder="Job title"
-            autoComplete="off"
-            value={draft.title}
-            onChange={(e) => {
-              set('title', e.target.value)
-              if (error) setError('')
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault()
-                descriptionRef.current?.focus()
-              }
-            }}
-            className="placeholder:text-muted-foreground/70 aria-invalid:placeholder:text-destructive/70 w-full min-w-0 bg-transparent text-lg font-semibold tracking-tight outline-none"
-          />
-          <FieldError id={errorId} className="mt-0.5">{error || undefined}</FieldError>
-          <textarea
-            ref={descriptionRef}
-            aria-label="Description"
-            placeholder="Add description…"
-            rows={3}
-            value={draft.description}
-            onChange={(e) => set('description', e.target.value)}
-            className="placeholder:text-muted-foreground/70 field-sizing-content mt-2 block min-h-20 w-full resize-none bg-transparent text-[13px] leading-relaxed outline-none"
-          />
-        </div>
-
-        <div className="flex flex-wrap gap-1.5 px-4 pb-3">
-          <MenuPill label="Status" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => set('status', v)} />
-          <MenuPill
+    <QuickCreate
+      open={open}
+      onOpenChange={onOpenChange}
+      trigger={trigger}
+      context={{ mark: 'OP', label: 'Operations' }}
+      title="New job"
+      description="A title is required. Everything else is optional. Press Control Enter to create the job."
+      titleLabel="Job title"
+      titlePlaceholder="Job title"
+      requiredMessage="A job needs a title."
+      submitLabel="Create job"
+      createMore
+      onSubmit={({ title, description }, { createMore }) => {
+        const job = addJob(draft.status, title)
+        const { priority, driver, labels, due } = draft
+        updateJob(job.id, { priority, driver, labels, due, description })
+        onCreated?.(job)
+        toast.success(`Created ${job.id}`, {
+          description: title,
+          action: {
+            label: 'Open',
+            onClick: () => {
+              onOpenChange(false)
+              select(job.id)
+              goTo('issue')
+            },
+          },
+        })
+        if (!createMore) setDraft(EMPTY_DRAFT)
+      }}
+      properties={
+        <>
+          <PropertyPill label="Status" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => set('status', v)} />
+          <PropertyPill
             label="Priority"
             value={draft.priority}
             unset="none"
             options={PRIORITY_OPTIONS}
             onChange={(v) => set('priority', v)}
           />
-          <AssigneePill value={draft.driver} onChange={(v) => set('driver', v)} />
-          <LabelsPill value={draft.labels} onChange={(v) => set('labels', v)} />
-          <MenuPill
+          <PropertyComboboxPill
+            label="Assignee"
+            value={draft.driver}
+            unset=""
+            options={ASSIGNEE_OPTIONS}
+            searchPlaceholder="Assign to…"
+            emptyText="No one found."
+            onChange={(v) => set('driver', v)}
+          />
+          <PropertyMultiPill
+            label="Labels"
+            value={draft.labels}
+            options={LABEL_OPTIONS}
+            unsetIcon={<HugeiconsIcon icon={Tag01Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />}
+            searchPlaceholder="Add labels…"
+            emptyText="No labels found."
+            onChange={(v) => set('labels', v)}
+          />
+          <PropertyPill
             label="Due date"
             value={draft.due || NO_DUE}
             unset={NO_DUE}
@@ -358,374 +269,91 @@ export function QuickCreateDialog({ open, onOpenChange, onCreated, trigger }: {
             options={DUE_MENU}
             onChange={(v) => set('due', v === NO_DUE ? '' : v)}
           />
-        </div>
-
-        <div className="flex items-center gap-2 border-t px-3 py-2.5">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label="Attach a file"
-                className="text-muted-foreground"
-                onClick={() => toast('Attach a file', { description: 'Demo only. Nothing is uploaded.' })}
-              >
-                <HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Attach a file</TooltipContent>
-          </Tooltip>
-          <div className="ml-auto flex items-center gap-3">
-            <Label className="text-muted-foreground font-normal">
-              <Switch size="sm" checked={createMore} onCheckedChange={setCreateMore} />
-              Create more
-            </Label>
-            <Button onClick={submit} aria-keyshortcuts="Control+Enter">
-              Create job
-              <Kbd className="bg-primary-foreground/15 text-primary-foreground ml-1 hidden sm:inline-flex">Ctrl ↵</Kbd>
+        </>
+      }
+      footerStart={
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Attach a file"
+              className="text-muted-foreground"
+              onClick={() => toast('Attach a file', { description: 'Demo only. Nothing is uploaded.' })}
+            >
+              <HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} />
             </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function MenuPill<T extends string>({ label, value, options, onChange, unset, unsetIcon }: {
-  label: string
-  value: T
-  options: { value: T; label: string; icon: ReactNode }[]
-  onChange: (value: T) => void
-  // The value that means "not set": the pill then shows its own name, muted.
-  unset?: T
-  unsetIcon?: ReactNode
-}) {
-  const current = options.find((o) => o.value === value) ?? options[0]
-  const isUnset = value === unset
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={PILL} aria-label={`${label}: ${current.label}`}>
-          {isUnset && unsetIcon ? unsetIcon : current.icon}
-          <span className={cn('truncate', isUnset && 'text-muted-foreground')}>{isUnset ? label : current.label}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-44">
-        <DropdownMenuLabel>{label}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={value} onValueChange={(v) => onChange(v as T)}>
-          {options.map((o) => (
-            <DropdownMenuRadioItem key={o.value} value={o.value}>
-              {o.icon} {o.label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-function AssigneePill({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  const [open, setOpen] = useState(false)
-
-  function pick(person: string) {
-    onChange(person)
-    setOpen(false)
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={PILL} aria-label={`Assignee: ${value || 'Unassigned'}`}>
-          {value ? (
-            <Initials name={value} className="size-4" />
-          ) : (
-            <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-          )}
-          <span className={cn('truncate', !value && 'text-muted-foreground')}>{value || 'Assignee'}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-52 gap-0 p-0">
-        <Command>
-          <CommandInput placeholder="Assign to…" />
-          <CommandList>
-            <CommandEmpty>No one found.</CommandEmpty>
-            <CommandGroup>
-              <CommandItem value="Unassigned" data-checked={!value} onSelect={() => pick('')}>
-                <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-4" />
-                Unassigned
-              </CommandItem>
-              {PEOPLE.map((person) => (
-                <CommandItem key={person} value={person} data-checked={value === person} onSelect={() => pick(person)}>
-                  <Initials name={person} className="size-5" />
-                  {person}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function LabelsPill({ value, onChange }: { value: string[]; onChange: (value: string[]) => void }) {
-  const chosen = LABELS.filter((l) => value.includes(l.id))
-  const text = chosen.length === 0 ? 'Labels' : chosen.length === 1 ? chosen[0].name : `${chosen.length} labels`
-
-  function toggle(id: string) {
-    const next = value.includes(id) ? value.filter((l) => l !== id) : [...value, id]
-    onChange(LABELS.filter((l) => next.includes(l.id)).map((l) => l.id))
-  }
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className={PILL}
-          aria-label={`Labels: ${chosen.map((l) => l.name).join(', ') || 'none'}`}
-        >
-          {chosen.length ? (
-            <span className="flex shrink-0 items-center gap-0.5" aria-hidden="true">
-              {chosen.slice(0, 3).map((l) => (
-                <span key={l.id} className="size-2 rounded-full" style={{ backgroundColor: l.colour }} />
-              ))}
-            </span>
-          ) : (
-            <HugeiconsIcon icon={Tag01Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-          )}
-          <span className={cn('truncate', !chosen.length && 'text-muted-foreground')}>{text}</span>
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-52 gap-0 p-0">
-        <Command>
-          <CommandInput placeholder="Add labels…" />
-          <CommandList>
-            <CommandEmpty>No labels found.</CommandEmpty>
-            <CommandGroup>
-              {LABELS.map((label) => (
-                <CommandItem
-                  key={label.id}
-                  value={label.name}
-                  data-checked={value.includes(label.id)}
-                  onSelect={() => toggle(label.id)}
-                >
-                  <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: label.colour }} />
-                  {label.name}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+          </TooltipTrigger>
+          <TooltipContent>Attach a file</TooltipContent>
+        </Tooltip>
+      }
+    />
   )
 }
 
 /* ---------- 2. Validated form dialog ---------- */
 
-type Customer = { name: string; email: string; size: string; plan: string; welcome: boolean; notes: string }
+const NEW_CUSTOMER: FormValues = { name: '', email: '', size: '11-50', plan: 'team', welcome: true, notes: '' }
 
-const NEW_CUSTOMER: Customer = { name: '', email: '', size: '11-50', plan: 'team', welcome: true, notes: '' }
-const NOTES_MAX = 200
-const SIZES = [
-  { id: '1-10', label: '1–10' },
-  { id: '11-50', label: '11–50' },
-  { id: '51-200', label: '51–200' },
-  { id: '200+', label: '200+' },
-]
-const PLANS = [
-  { id: 'free', label: 'Free' },
-  { id: 'team', label: 'Team' },
-  { id: 'business', label: 'Business' },
-  { id: 'enterprise', label: 'Enterprise' },
+const CUSTOMER_FIELDS: FormField[] = [
+  {
+    key: 'name', label: 'Name', type: 'text', required: true, requiredMessage: 'Enter the customer’s name.',
+    autoComplete: 'organization', placeholder: 'Harbour Foods',
+  },
+  {
+    key: 'email', label: 'Email', type: 'email', required: true, requiredMessage: 'Enter an email address.',
+    icon: Mail01Icon, placeholder: 'name@example.com',
+  },
+  {
+    key: 'size', label: 'Company size', type: 'radio',
+    options: [
+      { value: '1-10', label: '1–10' },
+      { value: '11-50', label: '11–50' },
+      { value: '51-200', label: '51–200' },
+      { value: '200+', label: '200+' },
+    ],
+  },
+  {
+    key: 'plan', label: 'Plan', type: 'select', description: 'You can change the plan at any time.',
+    options: [
+      { value: 'free', label: 'Free' },
+      { value: 'team', label: 'Team' },
+      { value: 'business', label: 'Business' },
+      { value: 'enterprise', label: 'Enterprise' },
+    ],
+  },
+  { key: 'welcome', label: 'Send welcome email', type: 'checkbox', description: 'With a link to the customer portal.' },
+  {
+    key: 'notes', label: 'Notes', type: 'textarea', hint: 'Optional', maxLength: 200,
+    placeholder: 'Delivery hours, contacts, anything the team should know…',
+  },
 ]
 
 function AddCustomerPanel() {
-  const uid = useId()
-  const [open, setOpen] = useState(false)
-  const [values, setValues] = useState(NEW_CUSTOMER)
-  const [saving, setSaving] = useState(false)
-  const over = values.notes.length - NOTES_MAX
-  const notesError = over > 0 ? `That is ${over} ${over === 1 ? 'character' : 'characters'} too long.` : undefined
-  const errors = useFieldErrors<'name' | 'email' | 'notes'>({
-    name: values.name.trim() ? undefined : 'Enter the customer’s name.',
-    email: emailError(values.email),
-    notes: notesError,
-  }, ['name', 'email', 'notes'])
-  const { shown } = errors
-  const id = (field: string) => `${uid}-${field}`
-
-  function change<K extends keyof Customer>(key: K, value: Customer[K]) {
-    setValues((v) => ({ ...v, [key]: value }))
-  }
-
-  function openChange(next: boolean) {
-    if (saving) return
-    if (next) {
-      setValues(NEW_CUSTOMER)
-      errors.reset()
-    }
-    setOpen(next)
-  }
-
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    if (saving || !errors.check()) return
-    setSaving(true)
-    await wait(800)
-    setSaving(false)
-    setOpen(false)
-    toast.success('Customer added', { description: `Demo only. ${values.name.trim()} was not saved.` })
-  }
-
   return (
     <Panel title="Validated form" note="Dialog, Field and FieldError">
       <Intro>
         Name and email are required, and the email is checked for format. Errors show when you leave a
         field or submit, and the first problem gets focus. Saving takes 800 ms.
       </Intro>
-      <Dialog open={open} onOpenChange={openChange}>
-        <DialogTrigger asChild>
+      <FormDialog
+        trigger={
           <Button variant="outline">
             <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" />
             Add customer
           </Button>
-        </DialogTrigger>
-        <DialogContent className={cn(MODAL, 'sm:max-w-md')}>
-          <DialogHeader className="border-b px-4 py-3 pr-10">
-            <DialogTitle>Add customer</DialogTitle>
-            <DialogDescription>They can then be picked on any job.</DialogDescription>
-          </DialogHeader>
-          <form noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
-            <div className={BODY}>
-              <FieldGroup>
-                <Field data-invalid={!!shown.name}>
-                  <FieldLabel htmlFor={id('name')}>Name</FieldLabel>
-                  <Input
-                    id={id('name')}
-                    ref={errors.register('name')}
-                    autoComplete="organization"
-                    placeholder="Harbour Foods"
-                    value={values.name}
-                    onChange={(e) => change('name', e.target.value)}
-                    onBlur={(e) => errors.blur('name', e.target.value)}
-                    aria-invalid={shown.name ? true : undefined}
-                    aria-describedby={shown.name ? id('name-error') : undefined}
-                  />
-                  <FieldError id={id('name-error')}>{shown.name}</FieldError>
-                </Field>
-
-                <Field data-invalid={!!shown.email}>
-                  <FieldLabel htmlFor={id('email')}>Email</FieldLabel>
-                  <InputGroup>
-                    <InputGroupAddon>
-                      <HugeiconsIcon icon={Mail01Icon} strokeWidth={2} />
-                    </InputGroupAddon>
-                    <InputGroupInput
-                      id={id('email')}
-                      ref={errors.register('email')}
-                      type="email"
-                      inputMode="email"
-                      autoComplete="email"
-                      spellCheck={false}
-                      placeholder="name@example.com"
-                      value={values.email}
-                      onChange={(e) => change('email', e.target.value)}
-                      onBlur={(e) => errors.blur('email', e.target.value)}
-                      aria-invalid={shown.email ? true : undefined}
-                      aria-describedby={shown.email ? id('email-error') : undefined}
-                    />
-                  </InputGroup>
-                  <FieldError id={id('email-error')}>{shown.email}</FieldError>
-                </Field>
-
-                <FieldSet className="min-w-0">
-                  <FieldLegend variant="label">Company size</FieldLegend>
-                  <RadioGroup
-                    value={values.size}
-                    onValueChange={(v) => change('size', v)}
-                    className="grid grid-cols-2 gap-2 sm:grid-cols-4"
-                  >
-                    {SIZES.map((s) => (
-                      <FieldLabel key={s.id} htmlFor={id(`size-${s.id}`)}>
-                        <Field orientation="horizontal" className="gap-2">
-                          <RadioGroupItem value={s.id} id={id(`size-${s.id}`)} />
-                          <FieldTitle className="tabular-nums">{s.label}</FieldTitle>
-                        </Field>
-                      </FieldLabel>
-                    ))}
-                  </RadioGroup>
-                </FieldSet>
-
-                <Field>
-                  <FieldLabel htmlFor={id('plan')}>Plan</FieldLabel>
-                  <Select value={values.plan} onValueChange={(v) => change('plan', v)}>
-                    <SelectTrigger id={id('plan')} className="w-full">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PLANS.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FieldDescription>You can change the plan at any time.</FieldDescription>
-                </Field>
-
-                <Field orientation="horizontal">
-                  <Checkbox
-                    id={id('welcome')}
-                    checked={values.welcome}
-                    onCheckedChange={(v) => change('welcome', v === true)}
-                  />
-                  <FieldContent>
-                    <FieldLabel htmlFor={id('welcome')}>Send welcome email</FieldLabel>
-                    <FieldDescription>With a link to the customer portal.</FieldDescription>
-                  </FieldContent>
-                </Field>
-
-                <Field data-invalid={!!notesError}>
-                  <div className="flex items-baseline justify-between gap-2">
-                    <FieldLabel htmlFor={id('notes')}>
-                      Notes <span className="text-muted-foreground font-normal">Optional</span>
-                    </FieldLabel>
-                    <span
-                      id={id('notes-count')}
-                      className={cn('text-[11px] tabular-nums', notesError ? 'text-destructive' : 'text-muted-foreground')}
-                    >
-                      {values.notes.length}/{NOTES_MAX}
-                    </span>
-                  </div>
-                  <Textarea
-                    id={id('notes')}
-                    ref={errors.register('notes')}
-                    rows={3}
-                    placeholder="Delivery hours, contacts, anything the team should know…"
-                    value={values.notes}
-                    onChange={(e) => change('notes', e.target.value)}
-                    aria-invalid={notesError ? true : undefined}
-                    aria-describedby={notesError ? `${id('notes-count')} ${id('notes-error')}` : id('notes-count')}
-                    className="max-h-40"
-                  />
-                  <FieldError id={id('notes-error')}>{notesError}</FieldError>
-                </Field>
-              </FieldGroup>
-            </div>
-            <DialogFooter className="border-t px-4 py-3">
-              <DialogClose asChild>
-                <Button type="button" variant="ghost" disabled={saving}>Cancel</Button>
-              </DialogClose>
-              <Button type="submit" aria-busy={saving || undefined}>
-                {saving && <Spinner aria-hidden="true" data-icon="inline-start" className="size-3.5" />}
-                {saving ? 'Saving…' : 'Add customer'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+        }
+        title="Add customer"
+        description="They can then be picked on any job."
+        fields={CUSTOMER_FIELDS}
+        initialValues={NEW_CUSTOMER}
+        submitLabel="Add customer"
+        shortcut={false}
+        onSubmit={async (values) => {
+          await wait(800)
+          toast.success('Customer added', { description: `Demo only. ${values.name} was not saved.` })
+        }}
+      />
     </Panel>
   )
 }
@@ -855,7 +483,7 @@ function EditProfilePanel() {
               <SheetDescription>How teammates see you, and how the app treats you.</SheetDescription>
             </SheetHeader>
 
-            <form id={id('form')} noValidate onSubmit={save} className={BODY}>
+            <form id={id('form')} noValidate onSubmit={save} className={DIALOG_BODY}>
               <FieldGroup>
                 <FieldSet className="min-w-0">
                   <FieldLegend>Profile</FieldLegend>
@@ -1073,7 +701,7 @@ function rowErrors(rows: InviteRow[]) {
   for (const row of rows) {
     const email = row.email.trim().toLowerCase()
     if (!email) continue
-    if (!EMAIL.test(email)) errors[row.id] = 'Enter an email like name@example.com.'
+    if (!EMAIL_PATTERN.test(email)) errors[row.id] = 'Enter an email like name@example.com.'
     else if (seen.has(email)) errors[row.id] = 'This email is already on the list.'
     seen.add(email)
   }
@@ -1392,7 +1020,7 @@ function WizardPanel() {
             Create workspace
           </Button>
         </DialogTrigger>
-        <DialogContent className={cn(MODAL, 'sm:max-w-lg')}>
+        <DialogContent className={cn(DIALOG_PANEL, 'sm:max-w-lg')}>
           <DialogHeader className="px-4 pt-4 pr-10">
             <DialogTitle>Create a workspace</DialogTitle>
             <DialogDescription>Three short steps. You can change all of it later.</DialogDescription>
@@ -1402,7 +1030,7 @@ function WizardPanel() {
           </div>
 
           <form noValidate onSubmit={next} className="flex min-h-0 flex-1 flex-col">
-            <div className={BODY}>
+            <div className={DIALOG_BODY}>
               {step === 0 && (
                 <FieldGroup>
                   <Field data-invalid={!!shown.name}>
@@ -1584,13 +1212,13 @@ function InvitePanel() {
               Invite members
             </Button>
           </DialogTrigger>
-          <DialogContent className={cn(MODAL, 'sm:max-w-lg')}>
+          <DialogContent className={cn(DIALOG_PANEL, 'sm:max-w-lg')}>
             <DialogHeader className="border-b px-4 py-3 pr-10">
               <DialogTitle>Invite members</DialogTitle>
               <DialogDescription>They get an email with a link to join Acme Studio.</DialogDescription>
             </DialogHeader>
             <form noValidate onSubmit={send} className="flex min-h-0 flex-1 flex-col">
-              <div className={BODY}>
+              <div className={DIALOG_BODY}>
                 <EmailRows rows={rows} setRows={setRows} showErrors={tried} withRole inputs={inputs} />
               </div>
               <DialogFooter className="border-t px-4 py-3">

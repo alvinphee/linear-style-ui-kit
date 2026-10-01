@@ -1,15 +1,16 @@
-import { useCallback, useRef, useState, useSyncExternalStore } from 'react'
+import { useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Building03Icon, Calendar03Icon,
   Cancel01Icon, CheckmarkCircle02Icon, FloppyDiskIcon, MinusSignIcon, PlusSignIcon, TextBoldIcon,
   TextItalicIcon, TextUnderlineIcon, Tick02Icon, UnfoldMoreIcon,
 } from '@hugeicons/core-free-icons'
-import { differenceInCalendarDays, endOfMonth, format, isSameDay, startOfMonth, subDays } from 'date-fns'
+import { differenceInCalendarDays, endOfMonth, format, startOfMonth, subDays } from 'date-fns'
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
-import { getDefaultClassNames, type DateRange } from 'react-day-picker'
+import type { DateRange } from 'react-day-picker'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { DateRangePicker, type DateRangePreset } from '@/blocks/period-picker'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup, ButtonGroupSeparator, ButtonGroupText } from '@/components/ui/button-group'
 import { Calendar } from '@/components/ui/calendar'
@@ -23,15 +24,6 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/compon
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { CUSTOMERS, LABELS } from '../data'
 import { Panel, Row, Section } from './shared'
-
-function useMediaQuery(query: string) {
-  const subscribe = useCallback((onChange: () => void) => {
-    const mq = window.matchMedia(query)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [query])
-  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false)
-}
 
 const FORMATS = [
   { id: 'bold', label: 'Bold', keys: 'Ctrl B', icon: TextBoldIcon },
@@ -330,65 +322,29 @@ function DatePickerPanel() {
   )
 }
 
-function rangeLabel(range: DateRange | undefined) {
-  if (!range?.from) return 'Pick a date range'
-  if (!range.to) return format(range.from, 'd MMM yyyy')
-  return `${format(range.from, 'd MMM')} – ${format(range.to, 'd MMM yyyy')}`
-}
-
 function DateRangePanel() {
   const [today] = useState(() => new Date())
   const [range, setRange] = useState<DateRange | undefined>({ from: subDays(today, 6), to: today })
-  const [month, setMonth] = useState(() => startOfMonth(today))
-  const twoMonths = useMediaQuery('(min-width: 640px)')
 
-  const presets: { label: string; range?: DateRange }[] = [
+  const presets: DateRangePreset[] = [
     { label: 'Last 7 days', range: { from: subDays(today, 6), to: today } },
     { label: 'This month', range: { from: startOfMonth(today), to: endOfMonth(today) } },
     { label: 'Clear' },
   ]
   const days = range?.from && range.to ? differenceInCalendarDays(range.to, range.from) + 1 : 0
 
-  function applyPreset(next?: DateRange) {
-    setRange(next)
-    if (next?.from) setMonth(startOfMonth(next.from))
-  }
-
   return (
     <Panel title="Date range" note='mode="range" with presets'>
       <div className="grid gap-1.5">
         <Label htmlFor="date-range">Reporting period</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button id="date-range" variant="outline" className={cn('w-full justify-start font-normal sm:w-64', !range?.from && 'text-muted-foreground')}>
-              <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} data-icon="inline-start" className="text-muted-foreground" />
-              <span className="truncate">{rangeLabel(range)}</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto gap-0 p-0" align="start">
-            <Calendar
-              mode="range"
-              numberOfMonths={twoMonths ? 2 : 1}
-              month={month}
-              onMonthChange={setMonth}
-              selected={range}
-              onSelect={setRange}
-              classNames={{ months: cn('relative flex flex-col gap-4 sm:flex-row', getDefaultClassNames().months) }}
-            />
-            <div className="flex flex-wrap items-center gap-1 border-t p-2">
-              {presets.map((p) => {
-                const active = p.range && range?.from && range.to
-                  && isSameDay(p.range.from!, range.from) && isSameDay(p.range.to!, range.to)
-                return (
-                  <Button key={p.label} variant={active ? 'secondary' : 'ghost'} size="sm" onClick={() => applyPreset(p.range)}>
-                    {p.label}
-                  </Button>
-                )
-              })}
-              {days > 0 && <span className="text-muted-foreground ml-auto px-1 text-[11px] tabular-nums">{days} days</span>}
-            </div>
-          </PopoverContent>
-        </Popover>
+        <DateRangePicker
+          id="date-range"
+          value={range}
+          onChange={setRange}
+          presets={presets}
+          defaultMonth={today}
+          className="w-full sm:w-64"
+        />
         <p className="text-muted-foreground text-[11px]">
           {days > 0 ? `${days} days selected` : range?.from ? 'Pick an end date' : 'No range selected'}
         </p>

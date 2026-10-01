@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowDown01Icon, ArrowRight01Icon, Camera01Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { KanbanBoard, type KanbanCardState } from '@/blocks/kanban-board'
 import { Button } from '@/components/ui/button'
 import { LABELS, type Job } from '../../data'
 import { useJobs } from '../../jobs-store'
@@ -137,88 +138,60 @@ function IssueRow({ job, display, selectedId, onOpen, onOpenFull }: Openers & { 
   )
 }
 
-// Board: a column per group. Drag a card to another column to change the
-// field the board is grouped by.
+// Board: a column per group, from the shared Kanban block. Drag a card to
+// another column to change the field the board is grouped by.
 export function IssueBoard({ groups, display, onAdd, ...openers }: Openers & {
   groups: Group[]
   display: ListDisplay
   onAdd: (group: Group) => void
 }) {
-  const { jobs, updateJob } = useJobs()
-  const [over, setOver] = useState<string | null>(null)
-
-  function drop(group: Group, id: string) {
-    setOver(null)
-    const job = jobs.find((j) => j.id === id)
-    if (!job || group.jobs.some((j) => j.id === id)) return
-    updateJob(id, group.patch)
-    toast(`${id} moved to ${group.label}`)
-  }
+  const { updateJob } = useJobs()
+  const groupOf = new Map(groups.flatMap((g) => g.jobs.map((j) => [j.id, g.key] as const)))
+  const byKey = (key: string) => groups.find((g) => g.key === key)!
 
   return (
-    <div className="flex h-full gap-2 overflow-x-auto p-2">
-      {groups.map((group) => (
-        <div
-          key={group.key}
-          onDragOver={(e) => {
-            e.preventDefault()
-            e.dataTransfer.dropEffect = 'move'
-            if (over !== group.key) setOver(group.key)
-          }}
-          onDragLeave={(e) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOver(null)
-          }}
-          onDrop={(e) => {
-            e.preventDefault()
-            drop(group, e.dataTransfer.getData('text/plain'))
-          }}
-          data-over={over === group.key}
-          className="bg-muted/40 data-[over=true]:bg-accent data-[over=true]:ring-primary/40 flex w-60 shrink-0 flex-col rounded-lg transition-colors data-[over=true]:ring-1"
-        >
-          <div className="flex items-center gap-1.5 px-2.5 pt-2 pb-1.5 text-xs">
-            <span className="flex shrink-0">{group.visual}</span>
-            <span className="truncate font-medium">{group.label}</span>
-            <span className="text-muted-foreground tabular-nums">{group.jobs.length}</span>
-            <Button variant="ghost" size="icon-xs" className="text-muted-foreground ml-auto" aria-label={`New issue in ${group.label}`} onClick={() => onAdd(group)}>
-              <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-            </Button>
-          </div>
-          <div className="grid min-h-0 flex-1 content-start gap-1.5 overflow-y-auto px-1.5 pb-1.5">
-            {group.jobs.map((job) => <IssueCard key={job.id} job={job} display={display} {...openers} />)}
-            {!group.jobs.length && (
-              <p className="text-muted-foreground rounded-md border border-dashed px-2 py-4 text-center text-[11px]">Drop issues here</p>
-            )}
-          </div>
-        </div>
-      ))}
-    </div>
+    <KanbanBoard
+      variant="compact"
+      className="h-full"
+      columns={groups.map((g) => ({ id: g.key, title: g.label, visual: g.visual }))}
+      items={groups.flatMap((g) => g.jobs)}
+      columnOf={(job) => groupOf.get(job.id)!}
+      onMove={(id, key) => {
+        const group = byKey(key)
+        updateJob(id, group.patch)
+        toast(`${id} moved to ${group.label}`)
+      }}
+      onAdd={(column) => onAdd(byKey(column.id))}
+      addLabel={(column) => `New issue in ${column.title}`}
+      itemName={{ one: 'issue', other: 'issues' }}
+      emptyLabel="Drop issues here"
+      dropLabel="Drop issues here"
+      renderCard={(job, card) => <IssueCard job={job} display={display} card={card} {...openers} />}
+    />
   )
 }
 
-function IssueCard({ job, display, selectedId, onOpen, onOpenFull }: Openers & { job: Job; display: ListDisplay }) {
+function IssueCard({ job, display, card, selectedId, onOpen, onOpenFull }: Openers & {
+  job: Job
+  display: ListDisplay
+  card: KanbanCardState
+}) {
   const p = display.properties
   const open = () => onOpen(job.id)
   const openFull = () => onOpenFull(job.id)
-  const [dragging, setDragging] = useState(false)
   return (
     <JobContextMenu job={job} onOpen={open} onOpenFull={openFull}>
       <div
         role="button"
         tabIndex={0}
-        draggable
-        onDragStart={(e) => {
-          e.dataTransfer.setData('text/plain', job.id)
-          e.dataTransfer.effectAllowed = 'move'
-          setDragging(true)
-        }}
-        onDragEnd={() => setDragging(false)}
+        {...card.cardProps}
         onClick={open}
         onKeyDown={onActivate(open)}
         data-selected={selectedId === job.id}
         aria-label={`${job.id} ${job.title}`}
         className={cn(
           'bg-card hover:border-foreground/15 data-[selected=true]:border-primary/50 focus-visible:ring-ring/40 group/card grid cursor-grab gap-1.5 rounded-md border p-2 text-xs outline-none select-none focus-visible:ring-2 active:cursor-grabbing',
-          dragging && 'opacity-40',
+          card.dragging && 'opacity-40',
         )}
       >
         <div className="text-muted-foreground flex h-5 items-center gap-1.5 text-[11px] tabular-nums">

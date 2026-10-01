@@ -7,11 +7,15 @@ file names and when talking about the work. Add a term here before using a
 new one.
 
 ## The kit's five levels
+Each level is built only from the level below it, so a fix at one level
+shows up everywhere above. This is **atomic design** (Brad Frost's term,
+used by most design systems).
+
 | Term | Meaning | In this kit |
 |---|---|---|
 | Design tokens | Named values for colour, radius, type and spacing that everything else reads | `styles.css`, the Theme page |
-| Components | Single building blocks with props and variants | Button, Input, Badge, Menu… |
-| Blocks | A section or screen built from components that does one task | Board, Data table, Issue detail |
+| Components | Single building blocks with props and variants | shadcn primitives in `src/components/ui` (Button, Input, Badge…), our own small ones in `src/components/` (status badge, person chip…) |
+| Blocks | A section or screen built from components that does one task | `src/blocks/`: board, data table, folding breadcrumb… |
 | Layouts | The frame pages sit in: navigation, header, content area. Also called the app shell | App shells |
 | Templates | A whole app: a layout, blocks and data, ready to run | ERP app, AI chat app |
 | Kitchen sink | One page that shows every component, to check they look right together | All components |
@@ -28,8 +32,16 @@ new one.
 | Launchpad | The home screen of tiles, one per module (SAP Fiori's term) |
 | App switcher (module switcher) | The control that moves between modules or apps. In the ERP template it sits at the top of the sidebar |
 | KPI (key performance indicator) | A headline number on a dashboard, such as open pipeline or overdue receivables |
-| Side panel (peek) | A record opened beside the list, without leaving it |
+| Side panel (peek, record sheet) | A record opened beside the list, without leaving it. The block is `record-sheet` |
+| Quick create | A light dialog for adding a record fast: a title, a description and property pills |
+| Property pill | A small button showing one field of a record (status, assignee, due date) that opens a picker to change it |
+| Notifications menu | The bell's popover: what needs you, newest first, with unread markers and "Mark all read" |
+| Kanban board | Records as cards in columns (one per status or stage); drag a card to move it |
 | Saved views | Named filters on a list, shown as tabs or pills |
+| Faceted filter | A filter listing a column's values with how many rows have each; pick one or several |
+| Filter chip | One active filter shown as a removable chip, such as "Status is Overdue" |
+| Row density | How tightly table rows are packed: compact or comfortable |
+| Column visibility (View menu) | Choosing which table columns show |
 | Bulk actions | Actions applied to every selected row |
 | Empty state | What a page shows when it has nothing to list |
 | Toast | A short message that appears and fades, such as "Invoice sent" |

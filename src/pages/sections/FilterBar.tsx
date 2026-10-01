@@ -1,18 +1,15 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  ArrowLeft01Icon, ArrowRight01Icon, BookmarkAdd01Icon, Building03Icon, Cancel01Icon,
-  FilterHorizontalIcon, FullSignalIcon, KanbanIcon, Search01Icon, SlidersHorizontalIcon, Tag01Icon,
-  TimeHalfPassIcon, UserCircleIcon, UserIcon,
+  Building03Icon, FullSignalIcon, KanbanIcon, SlidersHorizontalIcon, Tag01Icon, TimeHalfPassIcon, UserCircleIcon,
+  UserIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { Button } from '@/components/ui/button'
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import {
-  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+  FilterBar as FilterBarBlock, FilterChip as FilterChipBlock, FilterMenu as FilterMenuBlock, type FilterFieldConfig,
+} from '@/blocks/filter-bar'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -20,6 +17,9 @@ import { Switch } from '@/components/ui/switch'
 import { Toggle } from '@/components/ui/toggle'
 import { CUSTOMERS, LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
 import { Initials, PriorityIcon, StatusIcon } from './StatusSection'
+
+// The job pages' filter set-up: the fields, saved views, matching and
+// ordering. The filter bar itself is the block in src/blocks/filter-bar.
 
 export type FilterField = 'status' | 'priority' | 'assignee' | 'label' | 'customer'
 export type Filters = Partial<Record<FilterField, string[]>>
@@ -163,13 +163,8 @@ export const SAVED_VIEWS: { id: string; label: string; visual: ReactNode; filter
   },
 ]
 
-function sameFilters(a: Filters, b: Filters) {
-  return FIELD_ORDER.every((field) => {
-    const x = a[field] ?? []
-    const y = b[field] ?? []
-    return x.length === y.length && x.every((v) => y.includes(v))
-  })
-}
+// The fields in menu order, in the block's shape.
+const FIELD_LIST: FilterFieldConfig[] = FIELD_ORDER.map((id) => ({ id, ...FIELDS[id] }))
 
 const PROPERTIES: { id: CardProperty; label: string }[] = [
   { id: 'id', label: 'ID' },
@@ -198,246 +193,35 @@ export function FilterBar({
   shown: number
   total: number
 }) {
-  const activeView = SAVED_VIEWS.find((v) => sameFilters(v.filters, filters))
-  const active = FIELD_ORDER.filter((f) => filters[f]?.length)
-  const narrowed = active.length > 0 || search.trim() !== ''
-
-  function setField(field: FilterField, values: string[]) {
-    const next = { ...filters }
-    if (values.length) next[field] = values
-    else delete next[field]
-    onFiltersChange(next)
-  }
-
-  function toggleValue(field: FilterField, value: string) {
-    const current = filters[field] ?? []
-    setField(field, current.includes(value) ? current.filter((v) => v !== value) : [...current, value])
-  }
-
   return (
-    <div className="grid min-w-0 gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="Saved views" className="flex flex-wrap items-center gap-1">
-          {SAVED_VIEWS.map((view) => (
-            <button
-              key={view.id}
-              type="button"
-              aria-pressed={activeView?.id === view.id}
-              onClick={() => onFiltersChange(view.filters)}
-              className="text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:ring-ring/30 aria-pressed:bg-accent aria-pressed:text-foreground aria-pressed:border-border inline-flex h-6 items-center gap-1.5 rounded-full border border-transparent px-2.5 text-xs font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2"
-            >
-              {view.visual}
-              {view.label}
-            </button>
-          ))}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground"
-          onClick={() => toast.success('View saved', { description: 'Demo only: saved views are not stored.' })}
-        >
-          <HugeiconsIcon icon={BookmarkAdd01Icon} strokeWidth={2} data-icon="inline-start" />
-          Save view
-        </Button>
-
-        <div className="flex w-full min-w-0 items-center gap-1.5 sm:ml-auto sm:w-auto">
-          <InputGroup className="flex-1 sm:w-48 sm:flex-none">
-            <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Search title or ID"
-              aria-label="Search jobs by title or ID"
-            />
-            {search && (
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => onSearchChange('')}>
-                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                </InputGroupButton>
-              </InputGroupAddon>
-            )}
-          </InputGroup>
-          <DisplayMenu display={display} onChange={onDisplayChange} />
-        </div>
-      </div>
-
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <FilterMenu filters={filters} onToggle={toggleValue} />
-        {active.map((field) => (
-          <FilterChip key={field} field={field} values={filters[field]!} onChange={(v) => setField(field, v)} />
-        ))}
-        {active.length > 0 && (
-          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => onFiltersChange({})}>
-            Clear
-          </Button>
-        )}
-        <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums" aria-live="polite">
-          {narrowed ? `${shown} of ${total} jobs` : `${total} ${total === 1 ? 'job' : 'jobs'}`}
-        </span>
-      </div>
-    </div>
+    <FilterBarBlock
+      fields={FIELD_LIST}
+      filters={filters}
+      onFiltersChange={(next) => onFiltersChange(next as Filters)}
+      views={SAVED_VIEWS}
+      onSaveView={() => toast.success('View saved', { description: 'Demo only: saved views are not stored.' })}
+      search={search}
+      onSearchChange={onSearchChange}
+      searchPlaceholder="Search title or ID"
+      searchLabel="Search jobs by title or ID"
+      display={<DisplayMenu display={display} onChange={onDisplayChange} />}
+      shown={shown}
+      total={total}
+      noun={['job', 'jobs']}
+    />
   )
 }
 
 export function FilterMenu({ filters, onToggle }: { filters: Filters; onToggle: (field: FilterField, value: string) => void }) {
-  const [open, setOpen] = useState(false)
-  const [field, setField] = useState<FilterField | null>(null)
-  const [query, setQuery] = useState('')
-
-  function goTo(next: FilterField | null) {
-    setField(next)
-    setQuery('')
-  }
-
-  return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        // Reset on open, not on close, so the content does not swap mid fade-out.
-        if (next) goTo(null)
-        setOpen(next)
-      }}
-    >
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm">
-          <HugeiconsIcon icon={FilterHorizontalIcon} strokeWidth={2} data-icon="inline-start" />
-          Filter
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-60 gap-0 p-0">
-        {/* A new key per step resets cmdk's highlighted item along with the search. */}
-        <Command key={field ?? 'fields'} className="rounded-lg">
-          {field && (
-            <div className="px-1 pt-1">
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => goTo(null)}>
-                <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} data-icon="inline-start" />
-                {FIELDS[field].label}
-              </Button>
-            </div>
-          )}
-          <CommandInput
-            autoFocus
-            value={query}
-            onValueChange={setQuery}
-            placeholder={field ? `Filter by ${FIELDS[field].label.toLowerCase()}…` : 'Filter by…'}
-            onKeyDown={(e) => {
-              if (e.key === 'Backspace' && !query && field) {
-                e.preventDefault()
-                goTo(null)
-              }
-            }}
-          />
-          <CommandList>
-            <CommandEmpty>No matches</CommandEmpty>
-            {field ? (
-              <CommandGroup>
-                {FIELDS[field].options.map((option) => (
-                  <CommandItem
-                    key={option.value}
-                    value={option.label}
-                    data-checked={filters[field]?.includes(option.value) ?? false}
-                    onSelect={() => onToggle(field, option.value)}
-                  >
-                    {/* Wrapped so the item's highlight style does not recolour status icons. */}
-                    <span className="flex shrink-0">{option.visual}</span>
-                    <span className="truncate">{option.label}</span>
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            ) : (
-              <CommandGroup>
-                {FIELD_ORDER.map((f) => {
-                  const count = filters[f]?.length ?? 0
-                  return (
-                    <CommandItem
-                      key={f}
-                      value={FIELDS[f].label}
-                      onSelect={() => goTo(f)}
-                      className="[&>svg:last-child]:hidden"
-                    >
-                      <HugeiconsIcon icon={FIELDS[f].icon} strokeWidth={2} className="text-muted-foreground" />
-                      {FIELDS[f].label}
-                      {count > 0 && <span className="text-muted-foreground ml-auto tabular-nums">{count}</span>}
-                      <HugeiconsIcon
-                        icon={ArrowRight01Icon}
-                        strokeWidth={2}
-                        className={cn('text-muted-foreground', count === 0 && 'ml-auto')}
-                      />
-                    </CommandItem>
-                  )
-                })}
-              </CommandGroup>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
-  )
+  return <FilterMenuBlock fields={FIELD_LIST} filters={filters} onToggle={(field, value) => onToggle(field as FilterField, value)} />
 }
-
-const SEGMENT = 'flex items-center border-l outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40'
 
 export function FilterChip({ field, values, onChange }: {
   field: FilterField
   values: string[]
   onChange: (values: string[]) => void
 }) {
-  const config = FIELDS[field]
-  const chosen = config.options.filter((o) => values.includes(o.value))
-  if (!chosen.length) return null
-  const summary = chosen.length === 1 ? chosen[0].label : `${chosen[0].label} +${chosen.length - 1}`
-  const name = config.label.toLowerCase()
-
-  return (
-    <div className="bg-card flex h-6 max-w-full min-w-0 items-stretch overflow-hidden rounded-md border text-xs">
-      <span className="flex shrink-0 items-center gap-1 px-1.5">
-        <HugeiconsIcon icon={config.icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-        {config.label}
-      </span>
-      <span className="text-muted-foreground flex shrink-0 items-center border-l px-1.5">
-        {chosen.length === 1 ? 'is' : 'is any of'}
-      </span>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(SEGMENT, 'min-w-0 gap-1.5 px-1.5')}
-          aria-label={`Edit ${name} filter: ${chosen.map((o) => o.label).join(', ')}`}
-        >
-          <span className="flex shrink-0 items-center gap-0.5">
-            {chosen.slice(0, 3).map((o) => (
-              <span key={o.value} className="flex">{o.visual}</span>
-            ))}
-          </span>
-          <span className="truncate">{summary}</span>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-52">
-          <DropdownMenuLabel>{config.label}</DropdownMenuLabel>
-          {config.options.map((o) => (
-            <DropdownMenuCheckboxItem
-              key={o.value}
-              checked={values.includes(o.value)}
-              // Keep the menu open so several values can be ticked in a row.
-              onSelect={(e) => e.preventDefault()}
-              onCheckedChange={(on) => onChange(on ? [...values, o.value] : values.filter((v) => v !== o.value))}
-            >
-              {o.visual}
-              {o.label}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-      <button
-        type="button"
-        aria-label={`Remove ${name} filter`}
-        onClick={() => onChange([])}
-        className={cn(SEGMENT, 'text-muted-foreground hover:text-foreground px-1')}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-      </button>
-    </div>
-  )
+  return <FilterChipBlock field={{ id: field, ...FIELDS[field] }} values={values} onChange={onChange} />
 }
 
 function DisplayMenu({ display, onChange }: { display: DisplayOptions; onChange: (display: DisplayOptions) => void }) {

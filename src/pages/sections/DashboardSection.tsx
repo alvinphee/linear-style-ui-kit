@@ -1,28 +1,22 @@
 import { useId, useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
-import {
-  ArrowDownRight01Icon, ArrowUpRight01Icon, DollarCircleIcon, Download01Icon, Target02Icon,
-  UserAdd01Icon, UserGroupIcon,
-} from '@hugeicons/core-free-icons'
-import { Area, CartesianGrid, ComposedChart, Line, LineChart, XAxis, YAxis } from 'recharts'
+import { DollarCircleIcon, Download01Icon, Target02Icon, UserAdd01Icon, UserGroupIcon } from '@hugeicons/core-free-icons'
+import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { Badge } from '@/components/ui/badge'
+import { DeltaBadge, KpiCard, KpiGrid, type KpiDelta } from '@/blocks/kpi-card'
+import { PeriodBar } from '@/blocks/period-picker'
 import { Button } from '@/components/ui/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
-import { Label } from '@/components/ui/label'
-import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Panel, Section } from './shared'
 import { Initials } from './StatusSection'
 
 type Range = '7d' | '30d' | '90d'
-const RANGES: { value: Range; label: string; days: number }[] = [
-  { value: '7d', label: 'Last 7 days', days: 7 },
-  { value: '30d', label: 'Last 30 days', days: 30 },
-  { value: '90d', label: 'Last 90 days', days: 90 },
+const RANGES: { value: Range; label: string; short: string; days: number }[] = [
+  { value: '7d', label: 'Last 7 days', short: '7d', days: 7 },
+  { value: '30d', label: 'Last 30 days', short: '30d', days: 30 },
+  { value: '90d', label: 'Last 90 days', short: '90d', days: 90 },
 ]
 const rangeOf = (range: Range) => RANGES.find((r) => r.value === range) ?? RANGES[1]!
 
@@ -113,13 +107,13 @@ function totalOf(days: DayStats[], kpi: Kpi) {
   return kpi.total === 'sum' ? sum : sum / Math.max(1, days.length)
 }
 
-function changeOf(current: number, previous: number, kpi: Kpi) {
+function changeOf(current: number, previous: number, kpi: Kpi): KpiDelta {
   const value = kpi.change === 'pts' ? current - previous : (current / previous - 1) * 100
   const sign = value >= 0 ? '+' : '−'
   const text = kpi.change === 'pts'
     ? `${sign}${Math.abs(value).toFixed(2)} pts`
     : `${sign}${Math.abs(value).toFixed(1)}%`
-  return { up: value >= 0, text }
+  return { direction: value >= 0 ? 'up' : 'down', text }
 }
 
 // Trailing 7-day average, so the longer sparklines show a trend rather than weekend zigzags.
@@ -146,93 +140,27 @@ function sparkSeries(range: Range, key: Metric) {
 // SVG ids end up in url(#…), which does not accept the colons useId can produce.
 const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '')
 
-function DeltaBadge({ up, text }: { up: boolean; text: string }) {
-  return (
-    <Badge variant="outline" className={cn('tabular-nums', up ? 'text-status-done' : 'text-destructive')}>
-      <HugeiconsIcon icon={up ? ArrowUpRight01Icon : ArrowDownRight01Icon} strokeWidth={2} data-icon="inline-start" />
-      {text}
-    </Badge>
-  )
-}
-
-const sparkConfig = (up: boolean) => ({
-  value: { label: 'This period', color: up ? 'var(--chart-1)' : 'var(--destructive)' },
-  previous: { label: 'Previous period', color: 'var(--muted-foreground)' },
-}) satisfies ChartConfig
-
-function Sparkline({ current, previous, compare, up }: {
-  current: number[]
-  previous: number[]
-  compare: boolean
-  up: boolean
-}) {
-  const data = current.map((value, i) => ({ i, value, previous: previous[i] }))
-  return (
-    <ChartContainer config={sparkConfig(up)} className="aspect-auto h-9 w-24 shrink-0" aria-hidden>
-      <LineChart data={data} margin={{ top: 3, right: 2, bottom: 3, left: 2 }} accessibilityLayer={false}>
-        <YAxis hide domain={['dataMin', 'dataMax']} />
-        {compare && (
-          <Line
-            dataKey="previous"
-            type="monotone"
-            stroke="var(--color-previous)"
-            strokeWidth={1}
-            strokeDasharray="2 2"
-            strokeOpacity={0.7}
-            dot={false}
-            isAnimationActive={false}
-          />
-        )}
-        <Line
-          dataKey="value"
-          type="monotone"
-          stroke="var(--color-value)"
-          strokeWidth={1.5}
-          dot={false}
-          isAnimationActive={false}
-        />
-      </LineChart>
-    </ChartContainer>
-  )
-}
-
-function KpiCard({ kpi, range, compare }: { kpi: Kpi; range: Range; compare: boolean }) {
+function DashboardKpi({ kpi, range, compare }: { kpi: Kpi; range: Range; compare: boolean }) {
   const { current, previous } = periods(range)
   const value = totalOf(current, kpi)
   const before = totalOf(previous, kpi)
-  const delta = changeOf(value, before, kpi)
   const spark = sparkSeries(range, kpi.key)
 
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <div
-          tabIndex={0}
-          className="bg-card hover:border-foreground/15 focus-visible:ring-ring/50 grid min-w-0 gap-2.5 rounded-lg border p-3 transition-colors outline-none focus-visible:ring-2"
-        >
-          <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
-            <HugeiconsIcon icon={kpi.icon} strokeWidth={2} className="size-3.5 shrink-0" />
-            <span className="text-foreground truncate font-medium">{kpi.label}</span>
-            <span className="ml-auto shrink-0 text-[11px]">{kpi.hint}</span>
-          </div>
-          <div className="flex min-w-0 items-end justify-between gap-3">
-            <div className="grid min-w-0 gap-1.5">
-              <span className="truncate text-xl leading-none font-semibold tracking-tight tabular-nums">
-                {kpi.format(value)}
-              </span>
-              <DeltaBadge {...delta} />
-            </div>
-            <Sparkline current={spark.current} previous={spark.previous} compare={compare} up={delta.up} />
-          </div>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="bottom" sideOffset={6}>
+    <KpiCard
+      label={kpi.label}
+      hint={kpi.hint}
+      icon={kpi.icon}
+      value={kpi.format(value)}
+      delta={changeOf(value, before, kpi)}
+      sparkline={{ data: spark.current, previous: compare ? spark.previous : undefined }}
+      tooltip={
         <div className="grid gap-0.5">
           <span className="font-medium">Previous period: {kpi.format(before)}</span>
           <span className="opacity-70">{spanLabel(previous)}</span>
         </div>
-      </TooltipContent>
-    </Tooltip>
+      }
+    />
   )
 }
 
@@ -468,7 +396,6 @@ function ActivityPanel() {
 export default function DashboardSection() {
   const [range, setRange] = useState<Range>('30d')
   const [compare, setCompare] = useState(true)
-  const compareId = useId()
   const { current } = periods(range)
 
   function exportData() {
@@ -479,40 +406,27 @@ export default function DashboardSection() {
 
   return (
     <Section id="dashboard" title="Dashboard" description="KPI cards, sparklines and a range switch">
-      <div className="bg-card flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2 lg:col-span-2">
-        <div className="mr-auto grid min-w-0 gap-0.5">
-          <span className="text-xs font-medium">{rangeOf(range).label}</span>
-          <span className="text-muted-foreground text-[11px] tabular-nums">{spanLabel(current)} 2026</span>
-        </div>
-        <ToggleGroup
-          type="single"
-          variant="outline"
-          spacing={0}
-          value={range}
-          onValueChange={(v) => v && setRange(v as Range)}
-          aria-label="Date range"
-        >
-          {RANGES.map((r) => (
-            <ToggleGroupItem key={r.value} value={r.value} aria-label={r.label} className="tabular-nums">
-              {r.value}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-        <div className="flex items-center gap-2">
-          <Switch id={compareId} checked={compare} onCheckedChange={setCompare} />
-          <Label htmlFor={compareId} className="font-normal">Compare to previous period</Label>
-        </div>
-        <Button variant="outline" onClick={exportData}>
-          <HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" />
-          Export
-        </Button>
-      </div>
+      <PeriodBar
+        className="lg:col-span-2"
+        periods={RANGES}
+        value={range}
+        onChange={setRange}
+        compare={compare}
+        onCompareChange={setCompare}
+        description={`${spanLabel(current)} 2026`}
+        actions={
+          <Button variant="outline" onClick={exportData}>
+            <HugeiconsIcon icon={Download01Icon} strokeWidth={2} data-icon="inline-start" />
+            Export
+          </Button>
+        }
+      />
 
-      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:col-span-2 lg:grid-cols-4">
+      <KpiGrid className="lg:col-span-2">
         {KPIS.map((kpi) => (
-          <KpiCard key={kpi.key} kpi={kpi} range={range} compare={compare} />
+          <DashboardKpi key={kpi.key} kpi={kpi} range={range} compare={compare} />
         ))}
-      </div>
+      </KpiGrid>
 
       <PerformancePanel range={range} compare={compare} />
       <TopCustomersPanel range={range} />
