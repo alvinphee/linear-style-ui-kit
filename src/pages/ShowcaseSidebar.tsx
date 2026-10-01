@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Add01Icon, ArrowDown01Icon, ArrowRight01Icon, KeyboardIcon, Logout01Icon, Search01Icon,
+  Add01Icon, ArrowDown01Icon, ArrowRight01Icon, ArrowUpRight01Icon, KeyboardIcon, Logout01Icon, Search01Icon,
   Settings01Icon, Tick02Icon, UnfoldMoreIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
@@ -10,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Kbd, KbdGroup } from '@/components/ui/kbd'
-import { NAV_GROUPS, goTo } from './nav'
+import { NAV_GROUPS, TEMPLATES, goTo } from './nav'
 
 // Made-up workspaces: the switcher shows the pattern, only the first is real.
 const WORKSPACES = [
@@ -138,6 +138,24 @@ export default function ShowcaseSidebar({ active, onSearch, onShortcuts }: {
             </div>
           )
         })}
+
+        <div className="mt-3">
+          <span className="text-muted-foreground flex h-6 items-center px-2 text-[11px] font-medium">Templates</span>
+          <div className="mt-0.5 grid gap-px">
+            {TEMPLATES.map((m) => (
+              <a
+                key={m.path}
+                href={`#${m.path}`}
+                title={m.description}
+                className="hover:bg-sidebar-accent focus-visible:ring-ring/40 flex h-7 items-center gap-2 rounded-md px-2 text-xs outline-none focus-visible:ring-2"
+              >
+                <HugeiconsIcon icon={m.icon} strokeWidth={2} className="size-3.5 opacity-80" />
+                <span className="truncate">{m.label}</span>
+                <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} className="text-muted-foreground ml-auto size-3" />
+              </a>
+            ))}
+          </div>
+        </div>
       </nav>
 
       <div className="border-t p-2">

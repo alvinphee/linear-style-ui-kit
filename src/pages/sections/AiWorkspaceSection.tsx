@@ -1,6 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { SidebarLeftIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { cn } from 'cn'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
+import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { PEOPLE } from '../data'
 import { useJobs } from '../jobs-store'
@@ -18,10 +22,11 @@ import {
 import { IconAction } from './ai/Message'
 import { AiStyles } from './ai/parts'
 import { ProjectPage } from './ai/ProjectPage'
+import { SettingsDialog } from './ai/SettingsDialog'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
 import { clearSaved, initialState, loadState, reducer, saveState } from './ai/store'
 import type { Artifact, AssistantMessage, Chat, FileRef, Model, Modes, PartOf, Reply } from './ai/types'
-import { Section } from './shared'
+import { Panel, Section } from './shared'
 
 // Widths of the card (not the window) at which the side areas fit inline.
 // Below them the sidebar and the artifact panel open as sheets instead.
@@ -48,7 +53,9 @@ function useWidth(ref: RefObject<HTMLElement | null>) {
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
-export default function AiWorkspaceSection() {
+// The workspace itself. In the kit it sits in a card; with `page` it fills
+// the window, as the full-page template at #/templates/ai-chat.
+export function AiWorkspace({ page = false }: { page?: boolean }) {
   const jobsStore = useJobs()
   const storeRef = useRef(jobsStore)
   storeRef.current = jobsStore
@@ -62,6 +69,7 @@ export default function AiWorkspaceSection() {
   const [panelFocus, setPanelFocus] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [notice, setNotice] = useState('')
   const runRef = useRef<Run | null>(null)
   const cardRef = useRef<HTMLElement>(null)
@@ -387,6 +395,13 @@ export default function AiWorkspaceSection() {
         dispatch({ type: 'reset', state: initialState() })
         toast('Demo chats restored')
       },
+      openSettings() {
+        setSettingsOpen(true)
+      },
+      setDefaultModel(model) {
+        dispatch({ type: 'model', model })
+        toast(`New chats will use ${modelById(model).name}`)
+      },
     }
     return api
   }, [])
@@ -435,6 +450,22 @@ export default function AiWorkspaceSection() {
     if (latest) actions.openArtifact(latest.artifact.id, latest.artifact.versions.length)
   }
 
+  function exportAll() {
+    const lines: string[] = []
+    for (const c of stateRef.current.chats) {
+      lines.push(`# ${c.title}`, '')
+      for (const m of c.messages) {
+        if (m.role === 'user') lines.push(`**You:** ${m.text}`, '')
+        else {
+          const reply = currentReply(m)
+          lines.push(`**${modelById(reply.model ?? m.model).name}:**`, '', replyText(reply) || '_No text._', '')
+        }
+      }
+    }
+    downloadText('all-chats.md', lines.join('\n'), 'text/markdown')
+    toast(`Exported ${stateRef.current.chats.length} chats`)
+  }
+
   function onKeyDown(e: KeyboardEvent<HTMLElement>) {
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'o') {
       e.preventDefault()
@@ -457,6 +488,7 @@ export default function AiWorkspaceSection() {
       credits={state.credits}
       runningChatId={runningChatId}
       newChatRef={newChatRef}
+      kitLink={page}
       onNavigate={inSheet ? () => setSheetOpen(false) : undefined}
       onClose={inSheet ? () => setSheetOpen(false) : undefined}
     />
@@ -466,106 +498,130 @@ export default function AiWorkspaceSection() {
   const liveText = running && lastReply?.activity ? lastReply.activity : notice
 
   return (
+    <ActionsContext.Provider value={actions}>
+      <AiStyles />
+      <article
+        ref={cardRef}
+        aria-label="AI workspace"
+        onKeyDown={onKeyDown}
+        className={cn(
+          'bg-card relative flex min-w-0 overflow-hidden',
+          page ? 'h-svh' : 'h-[46rem] rounded-lg border lg:col-span-2',
+        )}
+      >
+        {sidebarInline && (
+          <aside aria-label="Chats and projects" className="bg-subtle flex w-64 shrink-0 flex-col border-r">
+            {sidebar(false)}
+          </aside>
+        )}
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          {view.kind === 'project' && project ? (
+            <ProjectPage
+              project={project}
+              chats={summaries.filter((c) => c.projectId === project.id)}
+              sidebarToggle={sidebarToggle}
+            />
+          ) : (
+            <Conversation
+              chat={chat}
+              project={project}
+              projects={state.projects}
+              model={chat?.model ?? state.model}
+              modes={modes}
+              running={running}
+              openArtifactId={artifact?.id ?? null}
+              hasArtifacts={!!chat && chatHasArtifacts(chat)}
+              sidebarToggle={sidebarToggle}
+              focusKey={focusKey}
+              mentions={mentions}
+              onOpenArtifacts={openLatestArtifact}
+              onDeleted={() => setFocusKey((k) => k + 1)}
+            />
+          )}
+        </div>
+
+        {artifact && state.artifact && panelInline && (
+          <aside
+            aria-label="Artifact"
+            onKeyDown={onPanelKeyDown}
+            className="animate-in fade-in-0 slide-in-from-right-2 flex w-96 shrink-0 flex-col border-l duration-200"
+          >
+            <ArtifactPanel
+              artifact={artifact}
+              version={state.artifact.version}
+              onVersion={(version) => dispatch({ type: 'artifact/open', id: artifact.id, version })}
+              onClose={actions.closeArtifact}
+              headingRef={panelHeading}
+              key={artifact.id}
+            />
+          </aside>
+        )}
+
+        <div aria-live="polite" className="sr-only">{liveText}</div>
+      </article>
+
+      {!sidebarInline && (
+        <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+          <SheetContent
+            side="left"
+            showCloseButton={false}
+            className="bg-subtle gap-0 p-0 data-[side=left]:w-72 data-[side=left]:max-w-[85vw]"
+          >
+            <SheetTitle className="sr-only">Chats and projects</SheetTitle>
+            <SheetDescription className="sr-only">Start a chat, open a project or find an old chat.</SheetDescription>
+            {sidebar(true)}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {!panelInline && (
+        <Sheet open={panelOpen} onOpenChange={(open) => !open && actions.closeArtifact()}>
+          <SheetContent
+            side="right"
+            showCloseButton={false}
+            className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+          >
+            <SheetTitle className="sr-only">{panel?.artifact.title ?? 'Artifact'}</SheetTitle>
+            <SheetDescription className="sr-only">Preview, code, versions and download.</SheetDescription>
+            {panel && (
+              <ArtifactPanel
+                artifact={panel.artifact}
+                version={panel.version}
+                onVersion={(version) => dispatch({ type: 'artifact/open', id: panel.artifact.id, version })}
+                onClose={actions.closeArtifact}
+              />
+            )}
+          </SheetContent>
+        </Sheet>
+      )}
+
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} model={state.model} onExportAll={exportAll} />
+    </ActionsContext.Provider>
+  )
+}
+
+export default function AiWorkspaceSection() {
+  return (
     <Section
       id="ai-workspace"
       title="AI workspace"
       description="Projects, chat history, an agent that thinks, plans and uses tools, and artifacts"
     >
-      <ActionsContext.Provider value={actions}>
-        <AiStyles />
-        <article
-          ref={cardRef}
-          aria-label="AI workspace"
-          onKeyDown={onKeyDown}
-          className="bg-card relative flex h-[46rem] min-w-0 overflow-hidden rounded-lg border lg:col-span-2"
-        >
-          {sidebarInline && (
-            <aside aria-label="Chats and projects" className="bg-subtle flex w-64 shrink-0 flex-col border-r">
-              {sidebar(false)}
-            </aside>
-          )}
-
-          <div className="flex min-w-0 flex-1 flex-col">
-            {view.kind === 'project' && project ? (
-              <ProjectPage
-                project={project}
-                chats={summaries.filter((c) => c.projectId === project.id)}
-                sidebarToggle={sidebarToggle}
-              />
-            ) : (
-              <Conversation
-                chat={chat}
-                project={project}
-                projects={state.projects}
-                model={chat?.model ?? state.model}
-                modes={modes}
-                running={running}
-                openArtifactId={artifact?.id ?? null}
-                hasArtifacts={!!chat && chatHasArtifacts(chat)}
-                sidebarToggle={sidebarToggle}
-                focusKey={focusKey}
-                mentions={mentions}
-                onOpenArtifacts={openLatestArtifact}
-                onDeleted={() => setFocusKey((k) => k + 1)}
-              />
-            )}
-          </div>
-
-          {artifact && state.artifact && panelInline && (
-            <aside
-              aria-label="Artifact"
-              onKeyDown={onPanelKeyDown}
-              className="animate-in fade-in-0 slide-in-from-right-2 flex w-96 shrink-0 flex-col border-l duration-200"
-            >
-              <ArtifactPanel
-                artifact={artifact}
-                version={state.artifact.version}
-                onVersion={(version) => dispatch({ type: 'artifact/open', id: artifact.id, version })}
-                onClose={actions.closeArtifact}
-                headingRef={panelHeading}
-                key={artifact.id}
-              />
-            </aside>
-          )}
-
-          <div aria-live="polite" className="sr-only">{liveText}</div>
-        </article>
-
-        {!sidebarInline && (
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetContent
-              side="left"
-              showCloseButton={false}
-              className="bg-subtle gap-0 p-0 data-[side=left]:w-72 data-[side=left]:max-w-[85vw]"
-            >
-              <SheetTitle className="sr-only">Chats and projects</SheetTitle>
-              <SheetDescription className="sr-only">Start a chat, open a project or find an old chat.</SheetDescription>
-              {sidebar(true)}
-            </SheetContent>
-          </Sheet>
-        )}
-
-        {!panelInline && (
-          <Sheet open={panelOpen} onOpenChange={(open) => !open && actions.closeArtifact()}>
-            <SheetContent
-              side="right"
-              showCloseButton={false}
-              className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
-            >
-              <SheetTitle className="sr-only">{panel?.artifact.title ?? 'Artifact'}</SheetTitle>
-              <SheetDescription className="sr-only">Preview, code, versions and download.</SheetDescription>
-              {panel && (
-                <ArtifactPanel
-                  artifact={panel.artifact}
-                  version={panel.version}
-                  onVersion={(version) => dispatch({ type: 'artifact/open', id: panel.artifact.id, version })}
-                  onClose={actions.closeArtifact}
-                />
-              )}
-            </SheetContent>
-          </Sheet>
-        )}
-      </ActionsContext.Provider>
+      <Panel title="Also as a full-page app" note="Same block, same chats" wide>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-muted-foreground max-w-xl text-xs">
+            The template puts this workspace in the whole window, with no kit around it, and adds Settings
+            (theme, personalisation, default model, data and account). Chats you start here show up there too.
+          </p>
+          <Button asChild size="sm">
+            <a href="#/templates/ai-chat">
+              Open AI chat app <HugeiconsIcon icon={ArrowUpRight01Icon} strokeWidth={2} data-icon="inline-end" />
+            </a>
+          </Button>
+        </div>
+      </Panel>
+      <AiWorkspace />
     </Section>
   )
 }

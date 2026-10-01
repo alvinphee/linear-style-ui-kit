@@ -22,7 +22,7 @@ SaaS UI. React 19 + Vite + TypeScript 7 + Tailwind v4. Read CLAUDE.md first.
 Keep content generic SaaS, no real brands.
 
 ## Design language (match it exactly)
-- The page is built from Section (id, title, description; renders
+- Each Section is one page of the kit (id, title, description; renders
   `grid grid-cols-1 lg:grid-cols-2 gap-3`) containing Panel cards (title,
   note?, wide?, className?) and Row, from src/pages/sections/shared.tsx.
   Read 2–3 existing sections close to your task to match the style

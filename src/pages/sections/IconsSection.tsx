@@ -79,7 +79,9 @@ async function copyImport(name: string) {
   }
 }
 
-export default function IconsSection() {
+// One component, three pages: the grouped icons, the icon props, and the
+// full searchable list (which loads the whole package, so only on its page).
+export default function IconsSection({ part = 'icons' }: { part?: 'icons' | 'props' | 'all-icons' }) {
   const [look, setLook] = useState<Look>(DEFAULTS)
   const [swapped, setSwapped] = useState<Record<string, boolean>>({})
   const [catalog, setCatalog] = useState<CatalogEntry[] | null>(null)
@@ -88,8 +90,9 @@ export default function IconsSection() {
   const deferredQuery = useDeferredValue(query.trim().toLowerCase())
 
   useEffect(() => {
+    if (part !== 'all-icons') return
     import('@hugeicons/core-free-icons').then((mod) => setCatalog(buildCatalog(mod)))
-  }, [])
+  }, [part])
 
   useEffect(() => setLimit(PAGE), [deferredQuery])
 
@@ -103,132 +106,138 @@ export default function IconsSection() {
 
   return (
     <>
-      <Section id="icons" title="Icons" description="Hugeicons free set, grouped by where you would use them">
-        <Panel title="Controls" note="Apply to every icon tile below" wide>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div className="grid w-40 gap-2">
-              <Label className="justify-between">Size <span className="text-muted-foreground tabular-nums">{look.size}px</span></Label>
-              <Slider value={[look.size]} min={12} max={48} step={1} onValueChange={([size]) => update({ size })} />
+      {part === 'icons' && (
+        <Section id="icons" title="Icons" description="Hugeicons free set, grouped by where you would use them">
+          <Panel title="Controls" note="Apply to every icon tile below" wide>
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+              <div className="grid w-40 gap-2">
+                <Label className="justify-between">Size <span className="text-muted-foreground tabular-nums">{look.size}px</span></Label>
+                <Slider value={[look.size]} min={12} max={48} step={1} onValueChange={([size]) => update({ size })} />
+              </div>
+              <div className="grid w-40 gap-2">
+                <Label className="justify-between">Stroke <span className="text-muted-foreground tabular-nums">{look.strokeWidth}</span></Label>
+                <Slider value={[look.strokeWidth]} min={0.5} max={3} step={0.25} onValueChange={([strokeWidth]) => update({ strokeWidth })} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Colour</Label>
+                <ToggleGroup type="single" variant="outline" size="sm" value={look.color}
+                  onValueChange={(color) => color && update({ color })}>
+                  {COLOURS.map((c) => (
+                    <ToggleGroupItem key={c.label} value={c.value} aria-label={c.label} title={c.label}>
+                      <span className="size-3 rounded-full" style={{ background: c.swatch }} />
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              </div>
+              <Label className="gap-2 font-normal">
+                <Switch checked={look.absoluteStrokeWidth} onCheckedChange={(absoluteStrokeWidth) => update({ absoluteStrokeWidth })} />
+                absoluteStrokeWidth
+              </Label>
+              <Button variant="ghost" size="sm" onClick={() => setLook(DEFAULTS)}>
+                <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} data-icon="inline-start" /> Reset
+              </Button>
             </div>
-            <div className="grid w-40 gap-2">
-              <Label className="justify-between">Stroke <span className="text-muted-foreground tabular-nums">{look.strokeWidth}</span></Label>
-              <Slider value={[look.strokeWidth]} min={0.5} max={3} step={0.25} onValueChange={([strokeWidth]) => update({ strokeWidth })} />
-            </div>
-            <div className="grid gap-1.5">
-              <Label>Colour</Label>
-              <ToggleGroup type="single" variant="outline" size="sm" value={look.color}
-                onValueChange={(color) => color && update({ color })}>
-                {COLOURS.map((c) => (
-                  <ToggleGroupItem key={c.label} value={c.value} aria-label={c.label} title={c.label}>
-                    <span className="size-3 rounded-full" style={{ background: c.swatch }} />
-                  </ToggleGroupItem>
-                ))}
-              </ToggleGroup>
-            </div>
-            <Label className="gap-2 font-normal">
-              <Switch checked={look.absoluteStrokeWidth} onCheckedChange={(absoluteStrokeWidth) => update({ absoluteStrokeWidth })} />
-              absoluteStrokeWidth
-            </Label>
-            <Button variant="ghost" size="sm" onClick={() => setLook(DEFAULTS)}>
-              <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} data-icon="inline-start" /> Reset
-            </Button>
-          </div>
-        </Panel>
+          </Panel>
 
-        {ICON_GROUPS.map((group) => (
-          <Panel key={group.title} title={group.title} note={group.note}>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-1">
-              {Object.entries(group.icons).map(([name, icon]) => (
-                <IconTile key={name} name={name} icon={icon} look={look} />
+          {ICON_GROUPS.map((group) => (
+            <Panel key={group.title} title={group.title} note={group.note}>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-1">
+                {Object.entries(group.icons).map(([name, icon]) => (
+                  <IconTile key={name} name={name} icon={icon} look={look} />
+                ))}
+              </div>
+            </Panel>
+          ))}
+        </Section>
+      )}
+
+      {part === 'props' && (
+        <Section id="props" title="Icon props" description="What HugeiconsIcon can do">
+          <Panel title="altIcon + showAlt" note="Click to swap">
+            <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
+              {SWAPS.map((s) => (
+                <Button key={s.label} variant="outline" aria-pressed={!!swapped[s.label]}
+                  className="aria-pressed:bg-accent aria-pressed:text-brand h-auto flex-col gap-1.5 py-2.5"
+                  onClick={() => setSwapped((cur) => ({ ...cur, [s.label]: !cur[s.label] }))}>
+                  <HugeiconsIcon icon={s.icon} altIcon={s.altIcon} showAlt={!!swapped[s.label]} className="size-5" />
+                  <span className="text-[11px] font-normal">{s.label}</span>
+                </Button>
               ))}
             </div>
           </Panel>
-        ))}
-      </Section>
 
-      <Section id="props" title="Icon props" description="What HugeiconsIcon can do">
-        <Panel title="altIcon + showAlt" note="Click to swap">
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-            {SWAPS.map((s) => (
-              <Button key={s.label} variant="outline" aria-pressed={!!swapped[s.label]}
-                className="aria-pressed:bg-accent aria-pressed:text-brand h-auto flex-col gap-1.5 py-2.5"
-                onClick={() => setSwapped((cur) => ({ ...cur, [s.label]: !cur[s.label] }))}>
-                <HugeiconsIcon icon={s.icon} altIcon={s.altIcon} showAlt={!!swapped[s.label]} className="size-5" />
-                <span className="text-[11px] font-normal">{s.label}</span>
-              </Button>
-            ))}
-          </div>
-        </Panel>
-
-        <Panel title="absoluteStrokeWidth" note="Off (top) vs on (bottom). Needs strokeWidth set.">
-          {[false, true].map((absolute) => (
-            <div key={String(absolute)} className="flex items-end gap-5 py-1">
-              {[16, 24, 36, 48].map((size) => (
-                <figure key={size} className="grid justify-items-center gap-1">
-                  <HugeiconsIcon icon={Location01Icon} size={size} strokeWidth={1.5} absoluteStrokeWidth={absolute} />
-                  <figcaption className="text-muted-foreground text-[10px] tabular-nums">{size}</figcaption>
-                </figure>
-              ))}
-            </div>
-          ))}
-        </Panel>
-
-        <Panel title="Lucide names work" note="Same icon, two names" wide>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {LUCIDE_NAMES.map((a) => (
-              <div key={a.lucide} className="flex flex-wrap items-center gap-2.5 text-xs">
-                <HugeiconsIcon icon={a.icon} className="size-4" />
-                <code className="bg-muted rounded px-1.5 py-0.5">{a.lucide}</code>
-                <span className="text-muted-foreground">{a.same ? '=' : '≠'}</span>
-                <code className="bg-muted rounded px-1.5 py-0.5">{a.huge}</code>
+          <Panel title="absoluteStrokeWidth" note="Off (top) vs on (bottom). Needs strokeWidth set.">
+            {[false, true].map((absolute) => (
+              <div key={String(absolute)} className="flex items-end gap-5 py-1">
+                {[16, 24, 36, 48].map((size) => (
+                  <figure key={size} className="grid justify-items-center gap-1">
+                    <HugeiconsIcon icon={Location01Icon} size={size} strokeWidth={1.5} absoluteStrokeWidth={absolute} />
+                    <figcaption className="text-muted-foreground text-[10px] tabular-nums">{size}</figcaption>
+                  </figure>
+                ))}
               </div>
             ))}
-          </div>
-        </Panel>
-      </Section>
+          </Panel>
 
-      <section id="all-icons" className="scroll-mt-16">
-        <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-sm font-semibold tracking-tight">All free icons</h2>
-          <p className="text-muted-foreground text-xs">
-            {catalog ? `${matches.length.toLocaleString()} of ${catalog.length.toLocaleString()} · click to copy the import` : 'Loading…'}
-          </p>
-        </div>
-        <InputGroup className="max-w-md">
-          <InputGroupAddon>
-            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-          </InputGroupAddon>
-          <InputGroupInput value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search, including Lucide names like trash or house…" />
-          {query && (
-            <InputGroupAddon align="inline-end">
-              <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQuery('')}>
-                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-              </InputGroupButton>
+          <Panel title="Lucide names work" note="Same icon, two names" wide>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {LUCIDE_NAMES.map((a) => (
+                <div key={a.lucide} className="flex flex-wrap items-center gap-2.5 text-xs">
+                  <HugeiconsIcon icon={a.icon} className="size-4" />
+                  <code className="bg-muted rounded px-1.5 py-0.5">{a.lucide}</code>
+                  <span className="text-muted-foreground">{a.same ? '=' : '≠'}</span>
+                  <code className="bg-muted rounded px-1.5 py-0.5">{a.huge}</code>
+                </div>
+              ))}
+            </div>
+          </Panel>
+        </Section>
+      )}
+
+      {part === 'all-icons' && (
+        <section id="all-icons" className="scroll-mt-16">
+          <div className="mb-6 grid gap-1">
+            <h1 className="text-xl font-semibold tracking-tight">All free icons</h1>
+            <p className="text-muted-foreground text-sm">
+              {catalog ? `${matches.length.toLocaleString()} of ${catalog.length.toLocaleString()} · click to copy the import` : 'Loading…'}
+            </p>
+          </div>
+          <InputGroup className="max-w-md">
+            <InputGroupAddon>
+              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
             </InputGroupAddon>
-          )}
-        </InputGroup>
+            <InputGroupInput value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search, including Lucide names like trash or house…" />
+            {query && (
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQuery('')}>
+                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                </InputGroupButton>
+              </InputGroupAddon>
+            )}
+          </InputGroup>
 
-        {catalog && (
-          <>
-            <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-1">
-              {matches.slice(0, limit).map((entry) => (
-                <IconTile key={entry.name} name={entry.name} icon={entry.icon} look={look} aliases={entry.aliases} />
-              ))}
-            </div>
-            {matches.length === 0 && (
-              <p className="text-muted-foreground mt-4 text-xs">No icon matches “{query}”.</p>
-            )}
-            {matches.length > limit && (
-              <div className="mt-4 flex justify-center">
-                <Button variant="outline" onClick={() => setLimit((l) => l + PAGE)}>
-                  Show more ({(matches.length - limit).toLocaleString()} left)
-                </Button>
+          {catalog && (
+            <>
+              <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(92px,1fr))] gap-1">
+                {matches.slice(0, limit).map((entry) => (
+                  <IconTile key={entry.name} name={entry.name} icon={entry.icon} look={look} aliases={entry.aliases} />
+                ))}
               </div>
-            )}
-          </>
-        )}
-      </section>
+              {matches.length === 0 && (
+                <p className="text-muted-foreground mt-4 text-xs">No icon matches “{query}”.</p>
+              )}
+              {matches.length > limit && (
+                <div className="mt-4 flex justify-center">
+                  <Button variant="outline" onClick={() => setLimit((l) => l + PAGE)}>
+                    Show more ({(matches.length - limit).toLocaleString()} left)
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      )}
     </>
   )
 }

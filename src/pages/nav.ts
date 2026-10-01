@@ -1,20 +1,26 @@
 import type { IconSvgElement } from '@hugeicons/react'
+import { navigate } from '@/lib/router'
 import {
   ChartAreaIcon, Compass01Icon, CursorPointer02Icon, FileUploadIcon, GridViewIcon, InboxIcon,
   InformationCircleIcon, Money03Icon, DashboardSquare01Icon, Calendar03Icon, FormIcon, Table01Icon,
-  Audit01Icon, SparklesIcon, AiChat02Icon,
-  InputTextIcon, KanbanIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
+  Audit01Icon, SparklesIcon, AiChat02Icon, Building06Icon,
+  InputTextIcon, KanbanIcon, LayoutGridIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
   PaintBoardIcon, Rocket01Icon, Search01Icon, Settings01Icon, Settings02Icon, SlidersHorizontalIcon,
   SidebarLeftIcon, Tag01Icon, Task01Icon, TimelineIcon,
 } from '@hugeicons/core-free-icons'
 
 export type NavItem = { id: string; label: string; icon: IconSvgElement }
 
-// Each item is a section id on the page, in page order.
+// The kit in five levels, smallest first: tokens (Theme), components,
+// blocks (screens built from components), layouts (the frame pages sit in)
+// and templates (whole apps, listed in TEMPLATES below). Each item is a page.
 export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Get started',
-    items: [{ id: 'theme', label: 'Theme', icon: PaintBoardIcon }],
+    items: [
+      { id: 'overview', label: 'All components', icon: LayoutGridIcon },
+      { id: 'theme', label: 'Theme', icon: PaintBoardIcon },
+    ],
   },
   {
     title: 'Components',
@@ -34,9 +40,8 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     ],
   },
   {
-    title: 'Patterns',
+    title: 'Blocks',
     items: [
-      { id: 'app-shell', label: 'App shells', icon: SidebarLeftIcon },
       { id: 'list', label: 'Job list', icon: LeftToRightListBulletIcon },
       { id: 'board', label: 'Board', icon: KanbanIcon },
       { id: 'issue', label: 'Issue detail', icon: Task01Icon },
@@ -49,14 +54,13 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'pricing', label: 'Pricing', icon: Money03Icon },
       { id: 'onboarding', label: 'Onboarding', icon: Rocket01Icon },
       { id: 'sign-in', label: 'Sign-in page', icon: Login01Icon },
-    ],
-  },
-  {
-    title: 'AI',
-    items: [
       { id: 'ai-workspace', label: 'AI workspace', icon: AiChat02Icon },
       { id: 'ai-features', label: 'AI in the product', icon: SparklesIcon },
     ],
+  },
+  {
+    title: 'Layouts',
+    items: [{ id: 'app-shell', label: 'App shells', icon: SidebarLeftIcon }],
   },
   {
     title: 'Icons',
@@ -81,6 +85,14 @@ export const GO_KEYS: { key: string; id: string }[] = [
   { key: 'S', id: 'settings' },
 ]
 
+// Each nav item is its own page now (one section per page).
 export function goTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  navigate(`/${id}`)
 }
+
+// Templates: whole apps built from the kit's layouts and blocks, shown full
+// page outside the kit's shell. Routed in App.tsx.
+export const TEMPLATES: { path: string; label: string; icon: IconSvgElement; description: string }[] = [
+  { path: '/templates/erp', label: 'ERP app', icon: Building06Icon, description: 'Multi-module ERP: sign-in, launchpad, modules, Cmd+K' },
+  { path: '/templates/ai-chat', label: 'AI chat app', icon: AiChat02Icon, description: 'The AI workspace as a full-page app, with settings' },
+]

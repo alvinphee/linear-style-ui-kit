@@ -31,6 +31,9 @@ export type WorkspaceActions = {
   setModes: (modes: Modes) => void
   toggleSidebar: () => void
   resetDemo: () => void
+  openSettings: () => void
+  // The model new chats start with, whatever chat is open.
+  setDefaultModel: (model: ModelId) => void
 }
 
 export const ActionsContext = createContext<WorkspaceActions | null>(null)

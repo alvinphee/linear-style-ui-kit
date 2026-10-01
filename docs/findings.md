@@ -219,3 +219,15 @@ Hugeicons names for 145 common Lucide icons, checked on 2026-09-30.
 - Test at 16 and 20px next to real text.
 - Decide whether the free Stroke Rounded style is enough, or whether a Pro
   licence is worth it.
+
+## Component quirks found while building the playgrounds (added 2026-10-01)
+- **`Textarea` ignores `rows`.** Its `field-sizing-content` class sizes it to
+  the text. Add `field-sizing-fixed` when you want a fixed number of rows.
+- **`InputOTP` warns with `defaultValue`.** It passes `defaultValue` on to its
+  `<input>` as well as using it itself, and React warns. Use a controlled
+  `value` instead.
+- **`RadioGroup` `orientation` only changes the arrow keys.** The layout
+  needs its own className (for example `flex` for a row).
+- **A one-thumb `Slider` has no accessible name.** Radix names the thumbs of
+  a range only, and the wrapper has no prop to label a thumb. Needs a fix in
+  `slider.tsx` before a slider ships in a real form.

@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState, type ReactNode, type RefObj
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowRight01Icon, Cancel01Icon, CopyPlusIcon, Delete02Icon, Edit02Icon, Folder01Icon,
-  FolderOpenIcon, FolderRemoveIcon, FolderTransferIcon, Logout01Icon, MoreHorizontalIcon, PencilEdit02Icon,
+  DashboardSquare01Icon, FolderOpenIcon, FolderRemoveIcon, FolderTransferIcon, Logout01Icon, MoreHorizontalIcon, PencilEdit02Icon,
   PinIcon, PinOffIcon, RefreshIcon, Search01Icon, Settings01Icon, SparklesIcon, Tick02Icon, UnfoldMoreIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
@@ -254,7 +254,7 @@ function historyGroup(time: number): (typeof HISTORY)[number] {
   return 'Older'
 }
 
-export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, runningChatId, onNavigate, onClose, newChatRef }: {
+export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, runningChatId, onNavigate, onClose, newChatRef, kitLink }: {
   chats: ChatSummary[]
   projects: Project[]
   view: View
@@ -264,6 +264,8 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
   onNavigate?: () => void
   onClose?: () => void
   newChatRef: RefObject<HTMLButtonElement | null>
+  // In the full-page mockup, a way back to the kit from the account menu.
+  kitLink?: boolean
 }) {
   const actions = useActions()
   const [query, setQuery] = useState('')
@@ -452,7 +454,7 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="start" className="w-56">
             <DropdownMenuLabel>{USER.email}</DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => toast('Settings', { description: 'Demo only.' })}>
+            <DropdownMenuItem onSelect={actions.openSettings}>
               <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => toast('Upgrade plan', { description: 'Demo only.' })}>
@@ -465,6 +467,16 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
             <DropdownMenuItem onSelect={() => toast('Signed out', { description: 'Demo only. You are still signed in.' })}>
               <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} /> Sign out
             </DropdownMenuItem>
+            {kitLink && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <a href="#/ai-workspace">
+                    <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} /> Back to the UI kit
+                  </a>
+                </DropdownMenuItem>
+              </>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </footer>

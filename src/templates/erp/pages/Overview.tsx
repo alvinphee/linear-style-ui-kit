@@ -1,0 +1,1042 @@
+import { useId, useState, type ReactNode } from 'react'
+import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
+import {
+  Add01Icon, Agreement01Icon, Alert02Icon, ArrowDownRight01Icon, ArrowRight01Icon, ArrowUpRight01Icon, Award01Icon,
+  BankIcon, Briefcase01Icon, Calendar03Icon, Clock01Icon, Coins01Icon, DeliveryTruck01Icon, Exchange01Icon,
+  Invoice01Icon, Invoice03Icon, PackageIcon, PackageReceiveIcon, PackageRemoveIcon, PercentCircleIcon, QuoteDownIcon,
+  ReceiptTextIcon, Target02Icon, UserAdd01Icon, UserMultipleIcon, Wallet01Icon,
+} from '@hugeicons/core-free-icons'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
+import { toast } from 'sonner'
+import { cn } from 'cn'
+import { Button } from '@/components/ui/button'
+import {
+  ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig,
+} from '@/components/ui/chart'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { TODAY, addDays, daysBetween, formatDate, formatMoney, formatMoneyShort, formatNumber } from '../format'
+import { moduleById, specFor } from '../modules'
+import { erpHref } from '../route'
+import { useErp } from '../store'
+import type { EntityId, ErpModule, Row } from '../types'
+import { Card, PageHeader, StatusBadge } from '../ui'
+
+// The Overview page of each module: KPIs, a chart, a breakdown and a list of
+// what needs attention. Everything is worked out from the live records on
+// each render, so a change made anywhere in the app shows here at once.
+
+// ---------------------------------------------------------------------------
+// Helpers
+
+const num = (r: Row, key: string) => Number(r[key] ?? 0)
+const str = (r: Row, key: string) => String(r[key] ?? '')
+const sum = (rows: Row[], key: string) => rows.reduce((t, r) => t + num(r, key), 0)
+const is = (...statuses: string[]) => (r: Row) => statuses.includes(str(r, 'status'))
+const pct = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0)
+const count = (n: number, one: string, many = `${one}s`) => `${formatNumber(n)} ${n === 1 ? one : many}`
+const money = (n: number) => formatMoney(n, false)
+const byDate = (key: string) => (a: Row, b: Row) => str(a, key).localeCompare(str(b, key))
+const tint = (colour: string, amount: number) => `color-mix(in oklch, ${colour} ${amount}%, transparent)`
+
+// Days from a date to the demo's today: positive in the past, negative ahead.
+const age = (iso: string) => daysBetween(iso, TODAY)
+const within = (iso: string, days: number) => iso !== '' && age(iso) >= 0 && age(iso) < days
+
+const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' })
+const monthOf = (period: string) => MONTH.format(Date.parse(`${period}-01T00:00:00Z`))
+
+// Totals per group, largest first. Counts rows unless a value is given.
+function groupSum(rows: Row[], by: string, value: (r: Row) => number = () => 1) {
+  const totals = new Map<string, { value: number; count: number }>()
+  for (const r of rows) {
+    const g = totals.get(str(r, by)) ?? { value: 0, count: 0 }
+    g.value += value(r)
+    g.count += 1
+    totals.set(str(r, by), g)
+  }
+  return [...totals].map(([label, t]) => ({ label, ...t })).sort((a, b) => b.value - a.value)
+}
+
+type Tone = 'danger' | 'warning'
+const TONE_TEXT: Record<Tone, string> = {
+  danger: 'text-destructive',
+  warning: 'text-[oklch(0.62_0.14_70)] dark:text-[oklch(0.8_0.14_80)]',
+}
+
+// ---------------------------------------------------------------------------
+// Page frame
+
+const PERIODS = [
+  { id: '30d', label: '30 days' },
+  { id: 'quarter', label: 'Quarter' },
+  { id: 'year', label: 'Year' },
+]
+
+function Header({ mod, description, create }: { mod: ErpModule; description: string; create: EntityId }) {
+  const { startCreate } = useErp()
+  // Visual only: the sample records span about ten weeks, so every period would read the same.
+  const [period, setPeriod] = useState('30d')
+  return (
+    <PageHeader
+      title={`${mod.name} overview`}
+      description={`${description}, as of ${formatDate(TODAY, true)}.`}
+      actions={
+        <>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            spacing={0}
+            value={period}
+            onValueChange={(v) => v && setPeriod(v)}
+            aria-label="Period"
+          >
+            {PERIODS.map((p) => (
+              <ToggleGroupItem key={p.id} value={p.id} className="px-2 text-[11px]">{p.label}</ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+          <Button size="sm" onClick={() => startCreate(create)}>
+            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> New {specFor(create)?.singular ?? 'record'}
+          </Button>
+        </>
+      }
+    />
+  )
+}
+
+type Kpi = {
+  label: string
+  value: string
+  sub: ReactNode
+  icon: IconSvgElement
+  // The module page the card links to.
+  page?: string
+  tone?: Tone
+  // The exact figure, shown on hover when the value is rounded.
+  title?: string
+}
+
+function KpiCard({ module, kpi }: { module: string; kpi: Kpi }) {
+  const body = (
+    <>
+      <span className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+        <HugeiconsIcon icon={kpi.icon} strokeWidth={2} className="size-3.5 shrink-0" />
+        <span className="truncate">{kpi.label}</span>
+      </span>
+      <span className="truncate text-xl leading-tight font-semibold tracking-tight tabular-nums" title={kpi.title}>
+        {kpi.value}
+      </span>
+      <span className={cn('text-muted-foreground truncate text-[11px] tabular-nums', kpi.tone && TONE_TEXT[kpi.tone])}>
+        {kpi.sub}
+      </span>
+    </>
+  )
+  const box = 'bg-card grid min-w-0 content-start gap-1.5 rounded-lg border p-3.5'
+  if (!kpi.page) return <div className={box}>{body}</div>
+  return (
+    <a
+      href={erpHref(module, kpi.page)}
+      className={cn(box, 'hover:border-foreground/15 focus-visible:ring-ring/40 transition-colors outline-none focus-visible:ring-2')}
+    >
+      {body}
+    </a>
+  )
+}
+
+function Trend({ up, neutral, children }: { up: boolean; neutral?: boolean; children: ReactNode }) {
+  return (
+    <span className={cn('inline-flex items-center gap-0.5', !neutral && (up ? 'text-status-done' : 'text-destructive'))}>
+      <HugeiconsIcon icon={up ? ArrowUpRight01Icon : ArrowDownRight01Icon} strokeWidth={2} className="size-3" />
+      {children}
+    </span>
+  )
+}
+
+const Note = ({ children }: { children: ReactNode }) => (
+  <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">{children}</span>
+)
+
+function Overview({ mod, description, create, kpis, chart, side, list }: {
+  mod: ErpModule
+  description: string
+  create: EntityId
+  kpis: Kpi[]
+  chart: ReactNode
+  side: ReactNode
+  list: ReactNode
+}) {
+  return (
+    <div className="pb-8">
+      <Header mod={mod} description={description} create={create} />
+      <div className="grid gap-3 px-4 @2xl:px-6">
+        <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @4xl:grid-cols-4">
+          {kpis.map((k) => <KpiCard key={k.label} module={mod.id} kpi={k} />)}
+        </div>
+        <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+          {chart}
+          {side}
+        </div>
+        {list}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Charts
+
+// A bar or point. The tooltip is headed by `title` (else the axis label) and
+// `note`; `fill` colours one bar.
+type Point = { label: string; title?: string; note?: string; fill?: string } & Record<string, string | number | undefined>
+type Series = { key: string; label: string; colour: string }
+
+const configOf = (series: Series[]): ChartConfig =>
+  Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.colour }]))
+
+// SVG ids end up in url(#…), which does not accept the colons useId can produce.
+const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '')
+
+function tooltip(format: (n: number) => string) {
+  return (
+    <ChartTooltipContent
+      labelFormatter={(label, payload) => {
+        const point = payload?.[0]?.payload as Point | undefined
+        const title = point?.title ?? label
+        return point?.note ? `${title} · ${point.note}` : title
+      }}
+      formatter={(value, name, item) => (
+        <div className="flex w-full items-center gap-2">
+          <span className="size-2.5 shrink-0 rounded-[2px]" style={{ background: item.payload?.fill ?? item.color }} />
+          <span className="text-muted-foreground flex-1">{name}</span>
+          <span className="text-foreground font-mono font-medium tabular-nums">{format(Number(value))}</span>
+        </div>
+      )}
+    />
+  )
+}
+
+type ChartProps = {
+  data: Point[]
+  format: (n: number) => string
+  axis: (n: number) => string
+  className?: string
+}
+
+function Columns({ data, series, format, axis, className = 'h-56' }: ChartProps & { series: Series[] }) {
+  return (
+    <ChartContainer config={configOf(series)} className={cn('aspect-auto w-full', className)}>
+      <BarChart data={data} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} accessibilityLayer>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={8} />
+        <YAxis tickLine={false} axisLine={false} width={44} tickMargin={4} allowDecimals={false} tickFormatter={(v: number) => axis(v)} />
+        <ChartTooltip content={tooltip(format)} />
+        {series.length > 1 && <ChartLegend content={<ChartLegendContent />} />}
+        {series.map((s) => (
+          <Bar key={s.key} dataKey={s.key} name={s.label} fill={`var(--color-${s.key})`} radius={[3, 3, 0, 0]} maxBarSize={36} />
+        ))}
+      </BarChart>
+    </ChartContainer>
+  )
+}
+
+function HBars({ data, series, format, axis, labelWidth, className = 'h-56' }: ChartProps & { series: Series; labelWidth: number }) {
+  return (
+    <ChartContainer config={configOf([series])} className={cn('aspect-auto w-full', className)}>
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }} accessibilityLayer>
+        <CartesianGrid horizontal={false} />
+        <XAxis type="number" tickLine={false} axisLine={false} tickMargin={8} minTickGap={16} tickFormatter={(v: number) => axis(v)} />
+        <YAxis
+          type="category"
+          dataKey="label"
+          tickLine={false}
+          axisLine={false}
+          width={labelWidth}
+          tickMargin={6}
+          tickFormatter={(v: string) => (v.length > 20 ? `${v.slice(0, 19)}…` : v)}
+        />
+        <ChartTooltip content={tooltip(format)} />
+        <Bar dataKey={series.key} name={series.label} fill={`var(--color-${series.key})`} radius={[0, 3, 3, 0]} maxBarSize={18} />
+      </BarChart>
+    </ChartContainer>
+  )
+}
+
+function TrendArea({ data, series, format, axis, className = 'h-56' }: ChartProps & { series: Series }) {
+  const gradientId = `ov-${useSvgId()}`
+  return (
+    <ChartContainer config={configOf([series])} className={cn('aspect-auto w-full', className)}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} accessibilityLayer>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={`var(--color-${series.key})`} stopOpacity={0.28} />
+            <stop offset="100%" stopColor={`var(--color-${series.key})`} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid vertical={false} />
+        <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={8} minTickGap={24} />
+        <YAxis tickLine={false} axisLine={false} width={44} tickMargin={4} tickFormatter={(v: number) => axis(v)} />
+        <ChartTooltip content={tooltip(format)} />
+        <Area
+          dataKey={series.key}
+          name={series.label}
+          type="monotone"
+          stroke={`var(--color-${series.key})`}
+          strokeWidth={2}
+          fill={`url(#${gradientId})`}
+          activeDot={{ r: 3.5 }}
+        />
+      </AreaChart>
+    </ChartContainer>
+  )
+}
+
+// A breakdown as labelled bars: lighter than a chart, and it never crowds on a phone.
+type Meter = { id: string; label: ReactNode; hint?: string; value: number; display: string; colour?: string }
+
+function Meters({ rows, colour, max, empty = 'Nothing to show yet.' }: { rows: Meter[]; colour: string; max?: number; empty?: string }) {
+  if (!rows.length) return <p className="text-muted-foreground py-6 text-center text-xs">{empty}</p>
+  const top = max ?? Math.max(1, ...rows.map((r) => r.value))
+  return (
+    <ul className="grid gap-3">
+      {rows.map((r) => (
+        <li key={r.id} className="grid gap-1.5">
+          <div className="flex min-w-0 items-center justify-between gap-3 text-xs">
+            <span className="flex min-w-0 items-center gap-1.5">
+              <span className="truncate">{r.label}</span>
+              {r.hint && <span className="text-muted-foreground shrink-0 text-[11px]">{r.hint}</span>}
+            </span>
+            <span className="shrink-0 font-medium tabular-nums">{r.display}</span>
+          </div>
+          <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden>
+            <div className="h-full rounded-full" style={{ width: `${Math.min(100, (r.value / top) * 100)}%`, background: r.colour ?? colour }} />
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Lists
+
+type Item = { id: string; entity: EntityId; title: string; detail: string; aside?: ReactNode; actions?: ReactNode }
+
+const MAX_ROWS = 6
+
+function ListCard({ title, module, page, items, empty }: {
+  title: string
+  module: string
+  page: string
+  items: Item[]
+  empty: string
+}) {
+  const { openPeek } = useErp()
+  const headingId = useId()
+  const more = items.length - MAX_ROWS
+  return (
+    <section aria-labelledby={headingId} className="bg-card min-w-0 rounded-lg border">
+      <header className="flex items-center gap-2 border-b px-3.5 py-2.5">
+        <h2 id={headingId} className="text-xs font-medium">{title}</h2>
+        <span className="text-muted-foreground text-[11px] tabular-nums">{items.length}</span>
+        <a
+          href={erpHref(module, page)}
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/40 ml-auto inline-flex items-center gap-1 rounded text-[11px] outline-none focus-visible:ring-2"
+        >
+          View all <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3" />
+        </a>
+      </header>
+      {items.length ? (
+        <ul className="divide-y">
+          {items.slice(0, MAX_ROWS).map((it) => (
+            <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
+              <button
+                type="button"
+                onClick={() => openPeek(it.entity, it.id)}
+                className="focus-visible:ring-ring/40 grid min-w-0 flex-1 basis-56 gap-0.5 rounded text-left outline-none focus-visible:ring-2"
+              >
+                <span className="truncate text-xs font-medium">{it.title}</span>
+                <span className="text-muted-foreground truncate text-[11px] tabular-nums">{it.detail}</span>
+              </button>
+              {it.aside}
+              {it.actions && <div className="flex shrink-0 items-center gap-1">{it.actions}</div>}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-muted-foreground px-3.5 py-8 text-center text-xs">{empty}</p>
+      )}
+      {more > 0 && (
+        <p className="text-muted-foreground border-t px-3.5 py-2 text-[11px]">
+          {more} more in <a href={erpHref(module, page)} className="hover:text-foreground underline underline-offset-2">the full list</a>
+        </p>
+      )}
+    </section>
+  )
+}
+
+function Decide({ entity, id }: { entity: EntityId; id: string }) {
+  const { update } = useErp()
+  return (
+    <>
+      <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => {
+        update(entity, [id], { status: 'Rejected' })
+        toast(`Rejected ${id}`)
+      }}>
+        Reject
+      </Button>
+      <Button size="sm" onClick={() => {
+        update(entity, [id], { status: 'Approved' })
+        toast.success(`Approved ${id}`)
+      }}>
+        Approve
+      </Button>
+    </>
+  )
+}
+
+const Late = ({ days, label = 'late' }: { days: number; label?: string }) =>
+  days > 0 ? <span className="text-destructive shrink-0 text-[11px] whitespace-nowrap tabular-nums">{count(days, 'day')} {label}</span> : null
+
+// ---------------------------------------------------------------------------
+// CRM
+
+function CrmOverview({ mod }: { mod: ErpModule }) {
+  const { data, update } = useErp()
+  const open = data.opportunities.filter((r) => !['Won', 'Lost'].includes(str(r, 'stage')))
+  const weightOf = (rows: Row[]) => rows.reduce((t, r) => t + (num(r, 'amount') * num(r, 'probability')) / 100, 0)
+  const pipeline = sum(open, 'amount')
+  const weighted = weightOf(open)
+  const won = data.opportunities.filter((r) => r.stage === 'Won').length
+  const lost = data.opportunities.filter((r) => r.stage === 'Lost').length
+  const leads = data.leads.filter((r) => within(str(r, 'created'), 30))
+
+  const stages = [...new Set(['Discovery', 'Proposal', 'Negotiation', ...open.map((r) => str(r, 'stage'))])].map((stage) => {
+    const rows = open.filter((r) => r.stage === stage)
+    return { label: stage, amount: sum(rows, 'amount'), weighted: Math.round(weightOf(rows)), note: count(rows.length, 'opportunity', 'opportunities') }
+  })
+  const sources = groupSum(leads, 'source')
+  const late = data.activities
+    .filter((r) => r.status === 'Overdue' || (r.status === 'Scheduled' && str(r, 'due') < TODAY))
+    .sort(byDate('due'))
+
+  return (
+    <Overview
+      mod={mod}
+      description="Pipeline, win rate and new leads"
+      create="opportunities"
+      kpis={[
+        {
+          label: 'Open pipeline', value: formatMoneyShort(pipeline), title: money(pipeline), icon: Target02Icon, page: 'opportunities',
+          sub: count(open.length, 'open opportunity', 'open opportunities'),
+        },
+        {
+          label: 'Weighted pipeline', value: formatMoneyShort(weighted), title: money(weighted), icon: Coins01Icon, page: 'opportunities',
+          sub: `Amount × probability · ${pct(weighted, pipeline)}% of open`,
+        },
+        { label: 'Win rate', value: `${pct(won, won + lost)}%`, sub: `${won} won · ${lost} lost`, icon: Award01Icon, page: 'opportunities' },
+        {
+          label: 'New leads', value: formatNumber(leads.length), icon: UserAdd01Icon, page: 'leads',
+          sub: `Last 30 days · ${leads.filter(is('Qualified')).length} qualified`,
+        },
+      ]}
+      chart={
+        <Card title="Pipeline by stage" action={<Note>{formatMoneyShort(pipeline)} open</Note>}>
+          <Columns
+            data={stages}
+            series={[
+              { key: 'amount', label: 'Amount', colour: mod.colour },
+              { key: 'weighted', label: 'Weighted', colour: tint(mod.colour, 45) },
+            ]}
+            format={money}
+            axis={formatMoneyShort}
+          />
+        </Card>
+      }
+      side={
+        <Card title="New leads by source" action={<Note>Last 30 days</Note>}>
+          <Meters
+            colour={mod.colour}
+            empty="No new leads in the last 30 days."
+            rows={sources.map((s) => ({ id: s.label, label: s.label, value: s.value, display: formatNumber(s.value) }))}
+          />
+        </Card>
+      }
+      list={
+        <ListCard
+          title="Overdue activities"
+          module={mod.id}
+          page="activities"
+          empty="No overdue activities."
+          items={late.map((r) => ({
+            id: r.id,
+            entity: 'activities',
+            title: str(r, 'subject'),
+            detail: `${str(r, 'type')} · ${str(r, 'owner')} · due ${formatDate(str(r, 'due'))}`,
+            aside: <Late days={age(str(r, 'due'))} />,
+            actions: (
+              <Button size="sm" variant="outline" onClick={() => {
+                update('activities', [r.id], { status: 'Completed' })
+                toast.success('Activity completed', { description: str(r, 'subject') })
+              }}>
+                Mark completed
+              </Button>
+            ),
+          }))}
+        />
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Sales
+
+const WEEKS = 5
+
+function SalesOverview({ mod }: { mod: ErpModule }) {
+  const { data, update } = useErp()
+  const openOrders = data.salesOrders.filter(is('Confirmed', 'Processing'))
+  const booked = data.salesOrders.filter((r) => r.status !== 'Cancelled')
+  const sent = data.quotations.filter(is('Sent'))
+  const issued = data.quotations.filter(is('Sent', 'Accepted', 'Rejected', 'Expired'))
+  const accepted = data.quotations.filter(is('Accepted')).length
+  const toPick = data.deliveries.filter(is('Ready to pick', 'Scheduled')).sort(byDate('scheduled'))
+  const late = toPick.filter((r) => str(r, 'scheduled') < TODAY).length
+
+  // Rolling 7-day windows ending today, so the latest point is a full week
+  // rather than a part week that always looks like a drop.
+  const weeks = Array.from({ length: WEEKS }, (_, i) => {
+    const end = addDays(TODAY, (i - WEEKS + 1) * 7)
+    const start = addDays(end, -6)
+    const rows = booked.filter((r) => str(r, 'ordered') >= start && str(r, 'ordered') <= end)
+    return { label: formatDate(start), title: `${formatDate(start)} – ${formatDate(end)}`, value: sum(rows, 'amount'), note: count(rows.length, 'order') }
+  })
+  const weeksTotal = weeks.reduce((t, w) => t + w.value, 0)
+  const customers = groupSum(booked, 'customer', (r) => num(r, 'amount')).slice(0, 5)
+  const openValue = sum(openOrders, 'amount')
+
+  return (
+    <Overview
+      mod={mod}
+      description="Quotations, sales orders and deliveries"
+      create="quotations"
+      kpis={[
+        {
+          label: 'Open sales orders', value: formatMoneyShort(openValue), title: money(openValue), icon: Agreement01Icon, page: 'orders',
+          sub: `${count(openOrders.length, 'order')} confirmed or processing`,
+        },
+        {
+          label: 'Quotations sent', value: formatNumber(sent.length), icon: QuoteDownIcon, page: 'quotations',
+          sub: `${formatMoneyShort(sum(sent, 'amount'))} awaiting a reply`,
+        },
+        {
+          label: 'Conversion rate', value: `${pct(accepted, issued.length)}%`, icon: PercentCircleIcon, page: 'quotations',
+          sub: `${accepted} of ${count(issued.length, 'quotation')} accepted`,
+        },
+        {
+          label: 'Deliveries to pick', value: formatNumber(toPick.length), icon: DeliveryTruck01Icon, page: 'deliveries',
+          sub: late ? `${late} past the scheduled date` : 'All on schedule', tone: late ? 'danger' : undefined,
+        },
+      ]}
+      chart={
+        <Card title="Sales orders by week" action={<Note>{formatMoneyShort(weeksTotal)} in {WEEKS} weeks</Note>}>
+          <TrendArea data={weeks} series={{ key: 'value', label: 'Order value', colour: mod.colour }} format={money} axis={formatMoneyShort} />
+        </Card>
+      }
+      side={
+        <Card title="Top customers" action={<Note>By order value</Note>}>
+          <Meters
+            colour={mod.colour}
+            empty="No sales orders yet."
+            rows={customers.map((c) => ({ id: c.label, label: c.label, hint: count(c.count, 'order'), value: c.value, display: formatMoneyShort(c.value) }))}
+          />
+        </Card>
+      }
+      list={
+        <ListCard
+          title="Deliveries to pick"
+          module={mod.id}
+          page="deliveries"
+          empty="Nothing waiting to be picked."
+          items={toPick.map((r) => {
+            const overdue = str(r, 'scheduled') < TODAY
+            return {
+              id: r.id,
+              entity: 'deliveries',
+              title: `${r.id} · ${str(r, 'customer')}`,
+              detail: `${str(r, 'order')} · ${str(r, 'warehouse')} · ${str(r, 'carrier')}`,
+              aside: (
+                <span className="flex shrink-0 items-center gap-2">
+                  <span className={cn('text-[11px] whitespace-nowrap tabular-nums', overdue ? 'text-destructive' : 'text-muted-foreground')}>
+                    {overdue ? 'Late · ' : ''}{formatDate(str(r, 'scheduled'))}
+                  </span>
+                  <StatusBadge status={str(r, 'status')} />
+                </span>
+              ),
+              actions: (
+                <Button size="sm" variant="outline" onClick={() => {
+                  update('deliveries', [r.id], { status: 'In transit' })
+                  toast.success(`${r.id} is in transit`, { description: `Sales order ${str(r, 'order')} for ${str(r, 'customer')}.` })
+                }}>
+                  Mark in transit
+                </Button>
+              ),
+            }
+          })}
+        />
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Inventory
+
+function InventoryOverview({ mod }: { mod: ErpModule }) {
+  const { data, openPeek, startCreate } = useErp()
+  const valueOf = (r: Row) => num(r, 'onHand') * num(r, 'cost')
+  const stockValue = data.items.reduce((t, r) => t + valueOf(r), 0)
+  const units = sum(data.items, 'onHand')
+  const low = data.items.filter(is('Low stock'))
+  const out = data.items.filter(is('Out of stock'))
+  const emptyLines = data.stock.filter((r) => num(r, 'onHand') === 0).length
+  const transit = data.transfers.filter(is('In transit')).length
+  const drafts = data.transfers.filter(is('Draft')).length
+  const categories = groupSum(data.items, 'category', valueOf)
+
+  // Emptiest first: out of stock, then the lowest share of the reorder point.
+  const fill = (r: Row) => num(r, 'onHand') / Math.max(1, num(r, 'reorderPoint'))
+  const reorder = [...low, ...out].sort((a, b) => fill(a) - fill(b))
+  const openRequisition = (item: string) =>
+    data.requisitions.find((r) => r.item === item && is('Awaiting approval', 'Approved', 'Ordered')(r))
+
+  return (
+    <Overview
+      mod={mod}
+      description="Stock value, reorder alerts and stock transfers"
+      create="items"
+      kpis={[
+        {
+          label: 'Stock value', value: formatMoneyShort(stockValue), title: formatMoney(stockValue), icon: PackageIcon, page: 'stock',
+          sub: `${formatNumber(units)} units at cost`,
+        },
+        {
+          label: 'Below reorder point', value: formatNumber(low.length + out.length), icon: Alert02Icon, page: 'items',
+          sub: `${low.length} low · ${out.length} out of stock`, tone: low.length + out.length ? 'warning' : undefined,
+        },
+        {
+          label: 'Out of stock', value: formatNumber(out.length), icon: PackageRemoveIcon, page: 'items',
+          sub: `${count(emptyLines, 'warehouse stock line')} at zero`, tone: out.length ? 'danger' : undefined,
+        },
+        {
+          label: 'Transfers in transit', value: formatNumber(transit), icon: Exchange01Icon, page: 'transfers',
+          sub: `${count(drafts, 'draft stock transfer')} not yet sent`,
+        },
+      ]}
+      chart={
+        <Card title="Stock value by category" action={<Note>At unit cost</Note>}>
+          <HBars
+            data={categories.map((c) => ({ label: c.label, value: Math.round(c.value), note: count(c.count, 'item') }))}
+            series={{ key: 'value', label: 'Stock value', colour: mod.colour }}
+            format={money}
+            axis={formatMoneyShort}
+            labelWidth={88}
+            className="h-60"
+          />
+        </Card>
+      }
+      side={
+        <Card title="Warehouse utilisation">
+          <Meters
+            colour={mod.colour}
+            max={100}
+            rows={data.warehouses.map((w) => {
+              const used = num(w, 'utilisation')
+              return {
+                id: w.id,
+                label: str(w, 'name'),
+                hint: `${w.id} · ${str(w, 'city')}`,
+                value: used,
+                display: `${used}%`,
+                colour: used >= 90 ? 'var(--destructive)' : used >= 80 ? 'var(--status-progress)' : undefined,
+              }
+            })}
+          />
+        </Card>
+      }
+      list={
+        <ListCard
+          title="Reorder now"
+          module={mod.id}
+          page="items"
+          empty="Every item is above its reorder point."
+          items={reorder.map((r) => {
+            const name = str(r, 'name')
+            const requisition = openRequisition(name)
+            const quantity = Math.max(10, Math.ceil((num(r, 'reorderPoint') * 2 - num(r, 'onHand')) / 10) * 10)
+            return {
+              id: r.id,
+              entity: 'items',
+              title: name,
+              detail: `${r.id} · ${formatNumber(num(r, 'onHand'))} on hand · reorder point ${formatNumber(num(r, 'reorderPoint'))}`,
+              aside: <StatusBadge status={str(r, 'status')} />,
+              actions: requisition ? (
+                <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => openPeek('requisitions', requisition.id)}>
+                  View {requisition.id}
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" onClick={() => startCreate('requisitions', {
+                  item: name, quantity, estimate: Math.round(quantity * num(r, 'cost')), needed: addDays(TODAY, 14),
+                })}>
+                  Create requisition
+                </Button>
+              ),
+            }
+          })}
+        />
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Purchasing
+
+const PO_STAGES = ['Draft', 'Awaiting approval', 'Approved', 'Partially received', 'Received', 'Closed', 'Rejected']
+const stageIndex = (status: string) => (PO_STAGES.includes(status) ? PO_STAGES.indexOf(status) : PO_STAGES.length)
+
+function PurchasingOverview({ mod }: { mod: ErpModule }) {
+  const { data, session } = useErp()
+  // Matches the launchpad: purchase orders are approved by finance, requisitions by operations too.
+  const approvesOrders = session?.role !== 'operations'
+  const openOrders = data.purchaseOrders.filter(is('Approved', 'Partially received'))
+  const ordersWaiting = data.purchaseOrders.filter(is('Awaiting approval'))
+  const requisitionsWaiting = data.requisitions.filter(is('Awaiting approval'))
+  const receipts = data.goodsReceipts.filter((r) => within(str(r, 'received'), 30))
+  const committed = data.purchaseOrders.filter((r) => !['Draft', 'Rejected', 'Cancelled'].includes(str(r, 'status')))
+  const totalSpend = sum(committed, 'amount')
+  const spend = groupSum(committed, 'vendor', (r) => num(r, 'amount'))
+  const top = spend[0]
+  const statuses = groupSum(data.purchaseOrders, 'status', (r) => num(r, 'amount'))
+    .sort((a, b) => stageIndex(a.label) - stageIndex(b.label))
+  const openValue = sum(openOrders, 'amount')
+  const waiting = ordersWaiting.length + requisitionsWaiting.length
+
+  const items: Item[] = [
+    ...ordersWaiting.map((r): Item => ({
+      id: r.id,
+      entity: 'purchaseOrders',
+      title: `${r.id} · ${str(r, 'vendor')}`,
+      detail: `${formatMoney(num(r, 'amount'))} · ${str(r, 'buyer')} · expected ${formatDate(str(r, 'expected'))}`,
+      actions: approvesOrders
+        ? <Decide entity="purchaseOrders" id={r.id} />
+        : <span className="text-muted-foreground text-[11px]">Needs finance approval</span>,
+    })),
+    ...requisitionsWaiting.map((r): Item => ({
+      id: r.id,
+      entity: 'requisitions',
+      title: `${r.id} · ${str(r, 'item')}`,
+      detail: `${formatNumber(num(r, 'quantity'))} units · est. ${formatMoney(num(r, 'estimate'))} · needed by ${formatDate(str(r, 'needed'))}`,
+      actions: <Decide entity="requisitions" id={r.id} />,
+    })),
+  ]
+
+  return (
+    <Overview
+      mod={mod}
+      description="Purchase orders, approvals and vendor spend"
+      create="purchaseOrders"
+      kpis={[
+        {
+          label: 'Open purchase orders', value: formatMoneyShort(openValue), title: money(openValue), icon: ReceiptTextIcon, page: 'orders',
+          sub: `${count(openOrders.length, 'order')} approved or partly received`,
+        },
+        {
+          label: 'Awaiting approval', value: formatNumber(waiting), icon: Clock01Icon, page: 'orders',
+          sub: `${count(ordersWaiting.length, 'purchase order')} · ${count(requisitionsWaiting.length, 'requisition')}`,
+          tone: waiting ? 'warning' : undefined,
+        },
+        {
+          label: 'Goods receipts', value: formatNumber(receipts.length), icon: PackageReceiveIcon, page: 'receipts',
+          sub: `Last 30 days · ${receipts.filter(is('Pending')).length} pending`,
+        },
+        {
+          label: 'Top vendor by spend', value: top?.label ?? '—', title: top?.label, icon: Briefcase01Icon, page: 'vendors',
+          sub: top ? `${formatMoneyShort(top.value)} · ${pct(top.value, totalSpend)}% of committed spend` : 'No committed spend yet',
+        },
+      ]}
+      chart={
+        <Card title="Spend by vendor" action={<Note>{formatMoneyShort(totalSpend)} committed</Note>}>
+          <HBars
+            data={spend.slice(0, 6).map((v) => ({ label: v.label, value: v.value, note: count(v.count, 'purchase order') }))}
+            series={{ key: 'value', label: 'Committed spend', colour: mod.colour }}
+            format={money}
+            axis={formatMoneyShort}
+            labelWidth={132}
+          />
+        </Card>
+      }
+      side={
+        <Card title="Purchase orders by status">
+          <Meters
+            colour={mod.colour}
+            empty="No purchase orders yet."
+            rows={statuses.map((s) => ({
+              id: s.label,
+              label: <StatusBadge status={s.label} />,
+              hint: count(s.count, 'order'),
+              value: s.value,
+              display: formatMoneyShort(s.value),
+            }))}
+          />
+        </Card>
+      }
+      list={<ListCard title="Awaiting approval" module={mod.id} page="orders" empty="Nothing is waiting for approval." items={items} />}
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Accounting
+
+function AccountingOverview({ mod }: { mod: ErpModule }) {
+  const { data, update } = useErp()
+  const receivable = data.invoices.filter((r) => !['Paid', 'Draft', 'Void', 'Cancelled'].includes(str(r, 'status')) && num(r, 'balance') > 0)
+  const ar = sum(receivable, 'balance')
+  // Past the due date, whatever the status says: a part-paid invoice can be overdue too.
+  const overdue = receivable.filter((r) => age(str(r, 'due')) > 0).sort((a, b) => age(str(b, 'due')) - age(str(a, 'due')))
+  const overdueValue = sum(overdue, 'balance')
+  const payable = data.bills.filter(is('Open', 'Overdue'))
+  const billsLate = payable.filter((r) => age(str(r, 'due')) > 0).length
+  const cashAccount = data.ledgerAccounts.find((r) => r.id === '1000')
+  const cash = cashAccount ? num(cashAccount, 'balance') : 0
+  const recent = data.payments.filter((r) => within(str(r, 'date'), 30))
+  const net = sum(recent.filter((r) => r.direction === 'Received'), 'amount') - sum(recent.filter((r) => r.direction === 'Sent'), 'amount')
+
+  const ageing = [
+    { label: 'Current', test: (d: number) => d <= 0, fill: mod.colour },
+    { label: '1–30 days', test: (d: number) => d >= 1 && d <= 30, fill: 'var(--status-progress)' },
+    { label: '31–60 days', test: (d: number) => d >= 31 && d <= 60, fill: 'color-mix(in oklch, var(--status-progress), var(--destructive))' },
+    { label: '60+ days', test: (d: number) => d > 60, fill: 'var(--destructive)' },
+  ].map((b) => {
+    const rows = receivable.filter((r) => b.test(age(str(r, 'due'))))
+    return { label: b.label, value: sum(rows, 'balance'), fill: b.fill, note: count(rows.length, 'invoice') }
+  })
+
+  const dueBuckets = [
+    { label: 'Overdue', test: (d: number) => d > 0, colour: 'var(--destructive)' },
+    { label: 'Due in 7 days', test: (d: number) => d <= 0 && d >= -7, colour: 'var(--status-progress)' },
+    { label: 'Due in 8–30 days', test: (d: number) => d < -7 && d >= -30 },
+    { label: 'Due later', test: (d: number) => d < -30 },
+  ].map((b) => {
+    const rows = payable.filter((r) => b.test(age(str(r, 'due'))))
+    const value = sum(rows, 'amount')
+    return { id: b.label, label: b.label, hint: count(rows.length, 'bill'), value, display: formatMoneyShort(value), colour: b.colour }
+  })
+
+  return (
+    <Overview
+      mod={mod}
+      description="Receivables, payables and cash"
+      create="invoices"
+      kpis={[
+        {
+          label: 'Accounts receivable', value: formatMoneyShort(ar), title: money(ar), icon: Invoice01Icon, page: 'invoices',
+          sub: count(receivable.length, 'open invoice'),
+        },
+        {
+          label: 'Overdue receivables', value: formatMoneyShort(overdueValue), title: money(overdueValue), icon: Alert02Icon, page: 'invoices',
+          sub: `${count(overdue.length, 'invoice')} past due · ${pct(overdueValue, ar)}% of AR`, tone: overdue.length ? 'danger' : undefined,
+        },
+        {
+          label: 'Accounts payable', value: formatMoneyShort(sum(payable, 'amount')), title: money(sum(payable, 'amount')), icon: Invoice03Icon, page: 'bills',
+          sub: `${count(payable.length, 'open bill')} · ${billsLate} overdue`, tone: billsLate ? 'warning' : undefined,
+        },
+        {
+          label: 'Cash position', value: formatMoneyShort(cash), title: money(cash), icon: BankIcon, page: 'ledger',
+          sub: <><Trend up={net >= 0}>{formatMoneyShort(Math.abs(net))}</Trend> net payments, last 30 days</>,
+        },
+      ]}
+      chart={
+        <Card title="Accounts receivable ageing" action={<Note>Days past due</Note>}>
+          <Columns data={ageing} series={[{ key: 'value', label: 'Balance due', colour: mod.colour }]} format={money} axis={formatMoneyShort} />
+        </Card>
+      }
+      side={
+        <Card title="Accounts payable by due date" action={<Note>Open bills</Note>}>
+          <Meters colour={mod.colour} rows={dueBuckets} />
+        </Card>
+      }
+      list={
+        <ListCard
+          title="Overdue customer invoices"
+          module={mod.id}
+          page="invoices"
+          empty="No customer invoices are past due."
+          items={overdue.map((r) => {
+            const balance = num(r, 'balance')
+            return {
+              id: r.id,
+              entity: 'invoices',
+              title: `${r.id} · ${str(r, 'customer')}`,
+              detail: `${formatMoney(balance)} due ${formatDate(str(r, 'due'))}`,
+              aside: (
+                <span className="flex shrink-0 items-center gap-2">
+                  <Late days={age(str(r, 'due'))} label="overdue" />
+                  <StatusBadge status={str(r, 'status')} />
+                </span>
+              ),
+              actions: (
+                <>
+                  <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => {
+                    toast.success(`Reminder sent for ${r.id}`, { description: `To ${str(r, 'customer')}'s accounts team.` })
+                  }}>
+                    Send reminder
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    update('invoices', [r.id], { status: 'Paid', balance: 0 })
+                    toast.success(`Payment recorded for ${r.id}`, { description: `${formatMoney(balance)} from ${str(r, 'customer')}.` })
+                  }}>
+                    Record payment
+                  </Button>
+                </>
+              ),
+            }
+          })}
+        />
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Human resources
+
+function HrOverview({ mod }: { mod: ErpModule }) {
+  const { data } = useErp()
+  const staff = data.employees.filter((r) => !['Inactive', 'Terminated'].includes(str(r, 'status')))
+  // Marked on leave, or covered by an approved leave request that includes today.
+  const away = new Set([
+    ...data.employees.filter(is('On leave')).map((r) => str(r, 'name')),
+    ...data.leave
+      .filter((r) => r.status === 'Approved' && str(r, 'from') <= TODAY && TODAY <= str(r, 'to'))
+      .map((r) => str(r, 'employee')),
+  ])
+  const pending = data.leave.filter(is('Pending')).sort(byDate('from'))
+  const runs = [...data.payroll].sort(byDate('period'))
+  const paid = runs.filter((r) => r.status !== 'Draft' && str(r, 'payDate') <= TODAY)
+  const last = paid.at(-1)
+  const previous = paid.at(-2)
+  const change = last && previous && num(previous, 'gross')
+    ? ((num(last, 'gross') - num(previous, 'gross')) / num(previous, 'gross')) * 100
+    : null
+  const departments = groupSum(staff, 'department')
+
+  return (
+    <Overview
+      mod={mod}
+      description="Headcount, leave and payroll"
+      create="employees"
+      kpis={[
+        {
+          label: 'Headcount', value: formatNumber(staff.length), icon: UserMultipleIcon, page: 'employees',
+          sub: `${staff.filter(is('Probation')).length} on probation`,
+        },
+        {
+          label: 'On leave today', value: formatNumber(away.size), icon: Calendar03Icon, page: 'employees',
+          sub: `${pct(away.size, staff.length)}% of headcount`,
+        },
+        {
+          label: 'Pending leave requests', value: formatNumber(pending.length), icon: Clock01Icon, page: 'leave',
+          sub: `${count(sum(pending, 'days'), 'day')} requested`, tone: pending.length ? 'warning' : undefined,
+        },
+        {
+          label: 'Last payroll gross',
+          value: last ? formatMoneyShort(num(last, 'gross')) : '—',
+          title: last ? money(num(last, 'gross')) : undefined,
+          icon: Wallet01Icon,
+          page: 'payroll',
+          sub: last ? (
+            <>
+              {change !== null && previous && (
+                <><Trend up={change >= 0} neutral>{Math.abs(change).toFixed(1)}%</Trend> on {monthOf(str(previous, 'period'))} · </>
+              )}
+              {monthOf(str(last, 'period'))} payroll run
+            </>
+          ) : 'No payroll run yet',
+        },
+      ]}
+      chart={
+        <Card title="Payroll gross by period" action={<Note>{count(runs.length, 'payroll run')}</Note>}>
+          <Columns
+            data={runs.map((r) => ({
+              label: monthOf(str(r, 'period')),
+              value: num(r, 'gross'),
+              note: `${str(r, 'status')} · ${count(num(r, 'employees'), 'employee')}`,
+              // Every bar sets its own fill, since an undefined one would wipe out the series colour.
+              fill: r.status === 'Draft' ? tint(mod.colour, 40) : mod.colour,
+            }))}
+            series={[{ key: 'value', label: 'Gross pay', colour: mod.colour }]}
+            format={money}
+            axis={formatMoneyShort}
+          />
+        </Card>
+      }
+      side={
+        <Card title="Headcount by department">
+          <Meters
+            colour={mod.colour}
+            empty="No employees yet."
+            rows={departments.map((d) => ({ id: d.label, label: d.label, value: d.value, display: formatNumber(d.value) }))}
+          />
+        </Card>
+      }
+      list={
+        <ListCard
+          title="Pending leave requests"
+          module={mod.id}
+          page="leave"
+          empty="No leave requests are waiting."
+          items={pending.map((r) => {
+            const days = num(r, 'days')
+            const from = str(r, 'from')
+            const starts = -age(from)
+            return {
+              id: r.id,
+              entity: 'leave',
+              title: `${str(r, 'employee')} · ${str(r, 'type')}`,
+              detail: [
+                count(days, 'day'),
+                days > 1 ? `${formatDate(from)} – ${formatDate(str(r, 'to'))}` : formatDate(from),
+                starts > 0 ? `starts in ${count(starts, 'day')}` : starts === 0 ? 'starts today' : 'already started',
+              ].join(' · '),
+              actions: <Decide entity="leave" id={r.id} />,
+            }
+          })}
+        />
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
+
+export function ModuleOverview({ module }: { module: string }) {
+  const mod = moduleById(module)
+  if (mod) {
+    switch (module) {
+      case 'crm': return <CrmOverview mod={mod} />
+      case 'sales': return <SalesOverview mod={mod} />
+      case 'inventory': return <InventoryOverview mod={mod} />
+      case 'purchasing': return <PurchasingOverview mod={mod} />
+      case 'accounting': return <AccountingOverview mod={mod} />
+      case 'hr': return <HrOverview mod={mod} />
+    }
+  }
+  return (
+    <PageHeader
+      title={mod ? `${mod.name} overview` : 'Overview'}
+      description="This module has no dashboard yet. Open one of its pages from the sidebar."
+    />
+  )
+}

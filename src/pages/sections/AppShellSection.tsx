@@ -1,4 +1,4 @@
-import { Fragment, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
+import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Add01Icon, AiChat02Icon, ArrowDown01Icon, ArrowRight01Icon, Cancel01Icon, ChartLineData01Icon,
@@ -33,6 +33,7 @@ import { NotificationsMenu, useNotifications, type Notifications } from './app-s
 import { FIELD_ORDER, FilterChip, FilterMenu, applyFilters, type FilterField, type Filters } from './FilterBar'
 import { QuickCreateDialog } from './FormModalsSection'
 import { JobPeek, openFullPage } from './JobActions'
+import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
 import { Section } from './shared'
 import { Initials } from './StatusSection'
 
@@ -1082,12 +1083,12 @@ function CrumbsSearchHeader({ info, issues, ...p }: HeaderProps & { info: Return
   )
 }
 
-type Crumb = { label: string; team?: (typeof TEAMS)[number]; page?: string }
+type TrailItem = { label: string; team?: (typeof TEAMS)[number]; page?: string }
 
 // The parents above the current page. "Long" adds a workspace and a project
-// with long names, to show how the trail fits.
-function trailFor(info: ReturnType<typeof pageInfo>, long?: boolean): Crumb[] {
-  const trail: Crumb[] = []
+// with long names, to show how the trail folds.
+function trailFor(info: ReturnType<typeof pageInfo>, long?: boolean): TrailItem[] {
+  const trail: TrailItem[] = []
   if (long) trail.push({ label: 'Acme Logistics International' })
   if (info.team) {
     trail.push({ label: long ? `${info.team.name} and Warehousing` : info.team.name, team: info.team, page: `${info.team.id}:issues` })
@@ -1096,139 +1097,24 @@ function trailFor(info: ReturnType<typeof pageInfo>, long?: boolean): Crumb[] {
   return trail
 }
 
-function goToCrumb(crumb: Crumb, onPage: (id: string) => void) {
-  if (crumb.page) onPage(crumb.page)
-  else toast(crumb.label, { description: 'Demo only.' })
-}
-
-const Sep = ({ className }: { className?: string }) => (
-  <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className={cn('text-muted-foreground/60 size-3 shrink-0', className)} />
-)
-
-function CrumbMenu({ crumbs, onPage, className }: { crumbs: Crumb[]; onPage: (id: string) => void; className?: string }) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-xs" className={cn('text-muted-foreground shrink-0', className)} aria-label="Show the full path">
-          <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        {crumbs.map((c) => (
-          <DropdownMenuItem key={c.label} onSelect={() => goToCrumb(c, onPage)}>
-            {c.team ? <Mark short={c.team.short} colour={c.team.colour} /> : <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />}
-            <span className="truncate">{c.label}</span>
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
-
-type Fold = 'none' | 'middle' | 'last' | 'all'
-const FOLDS: Fold[] = ['none', 'middle', 'last']
-
-// Folds the trail to the room it has, in steps: every crumb; the first and
-// last parents around "…"; "…" then the last parent; only "…" and the page
-// name, which then cuts off with an ellipsis. The room is the parent's width
-// less its other children; each step's width is read from a hidden copy.
-function useFold(nav: RefObject<HTMLElement | null>, copies: RefObject<Partial<Record<Fold, HTMLElement | null>>>) {
-  const [fold, setFold] = useState<Fold>('none')
-  useLayoutEffect(() => {
-    const el = nav.current
-    const row = el?.parentElement
-    if (!el || !row) return
-    function check() {
-      const style = getComputedStyle(row!)
-      const gap = parseFloat(style.columnGap) || 0
-      const others = [...row!.children].filter((c) => c !== el)
-      const used = others.reduce((sum, c) => sum + c.getBoundingClientRect().width + (c.getBoundingClientRect().width ? gap : 0), 0)
-      const room = row!.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - used
-      const next = FOLDS.find((fold) => {
-        const copy = copies.current[fold]
-        return !!copy && copy.getBoundingClientRect().width <= room
-      }) ?? 'all'
-      setFold((f) => (f === next ? f : next))
-    }
-    check()
-    const observer = new ResizeObserver(check)
-    observer.observe(row)
-    return () => observer.disconnect()
-  })
-  return fold
-}
-
-function CrumbButton({ crumb, onPage }: { crumb: Crumb; onPage: (id: string) => void }) {
-  return (
-    <button
-      type="button"
-      title={crumb.label}
-      onClick={() => goToCrumb(crumb, onPage)}
-      className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/40 flex max-w-32 min-w-0 items-center gap-1.5 rounded outline-none focus-visible:ring-2"
-    >
-      {crumb.team && <Mark short={crumb.team.short} colour={crumb.team.colour} />}
-      <span className="truncate">{crumb.label}</span>
-    </button>
-  )
-}
-
-// What the trail looks like for one fold: the measuring copies and the real
-// trail draw from the same function, so their widths match.
-function trailParts(parents: Crumb[], fold: Fold, menu: (crumbs: Crumb[]) => ReactNode, crumb: (c: Crumb) => ReactNode) {
-  if (!parents.length) return []
-  if (fold === 'all') return [menu(parents), <Sep key="s" />]
-  if (fold === 'last') {
-    const last = parents[parents.length - 1]
-    return [menu(parents.slice(0, -1)), <Sep key="sm" />, <Fragment key={last.label}>{crumb(last)}</Fragment>, <Sep key="s" />]
-  }
-  const shown = fold === 'middle' ? [parents[0], parents[parents.length - 1]] : parents
-  return shown.flatMap((c, i) => [
-    ...(fold === 'middle' && i === 1 ? [menu(parents.slice(1, -1)), <Sep key="sm" />] : []),
-    <Fragment key={c.label}>{crumb(c)}</Fragment>,
-    <Sep key={`s${i}`} />,
-  ])
-}
-
+// The trail itself is the shared FoldingBreadcrumb block (src/blocks), the
+// same one the ERP template's header uses.
 function Crumbs({ info, more, long, onPage }: {
   info: ReturnType<typeof pageInfo>
   more?: boolean
   long?: boolean
   onPage: (id: string) => void
 }) {
-  const parents = trailFor(info, long)
-  const navRef = useRef<HTMLElement>(null)
-  const copies = useRef<Partial<Record<Fold, HTMLElement | null>>>({})
-  const fold = useFold(navRef, copies)
-  // Steps that differ from the full trail: "middle" needs three parents, "last" two.
-  const steps = FOLDS.filter((f) => f === 'none' || (f === 'middle' ? parents.length > 2 : parents.length > 1))
-  const page = <span className="min-w-8 truncate font-medium" aria-current="page" title={info.label}>{info.label}</span>
-  const ghostMenu = () => <span key="m" className="size-5 shrink-0" />
-  const ghostCrumb = (c: Crumb) => (
-    <span className="flex max-w-32 items-center gap-1.5">
-      {c.team && <span className="size-4 shrink-0" />}
-      <span className="truncate">{c.label}</span>
-    </span>
-  )
+  const trail: Crumb[] = trailFor(info, long).map((c) => ({
+    id: c.label,
+    label: c.label,
+    icon: c.team && <Mark short={c.team.short} colour={c.team.colour} />,
+    onSelect: () => (c.page ? onPage(c.page) : toast(c.label, { description: 'Demo only.' })),
+  }))
 
   return (
     <>
-      <nav ref={navRef} aria-label="Breadcrumb" className="relative flex min-w-0 items-center gap-1.5 text-xs">
-        {trailParts(parents, fold, (crumbs) => <CrumbMenu key="m" crumbs={crumbs} onPage={onPage} />, (c) => <CrumbButton crumb={c} onPage={onPage} />)}
-        {page}
-        {/* Zero-size and clipped, so the copies never widen the page. */}
-        <div aria-hidden className="pointer-events-none invisible absolute top-0 left-0 size-0 overflow-hidden">
-          {FOLDS.map((step) => (
-            <div
-              key={step}
-              ref={(el) => { copies.current[step] = steps.includes(step) ? el : null }}
-              className="absolute flex w-max items-center gap-1.5 whitespace-nowrap"
-            >
-              {steps.includes(step) && trailParts(parents, step, ghostMenu, ghostCrumb)}
-              <span className="font-medium">{info.label}</span>
-            </div>
-          ))}
-        </div>
-      </nav>
+      <FoldingBreadcrumb trail={trail} current={info.label} />
       <Tooltip>
         <TooltipTrigger asChild>
           <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" aria-label="Add to favourites" onClick={() => toast('Added to favourites', { description: 'Demo only.' })}>

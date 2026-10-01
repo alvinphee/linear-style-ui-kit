@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { useTheme } from '@/lib/theme'
+import { usePath } from '@/lib/router'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Add01Icon, ComputerIcon, KeyboardIcon, Moon02Icon, PaintBoardIcon, Search01Icon, Sun03Icon,
+  Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, ComputerIcon, KeyboardIcon, Moon02Icon, PaintBoardIcon,
+  Search01Icon, Sun03Icon,
 } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import {
@@ -12,13 +14,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PRESETS } from '@/lib/theme'
-import { GO_KEYS, NAV, NAV_GROUPS, goTo } from './nav'
+import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, goTo } from './nav'
 import ShortcutsSheet from './ShortcutsSheet'
 import ShowcaseSidebar from './ShowcaseSidebar'
-import AppShellSection from './sections/AppShellSection'
-import AuditLogSection from './sections/AuditLogSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
 import AiWorkspaceSection from './sections/AiWorkspaceSection'
+import AppShellSection from './sections/AppShellSection'
+import AuditLogSection from './sections/AuditLogSection'
 import BoardSection from './sections/BoardSection'
 import ButtonsSection from './sections/ButtonsSection'
 import CalendarSection from './sections/CalendarSection'
@@ -29,53 +31,36 @@ import DataTableSection from './sections/DataTableSection'
 import DisplaySection from './sections/DisplaySection'
 import FormModalsSection, { QuickCreateDialog } from './sections/FormModalsSection'
 import FormsSection from './sections/FormsSection'
-import InputsSection from './sections/InputsSection'
-import NavigationSection from './sections/NavigationSection'
 import IconsSection from './sections/IconsSection'
 import InboxSection from './sections/InboxSection'
+import InputsSection from './sections/InputsSection'
 import IssueSection from './sections/IssueSection'
+import JobListSection from './sections/JobListSection'
+import NavigationSection from './sections/NavigationSection'
 import OnboardingSection from './sections/OnboardingSection'
 import OverlaysMoreSection from './sections/OverlaysMoreSection'
+import OverlaysSection from './sections/OverlaysSection'
 import PricingSection from './sections/PricingSection'
 import RoadmapSection from './sections/RoadmapSection'
 import SettingsSection from './sections/SettingsSection'
+import { InOverview, PageDemos } from './sections/shared'
 import SignInSection from './sections/SignInSection'
-import JobListSection from './sections/JobListSection'
-import OverlaysSection from './sections/OverlaysSection'
 import StatusSection from './sections/StatusSection'
 import ThemeSection, { ThemeControls } from './sections/ThemeSection'
+
+// Playgrounds and variant grids, one file per page: playground/buttons.tsx
+// belongs to the "buttons" page. Picked up by file name, so adding a file is
+// all it takes.
+const DEMO_FILES = import.meta.glob<{ default: ComponentType }>('./playground/*.tsx', { eager: true })
+const DEMOS: Record<string, ComponentType> = Object.fromEntries(
+  Object.entries(DEMO_FILES)
+    .map(([file, mod]) => [file.replace(/^.*\/(.+)\.tsx$/, '$1'), mod.default] as const)
+    .filter(([, component]) => typeof component === 'function'),
+)
 
 function isTyping(target: EventTarget | null) {
   return target instanceof HTMLElement
     && !!target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
-}
-
-// The current section is the last one whose top has passed just below the
-// header. Read from scroll position, so big jumps (G then …) stay correct.
-function useActiveSection() {
-  const [active, setActive] = useState(NAV[0].id)
-  useEffect(() => {
-    let timer = 0
-    function update() {
-      timer = 0
-      let current = NAV[0].id
-      for (const { id } of NAV) {
-        const el = document.getElementById(id)
-        if (el && el.getBoundingClientRect().top <= 120) current = id
-      }
-      setActive(current)
-    }
-    function onScroll() {
-      if (!timer) timer = window.setTimeout(update, 50)
-    }
-    update()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      clearTimeout(timer)
-    }
-  }, [])
-  return active
 }
 
 export default function KitchenSink() {
@@ -83,9 +68,72 @@ export default function KitchenSink() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
   const { resolvedTheme, setTheme, applyPreset } = useTheme()
-  const active = useActiveSection()
+  const path = usePath()
+  const page = NAV.find((n) => `/${n.id}` === path) ?? NAV[0]
+  const group = NAV_GROUPS.find((g) => g.items.some((i) => i.id === page.id))
   const dark = resolvedTheme === 'dark'
   const pressedG = useRef(0)
+
+  // One section per page, so each is rendered only when it is open.
+  const PAGES: Record<string, () => ReactNode> = {
+    overview,
+    theme: () => <ThemeSection />,
+    buttons: () => <ButtonsSection />,
+    forms: () => <FormsSection />,
+    'form-modals': () => <FormModalsSection />,
+    inputs: () => <InputsSection />,
+    status: () => <StatusSection />,
+    display: () => <DisplaySection />,
+    charts: () => <ChartsSection />,
+    overlays: () => <OverlaysSection onOpenCommand={() => setCommandOpen(true)} />,
+    'overlays-more': () => <OverlaysMoreSection />,
+    navigation: () => <NavigationSection />,
+    content: () => <ContentSection />,
+    'data-table': () => <DataTableSection />,
+    'app-shell': () => <AppShellSection />,
+    list: () => <JobListSection />,
+    board: () => <BoardSection />,
+    issue: () => <IssueSection />,
+    inbox: () => <InboxSection />,
+    dashboard: () => <DashboardSection />,
+    calendar: () => <CalendarSection />,
+    roadmap: () => <RoadmapSection />,
+    settings: () => <SettingsSection />,
+    'audit-log': () => <AuditLogSection />,
+    pricing: () => <PricingSection />,
+    onboarding: () => <OnboardingSection />,
+    'sign-in': () => <SignInSection />,
+    'ai-workspace': () => <AiWorkspaceSection />,
+    'ai-features': () => <AiFeaturesSection />,
+    icons: () => <IconsSection part="icons" />,
+    props: () => <IconsSection part="props" />,
+    'all-icons': () => <IconsSection part="all-icons" />,
+  }
+  const Demos = DEMOS[page.id]
+  const components = NAV_GROUPS.find((g) => g.title === 'Components')?.items ?? []
+
+  // Every component on one long page, as the kit was before it had one page
+  // per section. Each section links to its own page for the playground.
+  // A render function, not a component, so it never remounts its sections.
+  function overview() {
+    return (
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-12">
+        <header className="grid gap-1">
+          <h1 className="text-xl font-semibold tracking-tight">All components</h1>
+          <p className="text-muted-foreground text-sm">
+            Every component at a glance. Open a section for its playground, variants and code.
+          </p>
+        </header>
+        <InOverview.Provider value>
+          {components.map((c) => <Fragment key={c.id}>{PAGES[c.id]?.()}</Fragment>)}
+        </InOverview.Provider>
+      </div>
+    )
+  }
+
+  useEffect(() => {
+    document.title = `${page.label} · Linear-style UI Kit`
+  }, [page.label])
 
   // Ctrl+K command menu, ? shortcuts, C new job, and Linear-style "G then …" jumps.
   useEffect(() => {
@@ -124,15 +172,19 @@ export default function KitchenSink() {
     action()
   }
 
+  const index = NAV.findIndex((n) => n.id === page.id)
+  const prev = NAV[index - 1]
+  const next = NAV[index + 1]
+
   return (
     <div className="flex min-h-svh">
-      <ShowcaseSidebar active={active} onSearch={() => setCommandOpen(true)} onShortcuts={() => setShortcutsOpen(true)} />
+      <ShowcaseSidebar active={page.id} onSearch={() => setCommandOpen(true)} onShortcuts={() => setShortcutsOpen(true)} />
 
       <div className="min-w-0 flex-1">
         <header className="bg-background/85 sticky top-0 z-20 flex h-11 items-center gap-2 border-b px-4 backdrop-blur md:px-6">
-          <span className="text-muted-foreground hidden text-xs sm:inline">Kitchen Sink</span>
+          <span className="text-muted-foreground hidden text-xs sm:inline">{group?.title}</span>
           <span className="text-muted-foreground/50 hidden text-xs sm:inline">/</span>
-          <span className="truncate text-xs font-medium">{NAV.find((n) => n.id === active)?.label}</span>
+          <span className="truncate text-xs font-medium">{page.label}</span>
           <div className="ml-auto flex items-center gap-1">
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={() => setCommandOpen(true)}>
               <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
@@ -171,44 +223,52 @@ export default function KitchenSink() {
           </div>
         </header>
 
-        <nav className="flex gap-1 overflow-x-auto border-b px-4 py-2 md:hidden">
+        <nav aria-label="Pages" className="flex gap-1 overflow-x-auto border-b px-4 py-2 md:hidden">
           {NAV.map((item) => (
-            <Button key={item.id} variant={active === item.id ? 'secondary' : 'ghost'} size="sm" onClick={() => goTo(item.id)}>
+            <Button
+              key={item.id}
+              variant={page.id === item.id ? 'secondary' : 'ghost'}
+              size="sm"
+              aria-current={page.id === item.id ? 'page' : undefined}
+              ref={page.id === item.id ? (el) => el?.scrollIntoView({ inline: 'center', block: 'nearest' }) : undefined}
+              onClick={() => goTo(item.id)}
+            >
               {item.label}
             </Button>
           ))}
         </nav>
 
-        <main className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-10 px-4 pt-6 pb-24 md:px-6">
-          <ThemeSection />
-          <ButtonsSection />
-          <FormsSection />
-          <FormModalsSection />
-          <InputsSection />
-          <StatusSection />
-          <DisplaySection />
-          <ChartsSection />
-          <OverlaysSection onOpenCommand={() => setCommandOpen(true)} />
-          <OverlaysMoreSection />
-          <NavigationSection />
-          <ContentSection />
-          <DataTableSection />
-          <AppShellSection />
-          <JobListSection />
-          <BoardSection />
-          <IssueSection />
-          <InboxSection />
-          <DashboardSection />
-          <CalendarSection />
-          <RoadmapSection />
-          <SettingsSection />
-          <AuditLogSection />
-          <PricingSection />
-          <OnboardingSection />
-          <SignInSection />
-          <AiWorkspaceSection />
-          <AiFeaturesSection />
-          <IconsSection />
+        <main key={page.id} className="mx-auto grid max-w-6xl grid-cols-[minmax(0,1fr)] gap-10 px-4 pt-6 pb-16 md:px-6">
+          <PageDemos.Provider value={Demos ? <Demos /> : null}>
+            {PAGES[page.id]?.()}
+          </PageDemos.Provider>
+
+          <nav aria-label="Previous and next page" className="grid grid-cols-2 gap-3 border-t pt-6">
+            {prev ? (
+              <button
+                type="button"
+                onClick={() => goTo(prev.id)}
+                className="hover:bg-accent/60 focus-visible:ring-ring/40 grid justify-items-start gap-0.5 rounded-lg border px-3 py-2.5 text-left outline-none focus-visible:ring-2"
+              >
+                <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                  <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} className="size-3" /> Previous
+                </span>
+                <span className="text-xs font-medium">{prev.label}</span>
+              </button>
+            ) : <span />}
+            {next && (
+              <button
+                type="button"
+                onClick={() => goTo(next.id)}
+                className="hover:bg-accent/60 focus-visible:ring-ring/40 grid justify-items-end gap-0.5 rounded-lg border px-3 py-2.5 text-right outline-none focus-visible:ring-2"
+              >
+                <span className="text-muted-foreground flex items-center gap-1 text-[11px]">
+                  Next <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3" />
+                </span>
+                <span className="text-xs font-medium">{next.label}</span>
+              </button>
+            )}
+          </nav>
         </main>
       </div>
 
@@ -247,10 +307,10 @@ export default function KitchenSink() {
                 </CommandItem>
               ))}
             </CommandGroup>
-            {NAV_GROUPS.map((group) => (
-              <CommandGroup key={group.title} heading={`Go to · ${group.title}`}>
-                {group.items.map((item) => {
-                  const go = GO_KEYS.find((g) => g.id === item.id)
+            {NAV_GROUPS.map((g) => (
+              <CommandGroup key={g.title} heading={`Go to · ${g.title}`}>
+                {g.items.map((item) => {
+                  const go = GO_KEYS.find((k) => k.id === item.id)
                   return (
                     <CommandItem key={item.id} onSelect={() => run(() => goTo(item.id))}>
                       <HugeiconsIcon icon={item.icon} strokeWidth={2} /> {item.label}
@@ -260,6 +320,13 @@ export default function KitchenSink() {
                 })}
               </CommandGroup>
             ))}
+            <CommandGroup heading="Templates">
+              {TEMPLATES.map((m) => (
+                <CommandItem key={m.path} onSelect={() => run(() => { window.location.hash = m.path })}>
+                  <HugeiconsIcon icon={m.icon} strokeWidth={2} /> {m.label}
+                </CommandItem>
+              ))}
+            </CommandGroup>
           </CommandList>
         </Command>
       </CommandDialog>
