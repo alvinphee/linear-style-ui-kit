@@ -7,12 +7,10 @@ import {
   Settings01Icon, SidebarLeftIcon, SidebarRightIcon, UserGroupIcon, UserIcon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { cn } from 'cn'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   ContextMenu, ContextMenuCheckboxItem, ContextMenuContent, ContextMenuGroup, ContextMenuItem,
@@ -37,8 +35,13 @@ import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { PEOPLE, STATUS, type Status } from '../data'
 import { Panel, Row, Section } from './shared'
+import { LetterMark } from '@/components/mark'
+import { Mention } from '@/components/mention'
+import { NavHeading, NavItem } from '@/components/nav-item'
 import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from './StatusSection'
+import { PriorityIcon } from '@/components/priority-icon'
+import { MOD } from '@/components/shortcut'
+import { StatusIcon } from '@/components/status-icon'
 
 export default function OverlaysMoreSection() {
   return (
@@ -117,11 +120,11 @@ function ContextMenuPanel() {
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => toast.success('Link copied')}>
               <HugeiconsIcon icon={Link01Icon} strokeWidth={2} /> Copy link
-              <ContextMenuShortcut>Ctrl L</ContextMenuShortcut>
+              <ContextMenuShortcut>{MOD} L</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuItem onSelect={() => toast('Duplicated as DO-24818')}>
               <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} /> Duplicate
-              <ContextMenuShortcut>Ctrl D</ContextMenuShortcut>
+              <ContextMenuShortcut>{MOD} D</ContextMenuShortcut>
             </ContextMenuItem>
             <ContextMenuSub>
               <ContextMenuSubTrigger>
@@ -296,19 +299,18 @@ const TEAMS: { id: string; label: string; icon: IconSvgElement }[] = [
 function NavigationSheet() {
   const [active, setActive] = useState('all')
 
+  // Nav items recoloured for a sheet, which has no sidebar colours.
   function item(entry: { id: string; label: string; icon: IconSvgElement; count?: number }) {
     return (
-      <button
+      <NavItem
         key={entry.id}
-        type="button"
+        icon={entry.icon}
+        label={entry.label}
+        count={entry.count}
+        active={active === entry.id}
         onClick={() => setActive(entry.id)}
-        aria-current={active === entry.id ? 'page' : undefined}
-        className="hover:bg-accent aria-[current=page]:bg-accent aria-[current=page]:text-foreground text-muted-foreground flex h-7 items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-      >
-        <HugeiconsIcon icon={entry.icon} strokeWidth={2} className="size-3.5" />
-        <span className="flex-1 truncate">{entry.label}</span>
-        {entry.count !== undefined && <span className="tabular-nums text-[11px]">{entry.count}</span>}
-      </button>
+        className="text-muted-foreground hover:bg-accent data-[active=true]:bg-accent data-[active=true]:text-foreground focus-visible:ring-ring/30"
+      />
     )
   }
 
@@ -322,13 +324,13 @@ function NavigationSheet() {
       </SheetTrigger>
       <SheetContent side="left" className="w-64 gap-0 sm:max-w-64">
         <SheetHeader className="flex-row items-center gap-2 p-3 pr-12">
-          <span className="bg-primary text-primary-foreground grid size-5 place-items-center rounded text-[9px] font-semibold">KS</span>
+          <LetterMark text="KS" colour="var(--primary)" className="text-primary-foreground" />
           <SheetTitle className="text-[13px]">Kitchen Sink</SheetTitle>
           <SheetDescription className="sr-only">Workspace navigation</SheetDescription>
         </SheetHeader>
         <nav aria-label="Workspace" className="grid min-h-0 flex-1 content-start gap-px overflow-y-auto px-2">
           {NAV.map(item)}
-          <p className="text-muted-foreground px-2 pt-4 pb-1 text-[11px] font-medium">Workspace</p>
+          <NavHeading>Workspace</NavHeading>
           {TEAMS.map(item)}
         </nav>
         <div className="flex items-center gap-2 border-t p-3">
@@ -520,16 +522,7 @@ function HoverCardPanel() {
             Loaded and on the way now.{' '}
             <HoverCard openDelay={150} closeDelay={100}>
               <HoverCardTrigger asChild>
-                <a
-                  href="#overlays-more"
-                  onClick={(e) => e.preventDefault()}
-                  className={cn(
-                    'bg-brand/10 text-brand rounded px-1 py-px font-medium outline-none',
-                    'hover:bg-brand/15 focus-visible:ring-2 focus-visible:ring-ring/30',
-                  )}
-                >
-                  @meiling
-                </a>
+                <Mention href="#overlays-more" onClick={(e) => e.preventDefault()}>@meiling</Mention>
               </HoverCardTrigger>
               <HoverCardContent align="start" className="w-64 p-3">
                 <MeiLingProfile />
@@ -547,9 +540,10 @@ function MeiLingProfile() {
   return (
     <div className="grid gap-3">
       <div className="flex items-start gap-2.5">
-        <Avatar size="lg">
-          <AvatarFallback className="text-xs font-medium">ML</AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          name="Mei Ling"
+          className="size-10 *:data-[slot=avatar-fallback]:text-xs *:data-[slot=avatar-fallback]:font-medium"
+        />
         <div className="min-w-0 flex-1">
           <p className="truncate text-[13px] font-medium">Mei Ling</p>
           <p className="text-muted-foreground truncate text-[11px]">Dispatcher · Operations</p>

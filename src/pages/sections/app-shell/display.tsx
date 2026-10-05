@@ -1,22 +1,24 @@
 import type { ReactNode } from 'react'
-import { PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../../data'
-import { NoAssignee, UNASSIGNED, sortJobs, type Ordering } from '../FilterBar'
-import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from '../StatusSection'
+import { STATUS_LIST_ORDER, STATUS_ORDER, type Job, type Status } from '../../data'
+import {
+  ASSIGNEE_OPTIONS, JOB_PROPERTIES, PRIORITY_OPTIONS, STATUS_OPTIONS, assigneeValue, driverOf, type JobProperty,
+  type Ordering,
+} from '../../job-options'
+import { sortJobs } from '../FilterBar'
 
 // What the Display menu controls, and how the jobs are grouped for the list
-// and the board.
+// and the board. The groups, orderings and properties come from the shared
+// job lists in src/pages/job-options.
 
 export type Layout = 'list' | 'board'
 export type Grouping = 'status' | 'priority' | 'assignee' | 'none'
-export type Property = 'id' | 'status' | 'priority' | 'labels' | 'customer' | 'due' | 'assignee' | 'photos'
 
 export type ListDisplay = {
   grouping: Grouping
   ordering: Ordering
   showEmpty: boolean
   showCompleted: boolean
-  properties: Record<Property, boolean>
+  properties: Record<JobProperty, boolean>
 }
 
 export const DEFAULT_LIST_DISPLAY: ListDisplay = {
@@ -27,28 +29,11 @@ export const DEFAULT_LIST_DISPLAY: ListDisplay = {
   properties: { id: true, status: true, priority: true, labels: true, customer: false, due: true, assignee: true, photos: false },
 }
 
-export const PROPERTIES: { id: Property; label: string }[] = [
-  { id: 'id', label: 'ID' },
-  { id: 'status', label: 'Status' },
-  { id: 'priority', label: 'Priority' },
-  { id: 'labels', label: 'Labels' },
-  { id: 'customer', label: 'Customer' },
-  { id: 'due', label: 'Due date' },
-  { id: 'assignee', label: 'Assignee' },
-  { id: 'photos', label: 'Photos' },
-]
-
 export const GROUPINGS: { id: Grouping; label: string }[] = [
   { id: 'status', label: 'Status' },
   { id: 'priority', label: 'Priority' },
   { id: 'assignee', label: 'Assignee' },
   { id: 'none', label: 'No grouping' },
-]
-
-export const ORDERINGS: { id: Ordering; label: string }[] = [
-  { id: 'priority', label: 'Priority' },
-  { id: 'due', label: 'Due date' },
-  { id: 'title', label: 'Title' },
 ]
 
 export type JobPatch = Partial<Omit<Job, 'id'>>
@@ -63,38 +48,30 @@ export type Group = {
 }
 
 const COMPLETED: Status[] = ['done', 'cancelled']
-// A list reads top-down from what is moving; a board reads left to right along the workflow.
-const STATUS_LIST: Status[] = ['progress', 'todo', 'backlog', 'done', 'cancelled']
-const STATUS_BOARD: Status[] = ['backlog', 'todo', 'progress', 'done', 'cancelled']
-const PRIORITIES: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
 
 type GroupDef = Omit<Group, 'jobs'> & { match: (job: Job) => boolean }
 
+// A group per option of the field, headed by the option's name and visual.
 function groupDefs(grouping: Exclude<Grouping, 'none'>, layout: Layout, showCompleted: boolean): GroupDef[] {
   if (grouping === 'status') {
-    return (layout === 'board' ? STATUS_BOARD : STATUS_LIST)
+    // A list reads top-down from what is moving; a board reads left to right along the workflow.
+    return (layout === 'board' ? STATUS_ORDER : STATUS_LIST_ORDER)
       .filter((s) => showCompleted || !COMPLETED.includes(s))
-      .map((s) => ({
-        key: s, label: STATUS[s].label, visual: <StatusIcon status={s} />, patch: { status: s },
-        match: (j) => j.status === s,
-      }))
+      .map((s) => {
+        const { label, visual } = STATUS_OPTIONS.find((o) => o.value === s)!
+        return { key: s, label, visual, patch: { status: s }, match: (j) => j.status === s }
+      })
   }
   if (grouping === 'priority') {
-    return PRIORITIES.map((p) => ({
-      key: p, label: PRIORITY[p].label, visual: <PriorityIcon priority={p} />, patch: { priority: p },
-      match: (j) => j.priority === p,
+    return PRIORITY_OPTIONS.map(({ value, label, visual }) => ({
+      key: value, label, visual, patch: { priority: value }, match: (j) => j.priority === value,
     }))
   }
-  return [
-    ...PEOPLE.map((name) => ({
-      key: name, label: name, visual: <UserAvatar name={name} className="size-4" />, patch: { driver: name },
-      match: (j: Job) => j.driver === name,
-    })),
-    {
-      key: UNASSIGNED, label: 'No assignee', visual: <NoAssignee />, patch: { driver: '' },
-      match: (j: Job) => !j.driver,
-    },
-  ]
+  // People first, nobody last.
+  const [nobody, ...people] = ASSIGNEE_OPTIONS
+  return [...people, nobody].map(({ value, label, visual }) => ({
+    key: value, label, visual, patch: { driver: driverOf(value) }, match: (j) => assigneeValue(j.driver) === value,
+  }))
 }
 
 export function arrangeJobs(jobs: Job[], display: ListDisplay, layout: Layout): Group[] {
@@ -112,5 +89,5 @@ export function arrangeJobs(jobs: Job[], display: ListDisplay, layout: Layout): 
 
 export function sameDisplay(a: ListDisplay, b: ListDisplay) {
   return a.grouping === b.grouping && a.ordering === b.ordering && a.showEmpty === b.showEmpty
-    && a.showCompleted === b.showCompleted && PROPERTIES.every((p) => a.properties[p.id] === b.properties[p.id])
+    && a.showCompleted === b.showCompleted && JOB_PROPERTIES.every((p) => a.properties[p.id] === b.properties[p.id])
 }

@@ -9,9 +9,12 @@ import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { FileChip, formatFileSize } from '@/components/file-chip'
+import { FileChip } from '@/components/file-chip'
 import { IconAction } from '@/components/icon-action'
-import type { Citation } from './markdown'
+import { Mention } from '@/components/mention'
+import type { Citation } from '@/blocks/markdown'
+import { useCopied } from '@/lib/clipboard'
+import { plural } from '@/lib/text'
 
 // The pieces of a chat with an AI, as plain layouts: the person's message
 // (with attachments, mentions and an inline edit), the assistant's reply (a
@@ -23,9 +26,6 @@ import type { Citation } from './markdown'
 // every action goes out as a callback. Some notes show from @md up, so put the
 // chat in an @container.
 
-// The file chip is a kit component; re-exported for the pages that took it
-// from this block.
-export { FileChip, formatFileSize }
 
 export type ChatFile = {
   id: string
@@ -36,24 +36,13 @@ export type ChatFile = {
   icon?: IconSvgElement
 }
 
-// Briefly true after a copy, for the tick on a Copy button.
-function useCopied() {
-  const [copied, setCopied] = useState(false)
-  return [copied, () => {
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1500)
-  }] as const
-}
-
-const PILL = 'bg-brand/10 text-brand rounded px-1 py-px font-medium'
-
-// A leading /command and every match of `mentions` (@names) as brand pills.
+// A leading /command and every match of `mentions` (@names) as mention pills.
 function highlight(text: string, mentions?: RegExp | null): ReactNode[] {
   const out: ReactNode[] = []
   const command = text.match(/^\/\w+/)
   let rest = text
   if (command) {
-    out.push(<span key="cmd" className={PILL}>{command[0]}</span>)
+    out.push(<Mention key="cmd">{command[0]}</Mention>)
     rest = text.slice(command[0].length)
   }
   if (!mentions) return [...out, rest]
@@ -62,7 +51,7 @@ function highlight(text: string, mentions?: RegExp | null): ReactNode[] {
   for (const m of rest.matchAll(mentions)) {
     const index = m.index ?? 0
     if (index > last) out.push(rest.slice(last, index))
-    out.push(<span key={`m${n++}`} className={PILL}>{m[0]}</span>)
+    out.push(<Mention key={`m${n++}`}>{m[0]}</Mention>)
     last = index + m[0].length
   }
   out.push(rest.slice(last))
@@ -266,13 +255,20 @@ export function MessageActions({ onCopy, onRegenerate, regenerateDisabled, feedb
 }
 
 // Suggested next questions, as pills under the last reply.
-export function FollowUps({ items, onPick, className }: { items: string[]; onPick: (text: string) => void; className?: string }) {
+// Also suggested questions before a chat starts, with another label and icon.
+export function FollowUps({ items, onPick, label = 'Suggested follow-ups', icon = CornerDownRightIcon, className }: {
+  items: string[]
+  onPick: (text: string) => void
+  label?: string
+  icon?: IconSvgElement
+  className?: string
+}) {
   if (!items.length) return null
   return (
-    <div className={cn('flex min-w-0 flex-wrap gap-1.5', className)} role="group" aria-label="Suggested follow-ups">
+    <div className={cn('flex min-w-0 flex-wrap gap-1.5', className)} role="group" aria-label={label}>
       {items.map((text) => (
         <Button key={text} variant="outline" size="sm" className="h-auto min-h-6 max-w-full rounded-full py-0.5 text-left font-normal whitespace-normal" onClick={() => onPick(text)}>
-          <HugeiconsIcon icon={CornerDownRightIcon} strokeWidth={2} data-icon="inline-start" className="text-muted-foreground" />
+          <HugeiconsIcon icon={icon} strokeWidth={2} data-icon="inline-start" className="text-muted-foreground" />
           {text}
         </Button>
       ))}
@@ -351,7 +347,7 @@ export function SourcesRow({ sources, className }: { sources: Citation[]; classN
     <div className={cn('grid min-w-0 gap-1.5', className)}>
       <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
         <HugeiconsIcon icon={Globe02Icon} strokeWidth={2} className="size-3" />
-        {sources.length} sources
+        {plural(sources.length, 'source')}
       </span>
       <ol className="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-1">
         {sources.map((source, i) => (

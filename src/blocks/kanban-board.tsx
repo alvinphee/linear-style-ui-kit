@@ -1,4 +1,4 @@
-import { useRef, useState, type DragEvent, type ReactNode } from 'react'
+import { useRef, useState, type ComponentProps, type DragEvent, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, MoreHorizontalIcon, ViewIcon, ViewOffSlashIcon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
@@ -7,6 +7,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { plural } from '@/lib/text'
 
 // A Kanban board: a column per stage or status, cards dragged between
 // columns, and a "Move to…" menu for the keyboard and touch screens, where
@@ -14,12 +15,15 @@ import {
 // the page. Hidden columns fold into a strip at the end that still takes drops.
 //
 // Give it the columns in order, the items, and the column each item is in.
-// Draw each card with `renderCard`, spreading `card.cardProps` on the element
-// that drags (the card, not its menu button), and put `KanbanCardMenu` (or
-// `KanbanMoveItems` in your own menu) on it for moving without a mouse.
-// `onMove` runs when a card lands in another column. Place the board in a
-// container with a definite width, such as a `min-w-0` flex child.
+// Draw each card with `renderCard`: wrap your content in `KanbanCard`, which
+// drags, opens and shows the selected state, and give it `KanbanCardMenu` (or
+// `KanbanMoveItems` in your own menu) as its `menu`, for moving without a
+// mouse. A card of your own must spread `card.cardProps` on the element that
+// drags (the card, not its menu button). `onMove` runs when a card lands in
+// another column. Place the board in a container with a definite width, such
+// as a `min-w-0` flex child.
 
+// One column: a stage or status, and what its header shows.
 export type KanbanColumn<K extends string = string> = {
   id: K
   title: string
@@ -33,6 +37,7 @@ export type KanbanColumn<K extends string = string> = {
   hint?: ReactNode
 }
 
+// The drag wiring for one card (KanbanCard spreads it for you).
 export type KanbanCardProps = {
   draggable: true
   onDragStart: (e: DragEvent<HTMLElement>) => void
@@ -41,12 +46,15 @@ export type KanbanCardProps = {
   'data-kanban-card': string
 }
 
+// What `renderCard` gets for each card.
 export type KanbanCardState<K extends string = string> = {
   // Spread on the element that drags.
   cardProps: KanbanCardProps
   dragging: boolean
   // Moves the card from a menu; keyboard focus follows it to its new column.
   moveTo: (column: K) => void
+  // The board's variant, so KanbanCard matches its columns.
+  variant: KanbanVariant
 }
 
 // default: bordered columns, for a board that is the page.
@@ -75,6 +83,7 @@ const STYLES: Record<KanbanVariant, Record<'board' | 'column' | 'header' | 'row'
   },
 }
 
+// The board: its columns, the cards in them, dragging and the hidden-column strip.
 export function KanbanBoard<T extends { id: string }, K extends string = string>({
   columns,
   items,
@@ -133,7 +142,7 @@ export function KanbanBoard<T extends { id: string }, K extends string = string>
   const cardsIn = (id: K) => byColumn.get(id) ?? []
   const shown = columns.filter((c) => !hidden.includes(c.id) && (!hideEmpty || cardsIn(c.id).length > 0))
   const folded = columns.filter((c) => hidden.includes(c.id))
-  const counted = (n: number) => `${n} ${n === 1 ? itemName.one : itemName.other}`
+  const counted = (n: number) => plural(n, itemName.one, itemName.other)
 
   function move(id: string, column: K) {
     const item = items.find((i) => i.id === id)
@@ -218,6 +227,7 @@ export function KanbanBoard<T extends { id: string }, K extends string = string>
                       },
                       dragging: draggingId === item.id,
                       moveTo: (to) => moveTo(item.id, to),
+                      variant,
                     })}
                   </li>
                 ))
@@ -309,6 +319,71 @@ function ColumnHeader<K extends string>({ column, count, styles, addLabel, onAdd
   )
 }
 
+const CARD: Record<KanbanVariant, string> = {
+  default:
+    'bg-card hover:ring-foreground/10 focus-visible:ring-ring/40 data-[selected=true]:border-brand/40 grid cursor-grab gap-1.5 rounded-md border p-2.5 shadow-xs transition-[box-shadow,opacity] outline-none hover:ring-1 focus-visible:ring-2 active:cursor-grabbing data-[dragging=true]:opacity-40',
+  compact:
+    'bg-card hover:border-foreground/15 data-[selected=true]:border-primary/50 focus-visible:ring-ring/40 grid cursor-grab gap-1.5 rounded-md border p-2 text-xs outline-none select-none focus-visible:ring-2 active:cursor-grabbing data-[dragging=true]:opacity-40',
+}
+
+// The card shell for `renderCard`: it drags, opens on click, Enter or Space,
+// shows the selected state and fades while dragged, styled to match the
+// board's variant. Your content goes inside. `menu` (a KanbanCardMenu, or
+// your own … menu) sits beside the card at its top right, not inside it, so
+// no button is nested in a button; move it with `menuClassName` when the
+// corner is taken. Other props and `ref` go on the card itself, so it works
+// inside an `asChild` trigger such as a context menu's.
+export function KanbanCard<K extends string = string>({
+  card,
+  onOpen,
+  selected = false,
+  menu,
+  menuClassName,
+  className,
+  children,
+  ref,
+  onClick,
+  onKeyDown,
+  ...props
+}: Omit<ComponentProps<'div'>, 'children'> & {
+  card: KanbanCardState<K>
+  onOpen: () => void
+  // The card open in the side panel.
+  selected?: boolean
+  menu?: ReactNode
+  menuClassName?: string
+  children: ReactNode
+}) {
+  return (
+    <div className="group/card relative">
+      <div
+        ref={ref}
+        role="button"
+        tabIndex={0}
+        {...props}
+        {...card.cardProps}
+        data-selected={selected}
+        onClick={(e) => {
+          onClick?.(e)
+          if (!e.defaultPrevented) onOpen()
+        }}
+        onKeyDown={(e) => {
+          onKeyDown?.(e)
+          if (e.defaultPrevented || e.target !== e.currentTarget) return
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onOpen()
+          }
+        }}
+        className={cn(CARD[card.variant], className)}
+      >
+        {children}
+      </div>
+      {menu != null && <div className={cn('absolute top-2 right-2 flex', menuClassName)}>{menu}</div>}
+    </div>
+  )
+}
+
 // "Move to…" and a radio item per column, for a menu of your own.
 export function KanbanMoveItems<K extends string>({ columns, value, onMove, label = 'Move to…' }: {
   columns: KanbanColumn<K>[]
@@ -333,8 +408,9 @@ export function KanbanMoveItems<K extends string>({ columns, value, onMove, labe
 }
 
 // The … button on a card: your own items (children), then "Move to…". Hidden
-// until hover or focus on mouse devices, always shown on touch screens. The
-// card needs the `group/card` class.
+// until hover or focus on mouse devices, always shown on touch screens. Pass
+// it as KanbanCard's `menu`; on a card of your own, the card needs the
+// `group/card` class.
 export function KanbanCardMenu<K extends string>({ label, columns, value, onMove, children, className }: {
   // The button's accessible name: "Move OPP-2001 to another stage".
   label: string

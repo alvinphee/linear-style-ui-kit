@@ -1,4 +1,5 @@
-import { formatSize } from './data'
+import { formatFileSize } from '@/lib/format'
+import { plural } from '@/lib/text'
 import type { Job } from '../../data'
 import type {
   ApprovalRequest, Artifact, ArtifactKind, ArtifactSource, FileRef, Model, Modes, Project, Source, StepState, ToolName,
@@ -45,6 +46,8 @@ export type AgentContext = {
   modes: Modes
   // A snapshot of the shared job store, taken when the prompt is sent.
   jobs: Job[]
+  // Invoices that already got a payment reminder.
+  reminded: string[]
   // 0 for the first answer, 1 after one regenerate, and so on.
   attempt: number
   attachments: FileRef[]
@@ -66,6 +69,8 @@ const TOOL_MS: Record<ToolName, number> = {
   update_jobs: 1000,
   read_file: 800,
   search_knowledge: 850,
+  search_invoices: 900,
+  send_reminders: 1100,
 }
 
 function hash(text: string) {
@@ -73,8 +78,6 @@ function hash(text: string) {
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
   return Math.abs(h)
 }
-
-export const plural = (n: number, word: string, many = `${word}s`) => `${n} ${n === 1 ? word : many}`
 
 export class Builder {
   events: ScriptEvent[] = []
@@ -165,11 +168,11 @@ export function readFile(file: FileRef) {
   const seed = hash(file.name)
   if (file.kind === 'sheet' || file.kind === 'csv') {
     const rows = 20 + (seed % 180)
-    return { output: { name: file.name, size: formatSize(file.size), rows, columns: 4 + (seed % 8) }, summary: plural(rows, 'row') }
+    return { output: { name: file.name, size: formatFileSize(file.size), rows, columns: 4 + (seed % 8) }, summary: plural(rows, 'row') }
   }
   if (file.kind === 'image') {
-    return { output: { name: file.name, size: formatSize(file.size), width: 1600, height: 1200, text_found: false }, summary: '1600 × 1200' }
+    return { output: { name: file.name, size: formatFileSize(file.size), width: 1600, height: 1200, text_found: false }, summary: '1600 × 1200' }
   }
   const pages = 1 + (seed % 12)
-  return { output: { name: file.name, size: formatSize(file.size), pages, words: pages * 310 }, summary: plural(pages, 'page') }
+  return { output: { name: file.name, size: formatFileSize(file.size), pages, words: pages * 310 }, summary: plural(pages, 'page') }
 }

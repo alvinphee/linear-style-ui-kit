@@ -1,25 +1,16 @@
-import { format } from 'date-fns'
-import { LABELS, PRIORITY, STATUS, type Job, type Priority, type Status } from '../../data'
+import { formatShortDate } from '@/lib/format'
+import { LABELS, PRIORITY, PRIORITY_RANK, STATUS, dueRank, type Job, type Status } from '../../data'
 import { now } from './data'
 
 // Job helpers. Everything reads the snapshot of the real job store.
 
 export const OPEN: Status[] = ['backlog', 'todo', 'progress']
-export const RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 }
-export const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 export const isOpen = (job: Job) => OPEN.includes(job.status)
-export const isHot = (job: Job) => RANK[job.priority] <= 1
+export const isHot = (job: Job) => PRIORITY_RANK[job.priority] <= 1
 
-export function dueRank(due: string) {
-  if (due === 'Today') return 0
-  if (due === 'Tomorrow') return 1
-  const m = due.match(/^(\d{1,2}) (\w{3})/)
-  if (m) return 2 + Math.max(0, MONTHS.indexOf(m[2]) - 8) * 31 + Number(m[1])
-  return 999
-}
-
-export const byUrgency = (a: Job, b: Job) => RANK[a.priority] - RANK[b.priority] || dueRank(a.due) - dueRank(b.due)
+export const byUrgency = (a: Job, b: Job) =>
+  PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || dueRank(a.due) - dueRank(b.due)
 
 export function jobRow(job: Job) {
   return {
@@ -67,7 +58,7 @@ export function csv(rows: Record<string, string | number>[]) {
   return [keys.join(','), ...rows.map((r) => keys.map((k) => esc(r[k])).join(','))].join('\n')
 }
 
-export const DATE_LABEL = () => format(now(), 'd MMM yyyy')
+export const DATE_LABEL = () => formatShortDate(now(), { year: true })
 
 export function findJobIds(prompt: string) {
   return [...prompt.matchAll(/\bDO-\d{3,}\b/gi)].map((m) => m[0].toUpperCase())

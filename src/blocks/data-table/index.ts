@@ -5,7 +5,7 @@ export {
   type UseDataTableOptions,
 } from './features'
 export {
-  BulkDelete, DeleteConfirm, DensityToggle, FacetFilter, Pagination, RangeFilter, ViewOptions, actionsColumn, copyText,
-  listNames, selectColumn, type DataTableRowAction, type Density, type FacetOption,
+  BulkDelete, DensityToggle, FacetFilter, Pagination, RangeFilter, ViewOptions, actionsColumn,
+  listNames, MIXED, selectColumn, type DataTableRowAction, type Density, type FacetOption,
 } from './parts'
-export { downloadCsv, exportTableCsv, plural, type DataTableCsv } from './csv'
+export { downloadCsv, exportTableCsv, type DataTableCsv } from './csv'

@@ -1,820 +1,46 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight01Icon, DatabaseIcon, PencilEdit02Icon, SparklesIcon } from '@hugeicons/core-free-icons'
-import { toast } from 'sonner'
-import { AssistantMessage, FollowUps, MessageActions, StoppedNote, UserMessage, type Feedback } from '@/blocks/ai/chat-message'
-import { Markdown } from '@/blocks/ai/markdown'
-import { PromptBox, type PromptBoxHandle } from '@/blocks/ai/prompt-box'
-import { ThinkingTrail, type TrailStep } from '@/blocks/ai/thinking-trail'
+import { ArrowExpand01Icon, PencilEdit02Icon, SparklesIcon } from '@hugeicons/core-free-icons'
+import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat-thread'
 import { IconAction } from '@/components/icon-action'
 import { IconMark } from '@/components/mark'
 import { Shortcut } from '@/components/shortcut'
-import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { usePath } from '@/lib/router'
+import { firstName, suggestions } from './assistant/answers'
+import { parseRecordHref, useAssistant } from './assistant/store'
+import { Composer, Turns } from './assistant/Turns'
 import { ROLE_LABEL } from './data'
-import { TODAY, addDays, daysBetween, formatDate, formatMoney, formatNumber } from './format'
-import { MODULES, moduleById } from './modules'
+import { edition } from './edition'
+import { MODULES, moduleById, pagesOf } from './modules'
 import { go, parseRoute } from './route'
 import { useErp } from './store'
-import type { Data, EntityId, ErpModule, Role, Row } from './types'
+import type { EntityId, Role } from './types'
 
 // The "Ask AI" copilot: a side panel that answers questions about the
-// company's records. Answers are scripted from the live data (no model is
-// called), shown after a short "Thinking…" and streamed in word by word.
-
-/* ---------- Answers ---------- */
-
-// A record number inside an answer. It renders as a button that opens the record.
-type Ref = { entity: EntityId; id: string }
-type Inline = string | Ref
-type Block = { kind: 'p'; parts: Inline[] } | { kind: 'list'; items: Inline[][] }
-type Link = { label: string; module: string; page: string }
-type Answer = { blocks: Block[]; source?: string; links?: Link[]; followUps?: string[] }
-
-const p = (...parts: Inline[]): Block => ({ kind: 'p', parts })
-const list = (items: Inline[][]): Block => ({ kind: 'list', items })
-const ref = (entity: EntityId, id: string): Ref => ({ entity, id })
-
-const num = (r: Row, key: string) => Number(r[key] ?? 0)
-const str = (r: Row, key: string) => String(r[key] ?? '')
-const sum = (rows: Row[], key: string) => rows.reduce((t, r) => t + num(r, key), 0)
-const is = (...statuses: string[]) => (r: Row) => statuses.includes(str(r, 'status'))
-const most = (key: string) => (a: Row, b: Row) => num(b, key) - num(a, key)
-const earliest = (key: string) => (a: Row, b: Row) => str(a, key).localeCompare(str(b, key))
-const money = (n: number) => formatMoney(n, false)
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
-const isAre = (n: number) => (n === 1 ? 'is' : 'are')
-const inDays = (n: number) => addDays(TODAY, n)
-// Leads into the example record: ", such as SO-1" for many, ": SO-1" for one.
-const eg = (n: number, phrase: string) => (n === 1 ? ': ' : `, ${phrase} `)
-const firstName = (name: string) => name.split(' ')[0] || 'there'
-const monthOf = (iso: string) =>
-  new Date(`${iso.slice(0, 7)}-01T00:00:00Z`).toLocaleString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' })
-const span = (r: Row) => (str(r, 'from') === str(r, 'to') ? formatDate(str(r, 'from')) : `${formatDate(str(r, 'from'))} – ${formatDate(str(r, 'to'))}`)
-const stamp = (at: string) => `${formatDate(at.slice(0, 10))}, ${at.slice(11)}`
-const warehouse = (data: Data, id: string) => String(data.warehouses.find((w) => w.id === id)?.name ?? id)
-const canOpen = (moduleId: string, role: Role) => !!moduleById(moduleId)?.roles.includes(role)
-
-function thisWeek() {
-  const monday = addDays(TODAY, -((new Date(`${TODAY}T00:00:00Z`).getUTCDay() + 6) % 7))
-  return { start: monday, end: addDays(monday, 6) }
-}
-
-const PROMPTS: Record<string, string[]> = {
-  home: ['What needs my attention today?', 'What needs my approval?'],
-  crm: ['Which opportunities close this month?', 'Which activities are overdue?', 'Which new leads score highest?'],
-  sales: ['Summarise open sales orders', 'Which quotations expire this week?', 'What is ready to deliver?'],
-  inventory: ['Which items are below the reorder point?', 'Which stock transfers are in transit?', 'Which warehouse is fullest?'],
-  purchasing: ['What needs my approval?', 'Which purchase orders are late?', 'Who are our top vendors by spend?'],
-  accounting: ['Which invoices are overdue?', 'Summarise accounts receivable', 'Which vendor bills are due this week?'],
-  hr: ['Who is on leave this week?', 'When is the next payroll run?', 'How many employees are on probation?'],
-  admin: ['Which users have not set up 2FA?', 'Which users are invited or suspended?', 'What changed in the audit trail today?'],
-}
-
-// The home prompts, then the first prompt of each module the role can open.
-function starterPrompts(role: Role) {
-  const extra = MODULES.filter((m) => m.id !== 'home' && m.roles.includes(role)).map((m) => PROMPTS[m.id]?.[0]).filter((q): q is string => !!q)
-  return [...new Set([...PROMPTS.home, ...extra])]
-}
-
-function suggestions(module: ErpModule, role: Role) {
-  if (module.id !== 'home' && module.roles.includes(role) && PROMPTS[module.id]) return PROMPTS[module.id]
-  return starterPrompts(role).slice(0, 4)
-}
-
-type Pending = { entity: EntityId; noun: string; rows: Row[]; value?: string; detail: (r: Row) => string; link: Link }
-
-// What waits for this role's approval, by record type. Matches the launchpad.
-function pendingApprovals(data: Data, role: Role): Pending[] {
-  const groups: (Pending & { roles: Role[] })[] = [
-    {
-      entity: 'purchaseOrders', noun: 'purchase order', roles: ['admin', 'finance'], value: 'amount',
-      rows: data.purchaseOrders.filter(is('Awaiting approval')).sort(most('amount')),
-      detail: (r) => ` (${str(r, 'vendor')}, ${money(num(r, 'amount'))})`,
-      link: { label: 'Purchase orders', module: 'purchasing', page: 'orders' },
-    },
-    {
-      entity: 'requisitions', noun: 'purchase requisition', roles: ['admin', 'operations', 'finance'], value: 'estimate',
-      rows: data.requisitions.filter(is('Awaiting approval')).sort(most('estimate')),
-      detail: (r) => ` (${str(r, 'item')}, ${formatNumber(num(r, 'quantity'))} units)`,
-      link: { label: 'Purchase requisitions', module: 'purchasing', page: 'requisitions' },
-    },
-    {
-      entity: 'leave', noun: 'leave request', roles: ['admin', 'hr'],
-      rows: data.leave.filter(is('Pending')).sort(earliest('from')),
-      detail: (r) => ` (${str(r, 'employee')}, ${span(r)})`,
-      link: { label: 'Leave requests', module: 'hr', page: 'leave' },
-    },
-  ]
-  return groups.filter((g) => g.roles.includes(role) && g.rows.length > 0)
-}
-
-type Ctx = { data: Data; role: Role; name: string }
-// `module` is where the records live: a role that can't open it gets no answer.
-type Intent = { module: string; match: RegExp; answer: (ctx: Ctx) => Answer }
-
-// First match wins, so the specific questions come before the broad ones.
-const INTENTS: Intent[] = [
-  {
-    module: 'home', match: /^(hi|hello|hey|good (morning|afternoon|evening))\b/,
-    answer: ({ name, role }) => ({
-      blocks: [p(`Hi ${firstName(name)}. I can look things up across your modules. What would you like to know?`)],
-      followUps: starterPrompts(role).slice(0, 3),
-    }),
-  },
-  {
-    module: 'home', match: /^(thanks|thank you|cheers|great|perfect)\b/,
-    answer: () => ({ blocks: [p('Happy to help. Ask me anything else about your records.')] }),
-  },
-  {
-    module: 'admin', match: /two.?factor|\b2fa\b|\bmfa\b/,
-    answer: ({ data }) => {
-      const without = data.users.filter((u) => !u.mfa && u.status !== 'Suspended')
-      const on = data.users.filter((u) => u.mfa).length
-      const source = plural(data.users.length, 'user')
-      if (!without.length) return { blocks: [p('Every active user has two-factor authentication (2FA) set up.')], source }
-      return {
-        blocks: [
-          p(`${on} of ${data.users.length} users have two-factor authentication (2FA) set up. ${plural(without.length, 'user')} ${without.length === 1 ? 'has' : 'have'} not:`),
-          list(without.map((u) => [ref('users', u.id), ` · ${str(u, 'name')}, ${str(u, 'role')}, last active ${formatDate(str(u, 'lastActive'))}`])),
-          p('Turn on "Require two-factor authentication" in company settings and they are asked at their next sign-in.'),
-        ],
-        source,
-        links: [{ label: 'Company settings', module: 'admin', page: 'company' }, { label: 'Users', module: 'admin', page: 'users' }],
-      }
-    },
-  },
-  {
-    module: 'admin', match: /audit|changed|who did|history|recent changes?/,
-    answer: ({ data }) => {
-      const events = [...data.audit].sort((a, b) => str(b, 'at').localeCompare(str(a, 'at')))
-      const today = events.filter((e) => str(e, 'at').startsWith(TODAY)).length
-      return {
-        blocks: [
-          p(`${plural(today, 'change')} ${today === 1 ? 'was' : 'were'} logged in the audit trail today. The latest:`),
-          list(events.slice(0, 4).map((e) => [
-            ref('audit', e.id), ` · ${str(e, 'actor')} ${str(e, 'action')}${str(e, 'target') ? ` ${str(e, 'target')}` : ''}, ${stamp(str(e, 'at'))}`,
-          ])),
-        ],
-        source: plural(data.audit.length, 'audit event'),
-        links: [{ label: 'Audit trail', module: 'admin', page: 'audit' }],
-      }
-    },
-  },
-  {
-    module: 'admin', match: /\busers?\b|invit|suspend|\bseats?\b/,
-    answer: ({ data }) => {
-      const active = data.users.filter(is('Active')).length
-      const waiting = data.users.filter(is('Invited', 'Suspended'))
-      const blocks: Block[] = [p(`${active} of ${data.users.length} users are active.${waiting.length ? ` ${plural(waiting.length, 'user')} ${isAre(waiting.length)} invited or suspended:` : ''}`)]
-      if (waiting.length) {
-        blocks.push(
-          list(waiting.map((u) => [ref('users', u.id), ` · ${str(u, 'name')}, ${str(u, 'role')}, ${str(u, 'status').toLowerCase()}`])),
-          p('Open a user to resend the invitation or restore access.'),
-        )
-      }
-      return {
-        blocks,
-        source: plural(data.users.length, 'user'),
-        links: [{ label: 'Users', module: 'admin', page: 'users' }, { label: 'Roles and permissions', module: 'admin', page: 'roles' }],
-      }
-    },
-  },
-  {
-    module: 'hr', match: /\bleave\b|holiday|time off|out of office|\baway\b|absent|vacation/,
-    answer: ({ data }) => {
-      const { start, end } = thisWeek()
-      const week = `${formatDate(start)} – ${formatDate(end)}`
-      const away = data.leave.filter((r) => r.status === 'Approved' && str(r, 'from') <= end && str(r, 'to') >= start).sort(earliest('from'))
-      const pending = data.leave.filter(is('Pending')).sort(earliest('from'))
-      const blocks: Block[] = away.length
-        ? [
-            p(`${plural(away.length, 'person', 'people')} ${away.length === 1 ? 'has' : 'have'} approved leave this week (${week}):`),
-            list(away.map((r) => [ref('leave', r.id), ` · ${str(r, 'employee')}, ${str(r, 'type').toLowerCase()}, ${span(r)}`])),
-          ]
-        : [p(`Nobody has approved leave this week (${week}).`)]
-      if (pending.length) {
-        blocks.push(p(
-          `${plural(pending.length, 'leave request')} ${isAre(pending.length)} waiting for approval. The earliest starts on ${formatDate(str(pending[0], 'from'))}: `,
-          ref('leave', pending[0].id), '.',
-        ))
-      }
-      return { blocks, source: plural(data.leave.length, 'leave request'), links: [{ label: 'Leave requests', module: 'hr', page: 'leave' }] }
-    },
-  },
-  {
-    module: 'hr', match: /payroll|pay run|salar|wages?\b/,
-    answer: ({ data }) => {
-      const runs = [...data.payroll].sort(earliest('period'))
-      const next = runs.find(is('Draft'))
-      const last = [...runs].reverse().find(is('Completed'))
-      const blocks: Block[] = []
-      if (next) {
-        blocks.push(p(
-          'The next payroll run is ', ref('payroll', next.id),
-          ` for ${monthOf(str(next, 'period'))}: ${num(next, 'employees')} employees, ${money(num(next, 'gross'))} gross, paid on ${formatDate(str(next, 'payDate'))}. It is still a draft.`,
-        ))
-      }
-      for (const r of runs.filter(is('Processing'))) blocks.push(p(`The ${monthOf(str(r, 'period'))} run, `, ref('payroll', r.id), ', is still processing.'))
-      if (last) blocks.push(p(`The last completed run was ${monthOf(str(last, 'period'))}, at ${money(num(last, 'gross'))} gross.`))
-      if (!blocks.length) blocks.push(p('There are no payroll runs yet.'))
-      return { blocks, source: plural(data.payroll.length, 'payroll run'), links: [{ label: 'Payroll', module: 'hr', page: 'payroll' }] }
-    },
-  },
-  {
-    module: 'hr', match: /employees?|headcount|\bstaff\b|probation|new hires?/,
-    answer: ({ data }) => {
-      const probation = data.employees.filter(is('Probation')).sort(earliest('start'))
-      const onLeave = data.employees.filter(is('On leave')).length
-      const active = data.employees.filter(is('Active')).length
-      const blocks: Block[] = [p(`You have ${data.employees.length} employees: ${active} active, ${onLeave} on leave and ${probation.length} on probation.`)]
-      if (probation.length) {
-        blocks.push(p('On probation:'), list(probation.map((e) => [
-          ref('employees', e.id), ` · ${str(e, 'name')}, ${str(e, 'jobTitle').toLowerCase()}, started ${formatDate(str(e, 'start'))}`,
-        ])))
-      }
-      return { blocks, source: plural(data.employees.length, 'employee'), links: [{ label: 'Employees', module: 'hr', page: 'employees' }] }
-    },
-  },
-  {
-    module: 'home', match: /approv|sign.?off|awaiting/,
-    answer: ({ data, role }) => {
-      const groups = pendingApprovals(data, role)
-      const count = groups.reduce((n, g) => n + g.rows.length, 0)
-      const source = 'your approval queue'
-      if (!count) return { blocks: [p('Nothing is waiting for your approval right now.')], source }
-      return {
-        blocks: [
-          p(`${plural(count, 'item')} ${isAre(count)} waiting for your approval:`),
-          list(groups.map((g) => [
-            `${plural(g.rows.length, g.noun)}${g.value ? ` worth ${money(sum(g.rows, g.value))}` : ''}, starting with `,
-            ref(g.entity, g.rows[0].id), g.detail(g.rows[0]),
-          ])),
-          p('Open a record to approve or reject it. The launchpad lists them too.'),
-        ],
-        source,
-        links: groups.map((g) => g.link),
-      }
-    },
-  },
-  {
-    module: 'home', match: /attention|today|catch me up|priorit|what should i|focus on/,
-    answer: ({ data, role, name }) => {
-      const lines: Inline[][] = []
-      const approvals = pendingApprovals(data, role)
-      const waiting = approvals.reduce((n, g) => n + g.rows.length, 0)
-      if (waiting) lines.push([`${plural(waiting, 'approval')} waiting${eg(waiting, 'starting with')}`, ref(approvals[0].entity, approvals[0].rows[0].id), '.'])
-      if (canOpen('accounting', role)) {
-        const overdue = data.invoices.filter(is('Overdue')).sort(most('balance'))
-        if (overdue.length) {
-          lines.push([`${plural(overdue.length, 'customer invoice')} overdue, ${money(sum(overdue, 'balance'))} in total${eg(overdue.length, 'the largest')}`, ref('invoices', overdue[0].id), ` (${str(overdue[0], 'customer')}).`])
-        }
-        const bills = data.bills.filter((r) => r.status === 'Open' && str(r, 'due') >= TODAY && str(r, 'due') <= inDays(7)).sort(earliest('due'))
-        if (bills.length) lines.push([`${plural(bills.length, 'vendor bill')} due in the next 7 days${eg(bills.length, 'the first')}`, ref('bills', bills[0].id), ` on ${formatDate(str(bills[0], 'due'))}.`])
-      }
-      if (canOpen('sales', role)) {
-        const ready = data.deliveries.filter(is('Ready to pick'))
-        if (ready.length) lines.push([`${plural(ready.length, 'delivery', 'deliveries')} ready to pick${eg(ready.length, 'such as')}`, ref('deliveries', ready[0].id), ` for ${str(ready[0], 'customer')}.`])
-      }
-      if (canOpen('inventory', role)) {
-        const out = data.items.filter(is('Out of stock'))
-        if (out.length) lines.push([`${plural(out.length, 'item')} out of stock${eg(out.length, 'including')}`, ref('items', out[0].id), ` (${str(out[0], 'name')}).`])
-      }
-      if (canOpen('crm', role)) {
-        const late = data.activities.filter(is('Overdue')).sort(earliest('due'))
-        if (late.length) lines.push([`${plural(late.length, 'activity', 'activities')} overdue${eg(late.length, 'the oldest')}`, ref('activities', late[0].id), '.'])
-      }
-      if (canOpen('admin', role)) {
-        const invited = data.users.filter(is('Invited'))
-        if (invited.length) lines.push([`${plural(invited.length, 'user')} invited but not signed in yet${eg(invited.length, 'such as')}`, ref('users', invited[0].id), '.'])
-      }
-      return {
-        blocks: lines.length
-          ? [p(`Here's what needs you today, ${firstName(name)}:`), list(lines), p('Ask me about any of these for the detail.')]
-          : [p(`Nothing urgent today, ${firstName(name)}. You're all caught up.`)],
-        source: 'your modules',
-        followUps: starterPrompts(role).filter((q) => !/attention/.test(q)).slice(0, 2),
-      }
-    },
-  },
-  {
-    module: 'crm', match: /activit|follow.?ups?|\btasks?\b|\bcalls?\b|meetings?/,
-    answer: ({ data }) => {
-      const late = data.activities.filter(is('Overdue')).sort(earliest('due'))
-      const soon = data.activities.filter((r) => r.status === 'Scheduled' && str(r, 'due') <= inDays(7)).length
-      const blocks: Block[] = late.length
-        ? [
-            p(`${plural(late.length, 'activity', 'activities')} ${isAre(late.length)} overdue:`),
-            list(late.slice(0, 3).map((r) => [ref('activities', r.id), ` · ${str(r, 'subject')}, ${str(r, 'owner')}, due ${formatDate(str(r, 'due'))}`])),
-          ]
-        : [p('No activities are overdue.')]
-      blocks.push(p(soon ? `${plural(soon, 'activity', 'activities')} ${isAre(soon)} scheduled for the next 7 days.` : 'Nothing else is scheduled for the next 7 days.'))
-      return { blocks, source: plural(data.activities.length, 'activity', 'activities'), links: [{ label: 'Activities', module: 'crm', page: 'activities' }] }
-    },
-  },
-  {
-    module: 'inventory', match: /reorder|low stock|out of stock|below|restock|stock level|run(ning)? out/,
-    answer: ({ data }) => {
-      const shortfall = (r: Row) => num(r, 'reorderPoint') - num(r, 'onHand')
-      const low = data.items.filter(is('Low stock', 'Out of stock')).sort((a, b) => shortfall(b) - shortfall(a))
-      const out = low.filter(is('Out of stock')).length
-      const source = plural(data.items.length, 'item')
-      if (!low.length) return { blocks: [p('Every item is above its reorder point.')], source }
-      return {
-        blocks: [
-          p(`${plural(low.length, 'item')} ${isAre(low.length)} below the reorder point${out ? `, and ${out} of them ${isAre(out)} out of stock` : ''}. The biggest shortfalls:`),
-          list(low.slice(0, 3).map((r) => [
-            ref('items', r.id), ` · ${str(r, 'name')}: ${formatNumber(num(r, 'onHand'))} on hand, reorder point ${formatNumber(num(r, 'reorderPoint'))}`,
-          ])),
-          p('Raise a purchase requisition for these so purchasing can order more.'),
-        ],
-        source,
-        links: [{ label: 'Items', module: 'inventory', page: 'items' }, { label: 'Purchase requisitions', module: 'purchasing', page: 'requisitions' }],
-      }
-    },
-  },
-  {
-    module: 'inventory', match: /transfers?\b/,
-    answer: ({ data }) => {
-      const moving = data.transfers.filter(is('In transit')).sort(earliest('requested'))
-      const drafts = data.transfers.filter(is('Draft')).length
-      const blocks: Block[] = moving.length
-        ? [
-            p(`${plural(moving.length, 'stock transfer')} ${isAre(moving.length)} in transit.${moving.length > 3 ? ' The oldest:' : ''}`),
-            list(moving.slice(0, 3).map((r) => [
-              ref('transfers', r.id),
-              ` · ${warehouse(data, str(r, 'from'))} → ${warehouse(data, str(r, 'to'))}, ${plural(num(r, 'lines'), 'line')}, requested ${formatDate(str(r, 'requested'))}`,
-            ])),
-          ]
-        : [p('No stock transfers are in transit.')]
-      if (drafts) blocks.push(p(`${plural(drafts, 'more transfer')} ${isAre(drafts)} still in draft.`))
-      return { blocks, source: plural(data.transfers.length, 'stock transfer'), links: [{ label: 'Stock transfers', module: 'inventory', page: 'transfers' }] }
-    },
-  },
-  {
-    module: 'inventory', match: /warehouses?|utili[sz]|capacity|fullest|\bspace\b/,
-    answer: ({ data }) => {
-      const sorted = [...data.warehouses].sort(most('utilisation'))
-      const top = sorted[0]
-      const least = sorted[sorted.length - 1]
-      if (!top) return { blocks: [p('No warehouses are set up yet.')] }
-      const blocks: Block[] = [
-        p(`${str(top, 'name')} is the fullest, at ${num(top, 'utilisation')}% utilisation.`),
-        list(sorted.map((w) => [
-          ref('warehouses', w.id), ` · ${str(w, 'name')}, ${str(w, 'city')}: ${num(w, 'utilisation')}% full, ${plural(num(w, 'skus'), 'stock line')}`,
-        ])),
-      ]
-      if (top !== least && num(top, 'utilisation') >= 85) {
-        blocks.push(p(`Consider a stock transfer from ${str(top, 'name')} to ${str(least, 'name')}, which is at ${num(least, 'utilisation')}%.`))
-      }
-      return { blocks, source: plural(data.warehouses.length, 'warehouse'), links: [{ label: 'Warehouses', module: 'inventory', page: 'warehouses' }] }
-    },
-  },
-  {
-    module: 'accounting', match: /\bbills?\b|payables?|\bap\b/,
-    answer: ({ data }) => {
-      const open = data.bills.filter(is('Open', 'Overdue'))
-      const overdue = open.filter(is('Overdue')).sort(earliest('due'))
-      const soon = open.filter((r) => r.status === 'Open' && str(r, 'due') >= TODAY && str(r, 'due') <= inDays(7)).sort(earliest('due'))
-      const show = soon.length ? soon : overdue
-      const blocks: Block[] = [
-        p(`Accounts payable is ${money(sum(open, 'amount'))} across ${plural(open.length, 'open vendor bill')}. ${overdue.length} ${isAre(overdue.length)} overdue, worth ${money(sum(overdue, 'amount'))}.`),
-        p(soon.length ? `${plural(soon.length, 'bill')} ${soon.length === 1 ? 'falls' : 'fall'} due in the next 7 days:` : overdue.length ? 'Nothing else falls due in the next 7 days. The oldest overdue:' : 'Nothing falls due in the next 7 days.'),
-      ]
-      if (show.length) blocks.push(list(show.slice(0, 3).map((r) => [ref('bills', r.id), ` · ${str(r, 'vendor')}, ${money(num(r, 'amount'))}, due ${formatDate(str(r, 'due'))}`])))
-      return { blocks, source: plural(data.bills.length, 'vendor bill'), links: [{ label: 'Vendor bills', module: 'accounting', page: 'bills' }] }
-    },
-  },
-  {
-    module: 'purchasing', match: /purchase orders?|\bpos?\b|arriv|expected/,
-    answer: ({ data }) => {
-      const open = data.purchaseOrders.filter(is('Approved', 'Partially received'))
-      const late = open.filter((r) => str(r, 'expected') < TODAY).sort(earliest('expected'))
-      const waiting = data.purchaseOrders.filter(is('Awaiting approval')).length
-      const blocks: Block[] = late.length
-        ? [
-            p(`${plural(late.length, 'open purchase order')} ${isAre(late.length)} past the expected date and not fully received, worth ${money(sum(late, 'amount'))}:`),
-            list(late.slice(0, 3).map((r) => [
-              ref('purchaseOrders', r.id),
-              ` · ${str(r, 'vendor')}, ${money(num(r, 'amount'))}, expected ${formatDate(str(r, 'expected'))} (${plural(daysBetween(str(r, 'expected'), TODAY), 'day')} late)`,
-            ])),
-            p('Chase the vendors, then record a goods receipt when the goods arrive.'),
-          ]
-        : [p(open.length ? `None of the ${plural(open.length, 'open purchase order')} are late.` : 'There are no open purchase orders.')]
-      if (waiting) blocks.push(p(`${plural(waiting, 'purchase order')} ${isAre(waiting)} still waiting for approval.`))
-      return {
-        blocks,
-        source: plural(data.purchaseOrders.length, 'purchase order'),
-        links: [{ label: 'Purchase orders', module: 'purchasing', page: 'orders' }, { label: 'Goods receipts', module: 'purchasing', page: 'receipts' }],
-      }
-    },
-  },
-  {
-    module: 'purchasing', match: /vendors?|suppliers?|\bspend/,
-    answer: ({ data }) => {
-      const spend = new Map<string, { value: number; orders: number }>()
-      for (const r of data.purchaseOrders) {
-        if (r.status === 'Draft') continue
-        const v = spend.get(str(r, 'vendor')) ?? { value: 0, orders: 0 }
-        spend.set(str(r, 'vendor'), { value: v.value + num(r, 'amount'), orders: v.orders + 1 })
-      }
-      const ranked = [...spend.entries()].sort((a, b) => b[1].value - a[1].value)
-      const all = ranked.reduce((t, [, s]) => t + s.value, 0)
-      const top = ranked.slice(0, 3)
-      const source = plural(data.purchaseOrders.length, 'purchase order')
-      if (!top.length) return { blocks: [p('There is no purchase order spend yet.')], source }
-      const share = Math.round((top.reduce((t, [, s]) => t + s.value, 0) / all) * 100)
-      return {
-        blocks: [
-          p('Your top vendors by purchase order value:'),
-          list(top.map(([vendor, s]): Inline[] => {
-            const v = data.vendors.find((x) => x.name === vendor)
-            const text = `${vendor}, ${money(s.value)} across ${plural(s.orders, 'order')}${v ? `, rated ${num(v, 'rating')} of 5` : ''}`
-            return v ? [ref('vendors', v.id), ` · ${text}`] : [text]
-          })),
-          p(`Together they are ${share}% of the ${money(all)} on purchase orders, not counting drafts.`),
-        ],
-        source,
-        links: [{ label: 'Vendors', module: 'purchasing', page: 'vendors' }],
-      }
-    },
-  },
-  {
-    module: 'accounting', match: /overdue|\bowe|chase|collect|late pay|unpaid/,
-    answer: ({ data }) => {
-      const overdue = data.invoices.filter(is('Overdue')).sort(most('balance'))
-      const source = plural(data.invoices.length, 'customer invoice')
-      if (!overdue.length) return { blocks: [p('No customer invoices are overdue.')], source }
-      const oldest = [...overdue].sort(earliest('due'))[0]
-      return {
-        blocks: [
-          p(`${plural(overdue.length, 'customer invoice')} ${isAre(overdue.length)} overdue, worth ${money(sum(overdue, 'balance'))} in total. The largest:`),
-          list(overdue.slice(0, 3).map((r) => [
-            ref('invoices', r.id), ` · ${str(r, 'customer')}, ${money(num(r, 'balance'))}, ${plural(daysBetween(str(r, 'due'), TODAY), 'day')} overdue`,
-          ])),
-          p('The oldest, ', ref('invoices', oldest.id), `, has been due since ${formatDate(str(oldest, 'due'))}.`),
-        ],
-        source,
-        links: [{ label: 'Customer invoices', module: 'accounting', page: 'invoices' }],
-        followUps: ['Summarise accounts receivable'],
-      }
-    },
-  },
-  {
-    module: 'accounting', match: /receivables?|\bar\b|ageing|aging|invoices?/,
-    answer: ({ data }) => {
-      const open = data.invoices.filter(is('Sent', 'Partially paid', 'Overdue'))
-      const source = plural(data.invoices.length, 'customer invoice')
-      if (!open.length) return { blocks: [p('Nothing is outstanding. Every customer invoice is paid.')], source }
-      const age = (r: Row) => daysBetween(str(r, 'due'), TODAY)
-      const bucket = (test: (days: number) => boolean) => money(sum(open.filter((r) => test(age(r))), 'balance'))
-      const owed = new Map<string, number>()
-      for (const r of open) owed.set(str(r, 'customer'), (owed.get(str(r, 'customer')) ?? 0) + num(r, 'balance'))
-      const [topName, topValue] = [...owed.entries()].sort((a, b) => b[1] - a[1])[0]
-      const topInvoice = open.filter((r) => r.customer === topName).sort(most('balance'))[0]
-      return {
-        blocks: [
-          p(`Accounts receivable is ${money(sum(open, 'balance'))} across ${plural(open.length, 'open customer invoice')}. By age:`),
-          list([
-            [`Not yet due: ${bucket((d) => d <= 0)}`],
-            [`1–30 days overdue: ${bucket((d) => d > 0 && d <= 30)}`],
-            [`31–60 days overdue: ${bucket((d) => d > 30 && d <= 60)}`],
-            [`Over 60 days: ${bucket((d) => d > 60)}`],
-          ]),
-          p(`${topName} owes the most, ${money(topValue)}. Their largest open invoice is `, ref('invoices', topInvoice.id), '.'),
-        ],
-        source,
-        links: [{ label: 'Customer invoices', module: 'accounting', page: 'invoices' }, { label: 'Financial reports', module: 'accounting', page: 'reports' }],
-        followUps: ['Which invoices are overdue?'],
-      }
-    },
-  },
-  {
-    module: 'accounting', match: /cash|bank|reconcil|payments?/,
-    answer: ({ data }) => {
-      const cash = data.ledgerAccounts.find((r) => r.id === '1000')
-      const pending = data.payments.filter(is('Pending')).sort(most('amount'))
-      const blocks: Block[] = []
-      if (cash) blocks.push(p(`Cash at bank is ${money(num(cash, 'balance'))} in the general ledger (account `, ref('ledgerAccounts', cash.id), ').'))
-      blocks.push(p(pending.length
-        ? `${plural(pending.length, 'payment')} ${isAre(pending.length)} waiting for bank reconciliation, worth ${money(sum(pending, 'amount'))}. The largest:`
-        : 'Every payment is reconciled.'))
-      if (pending.length) {
-        blocks.push(list(pending.slice(0, 3).map((r) => [
-          ref('payments', r.id), ` · ${r.direction === 'Received' ? 'from' : 'to'} ${str(r, 'party')}, ${money(num(r, 'amount'))}, ${formatDate(str(r, 'date'))}`,
-        ])))
-      }
-      return { blocks, source: plural(data.payments.length, 'payment'), links: [{ label: 'Payments', module: 'accounting', page: 'payments' }] }
-    },
-  },
-  {
-    module: 'crm', match: /opportunit|\bclos(e|es|ing)\b|pipeline|\bdeals?\b|forecast/,
-    answer: ({ data }) => {
-      const month = TODAY.slice(0, 7)
-      const monthName = monthOf(TODAY).split(' ')[0]
-      const open = data.opportunities.filter((r) => !['Won', 'Lost'].includes(str(r, 'stage')))
-      const closing = open.filter((r) => str(r, 'close').startsWith(month)).sort(most('amount'))
-      const source = plural(data.opportunities.length, 'opportunity', 'opportunities')
-      const links = [{ label: 'Opportunities', module: 'crm', page: 'opportunities' }]
-      if (!closing.length) {
-        const next = open.filter((r) => str(r, 'close') > month).sort(earliest('close'))[0]
-        return {
-          blocks: [p(`No open opportunities close in ${monthName}.`, ...(next ? [' The next is ', ref('opportunities', next.id), `, closing ${formatDate(str(next, 'close'))}.`] : []))],
-          source,
-          links,
-        }
-      }
-      const weighted = closing.reduce((t, r) => t + (num(r, 'amount') * num(r, 'probability')) / 100, 0)
-      return {
-        blocks: [
-          p(`${plural(closing.length, 'open opportunity', 'open opportunities')} ${closing.length === 1 ? 'closes' : 'close'} in ${monthName}, worth ${money(sum(closing, 'amount'))}, or ${money(weighted)} weighted by probability.`),
-          list(closing.slice(0, 3).map((r) => [
-            ref('opportunities', r.id), ` · ${str(r, 'name')}, ${str(r, 'account')}, ${money(num(r, 'amount'))} at ${num(r, 'probability')}%, closes ${formatDate(str(r, 'close'))}`,
-          ])),
-          p(`The whole open pipeline is ${money(sum(open, 'amount'))} across ${plural(open.length, 'opportunity', 'opportunities')}.`),
-        ],
-        source,
-        links,
-      }
-    },
-  },
-  {
-    module: 'crm', match: /\bleads?\b/,
-    answer: ({ data }) => {
-      const fresh = data.leads.filter(is('New')).sort(most('score'))
-      const qualified = data.leads.filter(is('Qualified')).length
-      const source = plural(data.leads.length, 'lead')
-      if (!fresh.length) return { blocks: [p(`There are no new leads. ${plural(qualified, 'lead')} ${isAre(qualified)} qualified.`)], source }
-      return {
-        blocks: [
-          p(`${plural(fresh.length, 'lead')} ${isAre(fresh.length)} new and not contacted yet. The highest scores:`),
-          list(fresh.slice(0, 3).map((r) => [
-            ref('leads', r.id), ` · ${str(r, 'name')} at ${str(r, 'company')}, score ${num(r, 'score')}, from ${str(r, 'source').toLowerCase()}`,
-          ])),
-          p(`${plural(qualified, 'more lead')} ${isAre(qualified)} qualified and ready to become opportunities.`),
-        ],
-        source,
-        links: [{ label: 'Leads', module: 'crm', page: 'leads' }],
-      }
-    },
-  },
-  {
-    module: 'sales', match: /quot/,
-    answer: ({ data }) => {
-      const sent = data.quotations.filter(is('Sent'))
-      const source = plural(data.quotations.length, 'quotation')
-      if (!sent.length) return { blocks: [p('No quotations are waiting on customers.')], source }
-      const expiring = sent.filter((r) => str(r, 'validUntil') >= TODAY && str(r, 'validUntil') <= inDays(7)).sort(earliest('validUntil'))
-      const show = expiring.length ? expiring : [...sent].sort(most('amount'))
-      return {
-        blocks: [
-          p(`${plural(sent.length, 'quotation')} ${isAre(sent.length)} with customers, worth ${money(sum(sent, 'amount'))}. ${expiring.length
-            ? `${plural(expiring.length, 'quotation')} ${expiring.length === 1 ? 'expires' : 'expire'} in the next 7 days:`
-            : 'None expire in the next 7 days. The largest:'}`),
-          list(show.slice(0, 3).map((r) => [ref('quotations', r.id), ` · ${str(r, 'customer')}, ${money(num(r, 'amount'))}, valid until ${formatDate(str(r, 'validUntil'))}`])),
-        ],
-        source,
-        links: [{ label: 'Quotations', module: 'sales', page: 'quotations' }],
-      }
-    },
-  },
-  {
-    module: 'sales', match: /deliver|\bship|\bpick|dispatch|in transit/,
-    answer: ({ data }) => {
-      const ready = data.deliveries.filter(is('Ready to pick')).sort(earliest('scheduled'))
-      const transit = data.deliveries.filter(is('In transit')).length
-      const blocks: Block[] = [p(`${plural(ready.length, 'delivery', 'deliveries')} ${isAre(ready.length)} ready to pick and ${transit} ${isAre(transit)} in transit.`)]
-      if (ready.length) {
-        blocks.push(list(ready.slice(0, 3).map((r) => [
-          ref('deliveries', r.id), ` · ${str(r, 'customer')} from ${warehouse(data, str(r, 'warehouse'))}, for `, ref('salesOrders', str(r, 'order')),
-          `, scheduled ${formatDate(str(r, 'scheduled'))}`,
-        ])))
-      }
-      return { blocks, source: plural(data.deliveries.length, 'delivery', 'deliveries'), links: [{ label: 'Deliveries', module: 'sales', page: 'deliveries' }] }
-    },
-  },
-  {
-    module: 'sales', match: /sales|orders?\b|revenue|\bsell|bookings?/,
-    answer: ({ data }) => {
-      const open = data.salesOrders.filter(is('Confirmed', 'Processing')).sort(most('amount'))
-      const shipped = data.salesOrders.filter(is('Shipped')).length
-      const unpaid = data.salesOrders.filter((r) => r.payment === 'Unpaid' && r.status !== 'Cancelled')
-      const blocks: Block[] = [
-        p(`There ${isAre(open.length)} ${plural(open.length, 'open sales order')} worth ${money(sum(open, 'amount'))}, and ${shipped} more ${shipped === 1 ? 'has' : 'have'} shipped.${open.length ? ' The largest open orders:' : ''}`),
-      ]
-      if (open.length) {
-        blocks.push(list(open.slice(0, 3).map((r) => [
-          ref('salesOrders', r.id), ` · ${str(r, 'customer')}, ${money(num(r, 'amount'))}, ${str(r, 'status').toLowerCase()}, ordered ${formatDate(str(r, 'ordered'))}`,
-        ])))
-      }
-      blocks.push(p(`${plural(unpaid.length, 'order')} ${isAre(unpaid.length)} still unpaid, worth ${money(sum(unpaid, 'amount'))}.`))
-      return { blocks, source: plural(data.salesOrders.length, 'sales order'), links: [{ label: 'Sales orders', module: 'sales', page: 'orders' }] }
-    },
-  },
-]
-
-function respond(question: string, ctx: Ctx): Answer {
-  const q = question.toLowerCase()
-  const intent = INTENTS.find((i) => i.match.test(q))
-  if (!intent) {
-    return {
-      blocks: [
-        p("I couldn't match that to the records I can read. I answer from the live data in your modules: invoices, orders, stock, approvals, leave and more."),
-        p('Try one of these, or name a record type such as customer invoices, purchase orders or leave requests.'),
-      ],
-      followUps: starterPrompts(ctx.role).slice(0, 3),
-    }
-  }
-  const module = moduleById(intent.module)
-  if (module && module.id !== 'home' && !module.roles.includes(ctx.role)) {
-    return {
-      blocks: [p(`That's in ${module.name}, which the ${ROLE_LABEL[ctx.role]} role can't open, so I can't read those records for you. Ask an administrator to add ${module.name} to your role.`)],
-      followUps: starterPrompts(ctx.role).slice(0, 3),
-    }
-  }
-  return intent.answer(ctx)
-}
-
-/* ---------- Streaming ---------- */
-
-// The answer is written as Markdown for the kit's Markdown block: record
-// numbers become "#record:<entity>:<id>" links the panel opens. It streams
-// word by word (a record link counts as one word); the block heals any
-// half-written syntax while it streams.
-const recordHref = (r: Ref) => `#record:${r.entity}:${r.id}`
-const inlineMarkdown = (parts: Inline[]) => parts.map((part) => (typeof part === 'string' ? part : `[${part.id}](${recordHref(part)})`)).join('')
-const inlinePlain = (parts: Inline[]) => parts.map((part) => (typeof part === 'string' ? part : part.id)).join('')
-const WORDS = /\s*\S+\s*/g
-const words = (text: string) => text.match(WORDS) ?? [text]
-
-function toPieces(blocks: Block[]) {
-  const pieces: string[] = []
-  blocks.forEach((b, i) => {
-    if (i > 0) pieces.push('\n\n')
-    if (b.kind === 'p') pieces.push(...words(inlineMarkdown(b.parts)))
-    else b.items.forEach((item, j) => pieces.push(`${j ? '\n' : ''}- `, ...words(inlineMarkdown(item))))
-  })
-  return pieces
-}
-
-const toPlain = (blocks: Block[]) =>
-  blocks.map((b) => (b.kind === 'p' ? inlinePlain(b.parts) : b.items.map((item) => `• ${inlinePlain(item)}`).join('\n'))).join('\n\n')
-
-type Reply = {
-  id: number
-  role: 'assistant'
-  question: string
-  pieces: string[]
-  plain: string
-  shown: number
-  state: 'thinking' | 'streaming' | 'done' | 'stopped'
-  startedAt: number
-  source?: string
-  links?: Link[]
-  followUps?: string[]
-  feedback?: Feedback
-}
-type Message = { id: number; role: 'user'; text: string } | Reply
-
-const THINK_MS = 700
-const WORD_MS = 28
-let nextId = 0
-
-// The reply's thinking trail: reading the records it answers from.
-function trailOf(reply: Reply): TrailStep[] {
-  const thinking = reply.state === 'thinking'
-  const status = thinking ? 'running' : 'done'
-  const steps: TrailStep[] = [{
-    id: 'match', kind: 'thinking', status, ms: THINK_MS / 2, startedAt: reply.startedAt,
-    label: reply.source ? `Matched the question to ${reply.source}.` : 'Looked for records that answer the question.',
-  }]
-  if (reply.source) {
-    steps.push({
-      id: 'read', kind: 'tool', status, ms: THINK_MS / 2, startedAt: reply.startedAt, icon: DatabaseIcon,
-      label: 'Read', activeLabel: 'Reading', detail: reply.source, name: 'read_records',
-      input: { question: reply.question }, output: { read: reply.source }, summary: thinking ? undefined : reply.source,
-    })
-  }
-  return steps
-}
-
-/* ---------- The panel ---------- */
-
-// Built from the kit's AI blocks (src/blocks/ai): the same prompt box, thinking
-// trail, messages and markdown as the AI workspace, with the ERP's answers.
+// company's records, from any page (Ctrl+J / ⌘J). Built from the kit's AI
+// blocks, with the answers and chats in ./assistant. In the ERP + AI edition
+// its chat is the same one the full-page Assistant shows, and "Open full
+// page" carries it there.
 export function CopilotPanel() {
-  const { copilotOpen, setCopilotOpen, data, session, company, openPeek } = useErp()
+  const { copilotOpen, setCopilotOpen, session, company, openPeek } = useErp()
+  const { active, busy, send, newChat, focusComposer } = useAssistant()
   const route = parseRoute(usePath())
   const module = (route.screen === 'app' ? moduleById(route.module) : undefined) ?? MODULES[0]
-  const page = (route.screen === 'app' ? module.pages.find((pg) => pg.id === route.page) : undefined) ?? module.pages[0]
+  const pages = pagesOf(module)
+  const page = (route.screen === 'app' ? pages.find((pg) => pg.id === route.page) : undefined) ?? pages[0]
   const role: Role = session?.role ?? 'admin'
   const prompts = suggestions(module, role)
-
-  const [messages, setMessages] = useState<Message[]>([])
-  const [draft, setDraft] = useState('')
-  const timers = useRef({ wait: 0, tick: 0 })
+  const suggestedFor = `Suggested for ${module.id === 'home' ? 'you' : module.name}`
   const openingRecord = useRef(false)
-  const promptRef = useRef<PromptBoxHandle>(null)
-  const listRef = useRef<HTMLDivElement>(null)
-  const last = messages[messages.length - 1]
-  const busy = last?.role === 'assistant' && (last.state === 'thinking' || last.state === 'streaming')
-
-  function clearTimers() {
-    window.clearTimeout(timers.current.wait)
-    window.clearInterval(timers.current.tick)
-    timers.current = { wait: 0, tick: 0 }
-  }
-
-  const patch = (id: number, change: Partial<Reply>) =>
-    setMessages((list) => list.map((m): Message => (m.id === id && m.role === 'assistant' ? { ...m, ...change } : m)))
-
-  // Stop keeps what has streamed so far. Closing the panel shows the whole
-  // answer instead, so it is there when the panel opens again.
-  function settle(finish: boolean) {
-    if (!timers.current.wait && !timers.current.tick) return
-    clearTimers()
-    setMessages((list) => list.map((m): Message => {
-      if (m.role !== 'assistant' || (m.state !== 'thinking' && m.state !== 'streaming')) return m
-      return finish ? { ...m, shown: m.pieces.length, state: 'done' } : { ...m, state: 'stopped' }
-    }))
-  }
-
-  useEffect(() => () => clearTimers(), [])
-
-  useEffect(() => {
-    // settle only reads refs and setState, so it needn't be a dependency.
-    if (!copilotOpen) settle(true)
-  }, [copilotOpen])
-
-  useEffect(() => {
-    const el = listRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }, [messages])
-
-  // Think, then stream the reply in word by word.
-  function play(id: number, total: number) {
-    clearTimers()
-    timers.current.wait = window.setTimeout(() => {
-      patch(id, { state: 'streaming' })
-      let shown = 0
-      timers.current.tick = window.setInterval(() => {
-        shown += 1
-        if (shown < total) return patch(id, { shown })
-        clearTimers()
-        patch(id, { shown: total, state: 'done' })
-      }, WORD_MS)
-    }, THINK_MS)
-  }
-
-  function replyFor(question: string, id: number): Reply {
-    const answer = respond(question, { data, role, name: session?.name ?? '' })
-    return {
-      id, role: 'assistant', question, pieces: toPieces(answer.blocks), plain: toPlain(answer.blocks), shown: 0, state: 'thinking',
-      startedAt: Date.now(), source: answer.source, links: answer.links, followUps: answer.followUps,
-    }
-  }
-
-  function send(raw: string) {
-    const text = raw.trim()
-    if (!text || busy) return false
-    const userId = ++nextId
-    const reply = replyFor(text, ++nextId)
-    setMessages((list) => [...list, { id: userId, role: 'user', text }, reply])
-    setDraft('')
-    play(reply.id, reply.pieces.length)
-  }
-
-  // Answers again from the data as it is now (a record may have changed).
-  function regenerate(reply: Reply) {
-    if (busy) return
-    const fresh = replyFor(reply.question, reply.id)
-    setMessages((list) => list.map((m) => (m.id === reply.id ? fresh : m)))
-    play(fresh.id, fresh.pieces.length)
-  }
-
-  function newChat() {
-    clearTimers()
-    setMessages([])
-    setDraft('')
-    promptRef.current?.focus()
-  }
+  const messages = active?.messages ?? []
 
   function openLink(href: string) {
-    const [, entity, id] = href.match(/^#record:([^:]+):(.+)$/) ?? []
-    if (!entity || !id) return
+    const target = parseRecordHref(href)
+    if (!target) return
     openingRecord.current = true
     setCopilotOpen(false)
-    openPeek(entity as EntityId, id)
-  }
-
-  function openPage(link: Link) {
-    setCopilotOpen(false)
-    go(link.module, link.page)
-  }
-
-  function copy(text: string) {
-    navigator.clipboard?.writeText(text).catch(() => toast.error('Copy failed', { description: 'Your browser blocked the clipboard.' }))
+    openPeek(target.entity as EntityId, target.id)
   }
 
   return (
@@ -823,10 +49,9 @@ export function CopilotPanel() {
         side="right"
         className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
         onOpenAutoFocus={(e) => {
+          // The prompt box takes focus itself, once it has mounted.
           e.preventDefault()
-          promptRef.current?.focus()
-          const el = listRef.current
-          if (el) el.scrollTop = el.scrollHeight
+          focusComposer()
         }}
         onCloseAutoFocus={(e) => {
           // The record's side panel takes focus; don't pull it back to the trigger.
@@ -834,8 +59,8 @@ export function CopilotPanel() {
           openingRecord.current = false
         }}
       >
-        <header className="flex min-w-0 items-center gap-2.5 border-b py-3 pr-12 pl-4">
-          <IconMark icon={SparklesIcon} colour="var(--brand)" />
+        <header className="flex min-w-0 items-center gap-1.5 border-b py-3 pr-12 pl-4">
+          <IconMark icon={SparklesIcon} colour="var(--brand)" className="mr-1" />
           <div className="flex min-w-0 flex-1 items-center gap-2">
             <SheetTitle className="shrink-0">Ask AI</SheetTitle>
             <span
@@ -850,97 +75,61 @@ export function CopilotPanel() {
             </span>
           </div>
           {messages.length > 0 && <IconAction label="New chat" icon={PencilEdit02Icon} onClick={newChat} />}
+          {edition().assistant && (
+            <IconAction
+              label="Open full page"
+              icon={ArrowExpand01Icon}
+              onClick={() => {
+                setCopilotOpen(false)
+                go('home', 'assistant')
+              }}
+            />
+          )}
           <SheetDescription className="sr-only">
             Ask questions about the records in {company?.name ?? 'your company'}. Answers come from the live data.
           </SheetDescription>
         </header>
 
-        <div ref={listRef} role="log" aria-label="Conversation" aria-busy={busy} className="min-h-0 flex-1 overflow-y-auto">
-          {messages.length === 0 ? (
-            <div className="grid gap-5 p-4">
-              <div className="grid gap-1">
-                <p className="text-sm font-medium">How can I help, {firstName(session?.name ?? '')}?</p>
-                <p className="text-muted-foreground text-xs">
-                  I answer from the live records in {company?.name ?? 'your company'}, within what the {ROLE_LABEL[role]} role can open.
-                  Open me from anywhere with <Shortcut keys={['mod', 'J']} className="align-middle" />.
-                </p>
-              </div>
+        {active && messages.length > 0 ? (
+          <ChatThread
+            resetKey={active.id}
+            count={messages.length}
+            follow={messages}
+            label="Conversation"
+            busy={busy}
+            columnClassName="max-w-none p-4"
+          >
+            <Turns
+              chat={active}
+              onLink={openLink}
+              onOpenPage={(link) => {
+                setCopilotOpen(false)
+                go(link.module, link.page)
+              }}
+            />
+          </ChatThread>
+        ) : (
+          // The kit's welcome screen; the prompt box stays at the panel's foot.
+          <ChatWelcome
+            headingAs="h3"
+            title={`How can I help, ${firstName(session?.name ?? '')}?`}
+            description={
+              <>
+                I answer from the live records in {company?.name ?? 'your company'}, within what the {ROLE_LABEL[role]} role can open.
+                Open me from anywhere with <Shortcut keys={['mod', 'J']} className="align-middle" />.
+              </>
+            }
+            starters={
               <div className="grid gap-1.5">
-                <p className="text-muted-foreground text-[11px] font-medium">Suggested for {module.id === 'home' ? 'you' : module.name}</p>
-                {prompts.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => send(q)}
-                    className="bg-card hover:bg-accent/60 focus-visible:ring-ring/40 group flex min-w-0 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-xs outline-none focus-visible:ring-2"
-                  >
-                    <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-                    <span className="min-w-0 flex-1">{q}</span>
-                    <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" />
-                  </button>
-                ))}
+                <p className="text-muted-foreground text-[11px] font-medium">{suggestedFor}</p>
+                <PromptStarters label={suggestedFor} items={prompts.map((q) => ({ id: q, icon: SparklesIcon, title: q, onSelect: () => send(q) }))} />
               </div>
-            </div>
-          ) : (
-            <div className="grid gap-6 p-4">
-              {messages.map((m) => (m.role === 'user' ? (
-                <UserMessage key={m.id} text={m.text} onCopy={copy} />
-              ) : (
-                <AssistantMessage
-                  key={m.id}
-                  name="Ask AI"
-                  actions={(m.state === 'done' || m.state === 'stopped') && (
-                    <MessageActions
-                      onCopy={() => copy(m.plain)}
-                      onRegenerate={() => regenerate(m)}
-                      regenerateDisabled={busy}
-                      feedback={m.feedback ?? null}
-                      onFeedback={(feedback) => {
-                        patch(m.id, { feedback })
-                        if (feedback) toast('Thanks for the feedback', { description: 'It helps improve Ask AI’s answers.' })
-                      }}
-                    />
-                  )}
-                >
-                  <ThinkingTrail steps={trailOf(m)} live={m.state === 'thinking'} startedAt={m.startedAt} duration={THINK_MS} />
-                  {m.state !== 'thinking' && (
-                    <Markdown text={m.pieces.slice(0, m.shown).join('')} streaming={m.state === 'streaming'} onLink={openLink} />
-                  )}
-                  {m.state === 'stopped' && <StoppedNote>{m.shown ? 'Stopped' : 'Stopped before answering'}</StoppedNote>}
-                  {m.state === 'done' && ((m.links?.length ?? 0) > 0 || (m.followUps?.length ?? 0) > 0) && (
-                    <div className="grid gap-2">
-                      {!!m.links?.length && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {m.links.map((l) => (
-                            <Button key={`${l.module}/${l.page}`} variant="outline" size="sm" onClick={() => openPage(l)}>
-                              {l.label}
-                              <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} data-icon="inline-end" />
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                      <FollowUps items={m.followUps ?? []} onPick={send} />
-                    </div>
-                  )}
-                </AssistantMessage>
-              )))}
-            </div>
-          )}
-        </div>
+            }
+          />
+        )}
 
         <div className="border-t p-3">
-          <PromptBox
-            ref={promptRef}
-            value={draft}
-            onValueChange={setDraft}
-            onSubmit={(text) => send(text)}
-            running={busy}
-            onStop={() => settle(false)}
-            maxAttachments={0}
-            label="Ask a question"
-            placeholder={`Ask about ${module.id === 'home' ? 'your company' : module.name}…`}
-            footer="AI answers can be wrong. Check important numbers."
-          />
+          <Composer placeholder={`Ask about ${module.id === 'home' ? 'your company' : module.name}…`} autoFocus />
         </div>
       </SheetContent>
     </Sheet>

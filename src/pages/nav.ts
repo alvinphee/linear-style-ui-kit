@@ -3,7 +3,7 @@ import { navigate } from '@/lib/router'
 import {
   ChartAreaIcon, Compass01Icon, CursorPointer02Icon, FileUploadIcon, GridViewIcon, InboxIcon,
   InformationCircleIcon, Money03Icon, DashboardSquare01Icon, Calendar03Icon, FormIcon, Table01Icon,
-  Audit01Icon, SparklesIcon, AiChat02Icon, Building06Icon,
+  Audit01Icon, SparklesIcon, AiBrain01Icon, AiChat02Icon, AiMagicIcon, Building06Icon,
   InputTextIcon, KanbanIcon, LayoutGridIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
   PaintBoardIcon, Rocket01Icon, Search01Icon, Settings01Icon, Settings02Icon, SlidersHorizontalIcon,
   SidebarLeftIcon, Tag01Icon, Task01Icon, TimelineIcon,
@@ -37,6 +37,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'navigation', label: 'Navigation', icon: Compass01Icon },
       { id: 'content', label: 'Uploads and editor', icon: FileUploadIcon },
       { id: 'data-table', label: 'Data table', icon: Table01Icon },
+      { id: 'ai-components', label: 'AI components', icon: AiMagicIcon },
     ],
   },
   {
@@ -94,5 +95,6 @@ export function goTo(id: string) {
 // page outside the kit's shell. Routed in App.tsx.
 export const TEMPLATES: { path: string; label: string; icon: IconSvgElement; description: string }[] = [
   { path: '/templates/erp', label: 'ERP app', icon: Building06Icon, description: 'Multi-module ERP: sign-in, launchpad, modules, Cmd+K' },
+  { path: '/templates/erp-ai', label: 'ERP + AI app', icon: AiBrain01Icon, description: 'The ERP with an AI assistant: a briefing and prompt on the launchpad, a full-page Assistant' },
   { path: '/templates/ai-chat', label: 'AI chat app', icon: AiChat02Icon, description: 'The AI workspace as a full-page app, with settings' },
 ]

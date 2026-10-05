@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Add01Icon, Agreement01Icon, Alert02Icon, ArrowRight01Icon, Award01Icon,
@@ -6,21 +6,29 @@ import {
   Invoice01Icon, Invoice03Icon, PackageIcon, PackageReceiveIcon, PackageRemoveIcon, PercentCircleIcon, QuoteDownIcon,
   ReceiptTextIcon, Target02Icon, UserAdd01Icon, UserMultipleIcon, Wallet01Icon,
 } from '@hugeicons/core-free-icons'
+import { format } from 'date-fns'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { KpiCard, KpiGrid, type KpiDelta, type KpiTone } from '@/blocks/kpi-card'
+import { KpiCard, KpiGrid } from '@/blocks/kpi-card'
 import { PeriodPicker } from '@/blocks/period-picker'
+import { BarList } from '@/components/bar-list'
+import type { KpiDelta, KpiTone } from '@/components/delta-badge'
+import { PageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
 import { Button } from '@/components/ui/button'
 import {
   ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig,
 } from '@/components/ui/chart'
-import { TODAY, addDays, daysBetween, formatDate, formatMoney, formatMoneyShort, formatNumber } from '../format'
+import { formatMoney, formatNumber } from '@/lib/format'
+import { pluralWord } from '@/lib/text'
+import { useSvgId } from '@/lib/use-svg-id'
+import { TODAY, addDays, daysBetween, formatDate, formatMoneyShort } from '../format'
 import { moduleById, specFor } from '../modules'
 import { erpHref } from '../route'
 import { useErp } from '../store'
 import type { EntityId, ErpModule, Row } from '../types'
-import { Card, PageHeader, StatusBadge } from '../ui'
+import { ApproveReject, PAGE_HEADER, StatusBadge, Worklist, type WorkItem } from '../ui'
 
 // The Overview page of each module: KPIs, a chart, a breakdown and a list of
 // what needs attention. Everything is worked out from the live records on
@@ -34,7 +42,8 @@ const str = (r: Row, key: string) => String(r[key] ?? '')
 const sum = (rows: Row[], key: string) => rows.reduce((t, r) => t + num(r, key), 0)
 const is = (...statuses: string[]) => (r: Row) => statuses.includes(str(r, 'status'))
 const pct = (part: number, whole: number) => (whole ? Math.round((part / whole) * 100) : 0)
-const count = (n: number, one: string, many = `${one}s`) => `${formatNumber(n)} ${n === 1 ? one : many}`
+// A count and its word, with thousands separators: "1,204 items".
+const count = (n: number, one: string, many?: string) => `${formatNumber(n)} ${pluralWord(n, one, many)}`
 const money = (n: number) => formatMoney(n, false)
 const byDate = (key: string) => (a: Row, b: Row) => str(a, key).localeCompare(str(b, key))
 const tint = (colour: string, amount: number) => `color-mix(in oklch, ${colour} ${amount}%, transparent)`
@@ -43,8 +52,8 @@ const tint = (colour: string, amount: number) => `color-mix(in oklch, ${colour} 
 const age = (iso: string) => daysBetween(iso, TODAY)
 const within = (iso: string, days: number) => iso !== '' && age(iso) >= 0 && age(iso) < days
 
-const MONTH = new Intl.DateTimeFormat('en-GB', { month: 'short', timeZone: 'UTC' })
-const monthOf = (period: string) => MONTH.format(Date.parse(`${period}-01T00:00:00Z`))
+// "2026-09" → "Sep". date-fns, not Intl: newer Intl data writes "Sept".
+const monthOf = (period: string) => format(new Date(`${period}-01T00:00:00`), 'MMM')
 
 // Totals per group, largest first. Counts rows unless a value is given.
 function groupSum(rows: Row[], by: string, value: (r: Row) => number = () => 1) {
@@ -73,6 +82,7 @@ function Header({ mod, description, create }: { mod: ErpModule; description: str
   const [period, setPeriod] = useState('30d')
   return (
     <PageHeader
+      className={PAGE_HEADER}
       title={`${mod.name} overview`}
       description={`${description}, as of ${formatDate(TODAY, true)}.`}
       actions={
@@ -154,9 +164,6 @@ type Series = { key: string; label: string; colour: string }
 
 const configOf = (series: Series[]): ChartConfig =>
   Object.fromEntries(series.map((s) => [s.key, { label: s.label, color: s.colour }]))
-
-// SVG ids end up in url(#…), which does not accept the colons useId can produce.
-const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '')
 
 function tooltip(format: (n: number) => string) {
   return (
@@ -252,50 +259,23 @@ function TrendArea({ data, series, format, axis, className = 'h-56' }: ChartProp
   )
 }
 
-// A breakdown as labelled bars: lighter than a chart, and it never crowds on a phone.
-type Meter = { id: string; label: ReactNode; hint?: string; value: number; display: string; colour?: string }
-
-function Meters({ rows, colour, max, empty = 'Nothing to show yet.' }: { rows: Meter[]; colour: string; max?: number; empty?: string }) {
-  if (!rows.length) return <p className="text-muted-foreground py-6 text-center text-xs">{empty}</p>
-  const top = max ?? Math.max(1, ...rows.map((r) => r.value))
-  return (
-    <ul className="grid gap-3">
-      {rows.map((r) => (
-        <li key={r.id} className="grid gap-1.5">
-          <div className="flex min-w-0 items-center justify-between gap-3 text-xs">
-            <span className="flex min-w-0 items-center gap-1.5">
-              <span className="truncate">{r.label}</span>
-              {r.hint && <span className="text-muted-foreground shrink-0 text-[11px]">{r.hint}</span>}
-            </span>
-            <span className="shrink-0 font-medium tabular-nums">{r.display}</span>
-          </div>
-          <div className="bg-muted h-1.5 overflow-hidden rounded-full" aria-hidden>
-            <div className="h-full rounded-full" style={{ width: `${Math.min(100, (r.value / top) * 100)}%`, background: r.colour ?? colour }} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 // ---------------------------------------------------------------------------
 // Lists
 
-type Item = { id: string; entity: EntityId; title: string; detail: string; aside?: ReactNode; actions?: ReactNode }
-
 const MAX_ROWS = 6
 
+// A worklist in a panel, headed by its count, with a link to the full list.
 function ListCard({ title, module, page, items, empty }: {
   title: string
   module: string
   page: string
-  items: Item[]
+  items: WorkItem[]
   empty: string
 }) {
-  const { openPeek } = useErp()
   const more = items.length - MAX_ROWS
   return (
-    <Card
+    <Panel
+      as="section"
       title={<>{title}<span className="text-muted-foreground ml-2 text-[11px] font-normal tabular-nums">{items.length}</span></>}
       action={
         <a
@@ -307,52 +287,13 @@ function ListCard({ title, module, page, items, empty }: {
       }
       bodyClassName="p-0"
     >
-      {items.length ? (
-        <ul className="divide-y">
-          {items.slice(0, MAX_ROWS).map((it) => (
-            <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
-              <button
-                type="button"
-                onClick={() => openPeek(it.entity, it.id)}
-                className="focus-visible:ring-ring/40 grid min-w-0 flex-1 basis-56 gap-0.5 rounded text-left outline-none focus-visible:ring-2"
-              >
-                <span className="truncate text-xs font-medium">{it.title}</span>
-                <span className="text-muted-foreground truncate text-[11px] tabular-nums">{it.detail}</span>
-              </button>
-              {it.aside}
-              {it.actions && <div className="flex shrink-0 items-center gap-1">{it.actions}</div>}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-muted-foreground px-3.5 py-8 text-center text-xs">{empty}</p>
-      )}
+      <Worklist items={items.slice(0, MAX_ROWS)} empty={empty} />
       {more > 0 && (
         <p className="text-muted-foreground border-t px-3.5 py-2 text-[11px]">
           {more} more in <a href={erpHref(module, page)} className="hover:text-foreground underline underline-offset-2">the full list</a>
         </p>
       )}
-    </Card>
-  )
-}
-
-function Decide({ entity, id }: { entity: EntityId; id: string }) {
-  const { update } = useErp()
-  return (
-    <>
-      <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => {
-        update(entity, [id], { status: 'Rejected' })
-        toast(`Rejected ${id}`)
-      }}>
-        Reject
-      </Button>
-      <Button size="sm" onClick={() => {
-        update(entity, [id], { status: 'Approved' })
-        toast.success(`Approved ${id}`)
-      }}>
-        Approve
-      </Button>
-    </>
+    </Panel>
   )
 }
 
@@ -402,7 +343,7 @@ function CrmOverview({ mod }: { mod: ErpModule }) {
         },
       ]}
       chart={
-        <Card title="Pipeline by stage" action={<Note>{formatMoneyShort(pipeline)} open</Note>}>
+        <Panel as="section" title="Pipeline by stage" action={<Note>{formatMoneyShort(pipeline)} open</Note>}>
           <Columns
             data={stages}
             series={[
@@ -412,16 +353,16 @@ function CrmOverview({ mod }: { mod: ErpModule }) {
             format={money}
             axis={formatMoneyShort}
           />
-        </Card>
+        </Panel>
       }
       side={
-        <Card title="New leads by source" action={<Note>Last 30 days</Note>}>
-          <Meters
+        <Panel as="section" title="New leads by source" action={<Note>Last 30 days</Note>}>
+          <BarList
             colour={mod.colour}
             empty="No new leads in the last 30 days."
-            rows={sources.map((s) => ({ id: s.label, label: s.label, value: s.value, display: formatNumber(s.value) }))}
+            items={sources.map((s) => ({ id: s.label, label: s.label, value: s.value, display: formatNumber(s.value) }))}
           />
-        </Card>
+        </Panel>
       }
       list={
         <ListCard
@@ -501,18 +442,18 @@ function SalesOverview({ mod }: { mod: ErpModule }) {
         },
       ]}
       chart={
-        <Card title="Sales orders by week" action={<Note>{formatMoneyShort(weeksTotal)} in {WEEKS} weeks</Note>}>
+        <Panel as="section" title="Sales orders by week" action={<Note>{formatMoneyShort(weeksTotal)} in {WEEKS} weeks</Note>}>
           <TrendArea data={weeks} series={{ key: 'value', label: 'Order value', colour: mod.colour }} format={money} axis={formatMoneyShort} />
-        </Card>
+        </Panel>
       }
       side={
-        <Card title="Top customers" action={<Note>By order value</Note>}>
-          <Meters
+        <Panel as="section" title="Top customers" action={<Note>By order value</Note>}>
+          <BarList
             colour={mod.colour}
             empty="No sales orders yet."
-            rows={customers.map((c) => ({ id: c.label, label: c.label, hint: count(c.count, 'order'), value: c.value, display: formatMoneyShort(c.value) }))}
+            items={customers.map((c) => ({ id: c.label, label: c.label, hint: count(c.count, 'order'), value: c.value, display: formatMoneyShort(c.value) }))}
           />
-        </Card>
+        </Panel>
       }
       list={
         <ListCard
@@ -596,7 +537,7 @@ function InventoryOverview({ mod }: { mod: ErpModule }) {
         },
       ]}
       chart={
-        <Card title="Stock value by category" action={<Note>At unit cost</Note>}>
+        <Panel as="section" title="Stock value by category" action={<Note>At unit cost</Note>}>
           <HBars
             data={categories.map((c) => ({ label: c.label, value: Math.round(c.value), note: count(c.count, 'item') }))}
             series={{ key: 'value', label: 'Stock value', colour: mod.colour }}
@@ -605,14 +546,14 @@ function InventoryOverview({ mod }: { mod: ErpModule }) {
             labelWidth={88}
             className="h-60"
           />
-        </Card>
+        </Panel>
       }
       side={
-        <Card title="Warehouse utilisation">
-          <Meters
+        <Panel as="section" title="Warehouse utilisation">
+          <BarList
             colour={mod.colour}
             max={100}
-            rows={data.warehouses.map((w) => {
+            items={data.warehouses.map((w) => {
               const used = num(w, 'utilisation')
               return {
                 id: w.id,
@@ -624,7 +565,7 @@ function InventoryOverview({ mod }: { mod: ErpModule }) {
               }
             })}
           />
-        </Card>
+        </Panel>
       }
       list={
         <ListCard
@@ -684,22 +625,22 @@ function PurchasingOverview({ mod }: { mod: ErpModule }) {
   const openValue = sum(openOrders, 'amount')
   const waiting = ordersWaiting.length + requisitionsWaiting.length
 
-  const items: Item[] = [
-    ...ordersWaiting.map((r): Item => ({
+  const items: WorkItem[] = [
+    ...ordersWaiting.map((r): WorkItem => ({
       id: r.id,
       entity: 'purchaseOrders',
       title: `${r.id} · ${str(r, 'vendor')}`,
       detail: `${formatMoney(num(r, 'amount'))} · ${str(r, 'buyer')} · expected ${formatDate(str(r, 'expected'))}`,
       actions: approvesOrders
-        ? <Decide entity="purchaseOrders" id={r.id} />
+        ? <ApproveReject entity="purchaseOrders" id={r.id} />
         : <span className="text-muted-foreground text-[11px]">Needs finance approval</span>,
     })),
-    ...requisitionsWaiting.map((r): Item => ({
+    ...requisitionsWaiting.map((r): WorkItem => ({
       id: r.id,
       entity: 'requisitions',
       title: `${r.id} · ${str(r, 'item')}`,
       detail: `${formatNumber(num(r, 'quantity'))} units · est. ${formatMoney(num(r, 'estimate'))} · needed by ${formatDate(str(r, 'needed'))}`,
-      actions: <Decide entity="requisitions" id={r.id} />,
+      actions: <ApproveReject entity="requisitions" id={r.id} />,
     })),
   ]
 
@@ -728,7 +669,7 @@ function PurchasingOverview({ mod }: { mod: ErpModule }) {
         },
       ]}
       chart={
-        <Card title="Spend by vendor" action={<Note>{formatMoneyShort(totalSpend)} committed</Note>}>
+        <Panel as="section" title="Spend by vendor" action={<Note>{formatMoneyShort(totalSpend)} committed</Note>}>
           <HBars
             data={spend.slice(0, 6).map((v) => ({ label: v.label, value: v.value, note: count(v.count, 'purchase order') }))}
             series={{ key: 'value', label: 'Committed spend', colour: mod.colour }}
@@ -736,14 +677,14 @@ function PurchasingOverview({ mod }: { mod: ErpModule }) {
             axis={formatMoneyShort}
             labelWidth={132}
           />
-        </Card>
+        </Panel>
       }
       side={
-        <Card title="Purchase orders by status">
-          <Meters
+        <Panel as="section" title="Purchase orders by status">
+          <BarList
             colour={mod.colour}
             empty="No purchase orders yet."
-            rows={statuses.map((s) => ({
+            items={statuses.map((s) => ({
               id: s.label,
               label: <StatusBadge status={s.label} />,
               hint: count(s.count, 'order'),
@@ -751,7 +692,7 @@ function PurchasingOverview({ mod }: { mod: ErpModule }) {
               display: formatMoneyShort(s.value),
             }))}
           />
-        </Card>
+        </Panel>
       }
       list={<ListCard title="Awaiting approval" module={mod.id} page="orders" empty="Nothing is waiting for approval." items={items} />}
     />
@@ -821,14 +762,14 @@ function AccountingOverview({ mod }: { mod: ErpModule }) {
         },
       ]}
       chart={
-        <Card title="Accounts receivable ageing" action={<Note>Days past due</Note>}>
+        <Panel as="section" title="Accounts receivable ageing" action={<Note>Days past due</Note>}>
           <Columns data={ageing} series={[{ key: 'value', label: 'Balance due', colour: mod.colour }]} format={money} axis={formatMoneyShort} />
-        </Card>
+        </Panel>
       }
       side={
-        <Card title="Accounts payable by due date" action={<Note>Open bills</Note>}>
-          <Meters colour={mod.colour} rows={dueBuckets} />
-        </Card>
+        <Panel as="section" title="Accounts payable by due date" action={<Note>Open bills</Note>}>
+          <BarList colour={mod.colour} items={dueBuckets} />
+        </Panel>
       }
       list={
         <ListCard
@@ -928,7 +869,7 @@ function HrOverview({ mod }: { mod: ErpModule }) {
         },
       ]}
       chart={
-        <Card title="Payroll gross by period" action={<Note>{count(runs.length, 'payroll run')}</Note>}>
+        <Panel as="section" title="Payroll gross by period" action={<Note>{count(runs.length, 'payroll run')}</Note>}>
           <Columns
             data={runs.map((r) => ({
               label: monthOf(str(r, 'period')),
@@ -941,16 +882,16 @@ function HrOverview({ mod }: { mod: ErpModule }) {
             format={money}
             axis={formatMoneyShort}
           />
-        </Card>
+        </Panel>
       }
       side={
-        <Card title="Headcount by department">
-          <Meters
+        <Panel as="section" title="Headcount by department">
+          <BarList
             colour={mod.colour}
             empty="No employees yet."
-            rows={departments.map((d) => ({ id: d.label, label: d.label, value: d.value, display: formatNumber(d.value) }))}
+            items={departments.map((d) => ({ id: d.label, label: d.label, value: d.value, display: formatNumber(d.value) }))}
           />
-        </Card>
+        </Panel>
       }
       list={
         <ListCard
@@ -971,7 +912,7 @@ function HrOverview({ mod }: { mod: ErpModule }) {
                 days > 1 ? `${formatDate(from)} – ${formatDate(str(r, 'to'))}` : formatDate(from),
                 starts > 0 ? `starts in ${count(starts, 'day')}` : starts === 0 ? 'starts today' : 'already started',
               ].join(' · '),
-              actions: <Decide entity="leave" id={r.id} />,
+              actions: <ApproveReject entity="leave" id={r.id} />,
             }
           })}
         />
@@ -996,6 +937,7 @@ export function ModuleOverview({ module }: { module: string }) {
   }
   return (
     <PageHeader
+      className={PAGE_HEADER}
       title={mod ? `${mod.name} overview` : 'Overview'}
       description="This module has no dashboard yet. Open one of its pages from the sidebar."
     />

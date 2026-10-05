@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Calendar03Icon, Cancel01Icon, Rocket01Icon, SentIcon, Timer02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { cn } from 'cn'
+import { IconAction } from '@/components/icon-action'
+import { UsageMeter } from '@/components/usage-meter'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
+import { formatNumber } from '@/lib/format'
 import { Panel } from '../shared'
-import { IconAction } from './shared'
 
 const LIMIT = 5000
 const SLOW_MODE_S = 30
@@ -25,8 +26,6 @@ type FeatureId = (typeof FEATURES)[number]['id']
 
 const START: Record<FeatureId, number> = { chat: 1480, rewrite: 820, summaries: 610, triage: 310, agents: 200 }
 
-const fmt = (n: number) => n.toLocaleString('en-US')
-
 export function UsagePanel() {
   const [used, setUsed] = useState(START)
   const [slowUntil, setSlowUntil] = useState<number | null>(null)
@@ -37,7 +36,6 @@ export function UsagePanel() {
   const total = Object.values(used).reduce((a, b) => a + b, 0)
   const pct = Math.min(100, (total / LIMIT) * 100)
   const left = slowUntil ? Math.max(0, Math.ceil((slowUntil - now) / 1000)) : 0
-  const level = pct >= 90 ? 'danger' : pct >= 75 ? 'warning' : 'ok'
 
   useEffect(() => {
     if (!slowUntil) return
@@ -71,39 +69,32 @@ export function UsagePanel() {
   return (
     <Panel title="Usage and limits" note="Resets monthly">
       <div className="grid min-w-0 gap-4">
-        <div className="grid gap-1.5">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-            <span className="text-xs font-medium">AI credits</span>
-            <span className="text-xs tabular-nums" aria-live="polite">
-              <span className="font-medium">{fmt(total)}</span>
-              <span className="text-muted-foreground"> of {fmt(LIMIT)} credits</span>
+        <UsageMeter
+          size="md"
+          value={pct}
+          warnAt={75}
+          dangerAt={90}
+          label="AI credits"
+          count={(
+            <span aria-live="polite">
+              <span className="text-foreground font-medium">{formatNumber(total)}</span> of {formatNumber(LIMIT)} credits
             </span>
-          </div>
-          <Progress
-            value={pct}
-            aria-label="AI credits used this month"
-            className={cn(
-              'h-1.5',
-              level === 'warning' && '[&>[data-slot=progress-indicator]]:bg-status-progress',
-              level === 'danger' && '[&>[data-slot=progress-indicator]]:bg-destructive',
-            )}
-          />
-          <div className="text-muted-foreground flex flex-wrap justify-between gap-x-3 text-[11px] tabular-nums">
-            <span className={cn(level === 'danger' && 'text-destructive')}>
-              {Math.round(pct)}% used · {fmt(LIMIT - total)} left
-            </span>
-            <span className="flex items-center gap-1">
+          )}
+          barLabel="AI credits used this month"
+          note={`${Math.round(pct)}% used · ${formatNumber(LIMIT - total)} left`}
+          noteEnd={(
+            <>
               <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3" />
               Resets 1 Oct, in 1 day
-            </span>
-          </div>
-        </div>
+            </>
+          )}
+        />
 
         <div className="grid gap-2">
           <span className="text-muted-foreground text-[11px]">By feature</span>
           <div
             role="img"
-            aria-label={`Credits by feature: ${FEATURES.map((f) => `${f.name} ${fmt(used[f.id])}`).join(', ')}`}
+            aria-label={`Credits by feature: ${FEATURES.map((f) => `${f.name} ${formatNumber(used[f.id])}`).join(', ')}`}
             className="bg-muted flex h-2 overflow-hidden rounded-full"
           >
             {FEATURES.map((f) => (
@@ -119,7 +110,7 @@ export function UsagePanel() {
               <li key={f.id} className="flex min-w-0 items-center gap-2 text-xs">
                 <span className="size-2 shrink-0 rounded-[3px]" style={{ backgroundColor: f.colour }} />
                 <span className="truncate">{f.name}</span>
-                <span className="text-muted-foreground ml-auto tabular-nums">{fmt(used[f.id])}</span>
+                <span className="text-muted-foreground ml-auto tabular-nums">{formatNumber(used[f.id])}</span>
               </li>
             ))}
           </ul>
@@ -163,7 +154,7 @@ export function UsagePanel() {
         <div className="bg-subtle flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border px-3 py-2.5">
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium">Team plan</p>
-            <p className="text-muted-foreground text-[11px]">{fmt(LIMIT)} credits a month for the whole workspace</p>
+            <p className="text-muted-foreground text-[11px]">{formatNumber(LIMIT)} credits a month for the whole workspace</p>
           </div>
           <Button
             size="sm"

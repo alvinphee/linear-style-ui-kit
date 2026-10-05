@@ -6,12 +6,8 @@ import {
   Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import { FlexRender, type Header, type Row, type RowData, type Table } from '@tanstack/react-table'
-import { toast } from 'sonner'
 import { cn } from 'cn'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { DeleteConfirm } from '@/components/delete-confirm'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -57,17 +53,6 @@ export const MIXED =
 // "Ava Hart, Liam Okafor and 3 more"
 export function listNames(names: string[]) {
   return names.length > 3 ? `${names.slice(0, 2).join(', ')} and ${names.length - 2} more` : names.join(', ')
-}
-
-export function copyText(value: string, what: string) {
-  if (!navigator.clipboard) {
-    toast.error('Clipboard not available')
-    return
-  }
-  navigator.clipboard.writeText(value).then(
-    () => toast.success(`Copied ${value}`),
-    () => toast.error(`Could not copy the ${what}`),
-  )
 }
 
 /* ---------- Row context: what cells need from the table's props ---------- */
@@ -515,38 +500,7 @@ export function Pagination<TData extends RowData>({ table, pageSizes, selectable
 
 /* ---------- Delete with a confirm step ---------- */
 
-// The confirm dialog. Pass a trigger as children, or drive it with open/onOpenChange.
-export function DeleteConfirm({ title, description, onConfirm, open, onOpenChange, children }: {
-  title: ReactNode
-  description: ReactNode
-  onConfirm: () => void
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
-  children?: ReactNode
-}) {
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      {children && <AlertDialogTrigger asChild>{children}</AlertDialogTrigger>}
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogMedia className="bg-destructive/10 text-destructive">
-            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-          </AlertDialogMedia>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
-
-// The bulk bar's Delete button, with its confirm dialog.
+// The bulk bar's Delete button, with its confirm dialog (the DeleteConfirm component).
 export function BulkDelete({ title, description, onConfirm }: {
   title: ReactNode
   description: ReactNode

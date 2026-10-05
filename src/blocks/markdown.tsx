@@ -1,29 +1,37 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AiMotion, StreamCaret } from '@/components/thinking-indicator'
+import { copyText, useCopied } from '@/lib/clipboard'
 
-// AI replies as Markdown: headings, paragraphs, lists and task lists, quotes,
-// code blocks with a Copy button, tables (numbers right-aligned) and
-// citations. A citation is "[2]" in the text and opens sources[1].
+// Markdown rendered as the kit's typography: AI replies, artifacts, and the
+// preview of anything people write (a description, a comment, release notes).
+// Headings, paragraphs, lists and task lists, quotes, code blocks with a Copy
+// button, tables (numbers right-aligned), bold, italic, strikethrough, inline
+// code, links and citations. A citation is "[2]" in the text and opens
+// sources[1].
 //
 // It builds React elements and never injects HTML: anything it does not
-// understand is shown as plain text. While `streaming`, half-written syntax
-// is held back so it never flashes as raw characters, each new block fades
-// in, and a caret follows the text.
+// understand is shown as plain text. A line break inside a paragraph stays a
+// line break, as people typed it. While `streaming`, half-written syntax is
+// held back so it never flashes as raw characters, each new block fades in,
+// and a caret follows the text.
 //
 // Links to "#…" stay in the app: give `onLink` to route them yourself
 // (it gets the href, "#board"); without it they change the hash. Other links
-// open in a new tab.
+// (https:, mailto: and paths such as "/docs") open in a new tab.
 
+// A source a citation points at: shown in its tooltip, opened on click.
 export type Citation = { title: string; url: string; domain: string; snippet?: string }
 
+// How a table column lines up, from the ":" in its separator row.
 export type Align = 'left' | 'right' | 'center'
 type ListItem = { text: string; checked?: boolean }
 
+// One top-level piece of a Markdown text, as parseBlocks returns it.
 export type MdBlock =
   | { type: 'heading'; level: number; text: string }
   | { type: 'paragraph'; text: string }
@@ -55,6 +63,8 @@ function splitRow(line: string) {
   return row.split('|').map((c) => c.trim())
 }
 
+// Splits Markdown into blocks (headings, lists, code, tables…), for when you
+// need the structure rather than the rendered text.
 export function parseBlocks(src: string): MdBlock[] {
   const lines = src.replace(/\r\n?/g, '\n').split('\n')
   const blocks: MdBlock[] = []
@@ -128,7 +138,7 @@ export function parseBlocks(src: string): MdBlock[] {
 }
 
 // While text streams in, hide half-written syntax: a table header without its
-// separator yet, an open link, unclosed bold or code.
+// separator yet, an open link, unclosed bold, strikethrough or code.
 function heal(src: string) {
   const lines = src.split('\n')
   const fences = lines.filter((l) => FENCE.test(l) || /^\s*```\s*$/.test(l)).length
@@ -147,13 +157,16 @@ function heal(src: string) {
     if (!complete) line = line.slice(0, open)
   }
   if ((line.match(/\*\*/g) ?? []).length % 2) line += '**'
+  if ((line.match(/~~/g) ?? []).length % 2) line += '~~'
   if ((line.match(/`/g) ?? []).length % 2) line += '`'
   lines[lines.length - 1] = line
   return lines.join('\n')
 }
 
-// Order matters: code first, so nothing inside backticks is parsed.
-const INLINE = /(`[^`\n]+`)|(\*\*(?=\S)[\s\S]*?\S\*\*)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:|#)[^)\s]*\))|(\[\d{1,2}\])|((?<![*\w])\*(?=\S)[^*\n]*?\S\*(?![*\w]))|((?<![\w_])_(?=\S)[^_\n]*?\S_(?![\w_]))/g
+// Order matters: code first, so nothing inside backticks is parsed. Groups:
+// 1 code, 2 bold, 3 link, 4 citation, 5 and 6 italic, 7 strikethrough. A link
+// may be https:, mailto:, "#…" or a path ("/docs", never "//host").
+const INLINE = /(`[^`\n]+`)|(\*\*(?=\S)[\s\S]*?\S\*\*)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:|#|\/(?!\/))[^)\s]*\))|(\[\d{1,2}\])|((?<![*\w])\*(?=\S)[^*\n]*?\S\*(?![*\w]))|((?<![\w_])_(?=\S)[^_\n]*?\S_(?![\w_]))|(~~(?=\S)[\s\S]*?\S~~)/g
 
 type Ctx = { sources?: Citation[]; onLink?: (href: string) => void }
 
@@ -182,6 +195,8 @@ function renderInline(text: string, ctx: Ctx, prefix = 'i'): ReactNode[] {
       const number = Number(token.slice(1, -1))
       const source = ctx.sources?.[number - 1]
       out.push(source ? <Cite key={key} n={number} source={source} /> : token)
+    } else if (m[7]) {
+      out.push(<del key={key} className="text-muted-foreground">{renderInline(token.slice(2, -2), ctx, key)}</del>)
     } else {
       out.push(<em key={key}>{renderInline(token.slice(1, -1), ctx, key)}</em>)
     }
@@ -239,14 +254,6 @@ const LANG_LABEL: Record<string, string> = {
   sql: 'SQL', json: 'JSON', csv: 'CSV', bash: 'Shell', sh: 'Shell', text: 'Text', md: 'Markdown', markdown: 'Markdown',
 }
 
-function writeClipboard(text: string) {
-  try {
-    navigator.clipboard?.writeText(text).catch(() => {})
-  } catch {
-    // No clipboard (an insecure page, an old browser): nothing to do.
-  }
-}
-
 // A code block with its language and a Copy button. `onCopy` runs after the
 // code is on the clipboard (for a toast or analytics).
 export function CodeBlock({ lang, code, cursor, onCopy }: {
@@ -255,12 +262,12 @@ export function CodeBlock({ lang, code, cursor, onCopy }: {
   cursor?: boolean
   onCopy?: (code: string) => void
 }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, flagCopied] = useCopied()
   function copy() {
-    writeClipboard(code)
+    // The button turns into "Copied", so no toast either way.
+    void copyText(code, { success: false, error: false })
     onCopy?.(code)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1500)
+    flagCopied()
   }
   return (
     <div className="bg-subtle min-w-0 overflow-hidden rounded-lg border">
@@ -397,6 +404,8 @@ function Blocks({ text, ctx, cursor, className }: { text: string; ctx: Ctx; curs
   )
 }
 
+// Renders a Markdown text. Pass `streaming` while an AI reply is still being
+// written; leave it out for finished text.
 export function Markdown({ text, streaming, sources, onLink, className }: {
   text: string
   streaming?: boolean

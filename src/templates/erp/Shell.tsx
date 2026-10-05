@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  ComputerIcon, DashboardSquare01Icon, LayoutTopIcon, Logout01Icon, Menu01Icon, Moon02Icon,
+  ComputerIcon, DashboardSquare01Icon, Home01Icon, LayoutTopIcon, Logout01Icon, Menu01Icon, Moon02Icon,
   Search01Icon, SidebarLeftIcon, SparklesIcon, Sun03Icon, Tick02Icon, UnfoldMoreIcon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { LetterMark } from '@/components/mark'
+import { AccountMenu as KitAccountMenu } from '@/blocks/account-menu'
+import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
+import { NotificationsMenu } from '@/blocks/notifications-menu'
+import { WorkspaceSwitcher } from '@/blocks/workspace-switcher'
+import { IconAction } from '@/components/icon-action'
+import { IconMark, LetterMark } from '@/components/mark'
 import { NavHeading, NavItem } from '@/components/nav-item'
-import { UserAvatar } from '@/components/person'
 import { SearchTrigger } from '@/components/search-trigger'
 import { Shortcut } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
@@ -18,18 +22,23 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
-import { NotificationsMenu } from '@/blocks/notifications-menu'
+import { formatMoney } from '@/lib/format'
+import { isTyping } from '@/lib/keyboard'
+import { plural } from '@/lib/text'
 import { useTheme } from '@/lib/theme'
 import { COMPANIES, DEMO_USERS, ROLE_LABEL } from './data'
-import { formatMoney } from './format'
-import { MODULES } from './modules'
+import { edition } from './edition'
+import { MODULES, pagesOf } from './modules'
 import { go, goScreen } from './route'
-import { useErp, type HeaderStyle } from './store'
+import { useErp, type HeaderStyle, type StartPage } from './store'
 import type { EntityId, ErpModule, ErpPage, Role } from './types'
-import { ModuleMark } from './ui'
 
 export const allowedModules = (role: Role | undefined) => MODULES.filter((m) => role && m.roles.includes(role))
+
+// Home is "Launchpad" while that is its only page; with the Assistant beside
+// it (ERP + AI) it is "Home".
+const moduleLabel = (m: ErpModule) => (m.id === 'home' && !edition().assistant ? 'Launchpad' : m.name)
+const moduleDescription = (m: ErpModule) => (m.id === 'home' && edition().assistant ? 'Your launchpad and the Assistant' : m.description)
 
 // The app frame: one sidebar (company, module switcher, the module's pages,
 // recent records, and Ask AI, notifications and the account at the foot) and
@@ -42,8 +51,7 @@ export function Shell({ module, page, children }: { module: ErpModule; page: Erp
   // "[" folds the sidebar away, like Linear.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const t = e.target as HTMLElement
-      if (e.key !== '[' || e.metaKey || e.ctrlKey || t.closest('input, textarea, [contenteditable="true"], [role="dialog"]')) return
+      if (e.key !== '[' || e.metaKey || e.ctrlKey || isTyping(e.target)) return
       setCollapsed((c) => !c)
     }
     window.addEventListener('keydown', onKey)
@@ -77,40 +85,25 @@ export function Shell({ module, page, children }: { module: ErpModule; page: Erp
   )
 }
 
+// The shared workspace switcher, over the companies (multi-company).
 function CompanySwitcher() {
   const { company, session, setCompany } = useErp()
   if (!company) return null
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="hover:bg-sidebar-accent focus-visible:ring-ring/40 flex w-full min-w-0 items-center gap-2 rounded-md p-1.5 text-left outline-none focus-visible:ring-2">
-          <LetterMark text={company.short} colour={company.colour} size="md" />
-          <span className="grid min-w-0 flex-1 leading-tight">
-            <span className="truncate text-[13px] font-medium">{company.name}</span>
-            <span className="text-muted-foreground truncate text-[11px]">{session ? ROLE_LABEL[session.role] : ''} · {company.country}</span>
-          </span>
-          <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>Companies</DropdownMenuLabel>
-        {COMPANIES.map((c) => (
-          <DropdownMenuItem
-            key={c.id}
-            onSelect={() => {
-              setCompany(c.id)
-              if (c.id !== company.id) toast(`Switched to ${c.name}`, { description: 'Demo data is shared between companies.' })
-            }}
-          >
-            <LetterMark text={c.short} colour={c.colour} />
-            <span className="flex-1 truncate">{c.name}</span>
-            {c.id === company.id && <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => goScreen('companies')}>All companies</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <WorkspaceSwitcher
+      workspaces={COMPANIES}
+      currentId={company.id}
+      onSelect={(id) => {
+        setCompany(id)
+        const next = COMPANIES.find((c) => c.id === id)
+        if (next) toast(`Switched to ${next.name}`, { description: 'Demo data is shared between companies.' })
+      }}
+      label="Companies"
+      detail={`${session ? ROLE_LABEL[session.role] : ''} · ${company.country}`}
+      menuClassName="w-64"
+    >
+      <DropdownMenuItem onSelect={() => goScreen('companies')}>All companies</DropdownMenuItem>
+    </WorkspaceSwitcher>
   )
 }
 
@@ -133,10 +126,10 @@ function ModuleMenu({ module, onNavigate, children }: { module: ErpModule; onNav
             }}
             className="gap-2.5 py-1.5"
           >
-            <ModuleMark icon={m.icon} colour={m.colour} />
+            <IconMark icon={m.icon} colour={m.colour} />
             <span className="grid min-w-0 flex-1 leading-tight">
-              <span className="truncate font-medium">{m.id === 'home' ? 'Launchpad' : m.name}</span>
-              <span className="text-muted-foreground truncate text-[11px]">{m.description}</span>
+              <span className="truncate font-medium">{moduleLabel(m)}</span>
+              <span className="text-muted-foreground truncate text-[11px]">{moduleDescription(m)}</span>
             </span>
             {m.id === module.id ? <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} /> : <DropdownMenuShortcut>G {m.key}</DropdownMenuShortcut>}
           </DropdownMenuItem>
@@ -148,6 +141,8 @@ function ModuleMenu({ module, onNavigate, children }: { module: ErpModule; onNav
 
 function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; page: ErpPage; onNavigate?: () => void; showSearch: boolean }) {
   const { data, recent, openPeek, setPaletteOpen } = useErp()
+  // A page's own part of the sidebar, such as the Assistant's chat history.
+  const Extra = page.sidebar
   const open = (m: string, p: string) => {
     go(m, p)
     onNavigate?.()
@@ -155,7 +150,7 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
   // Consecutive pages with the same group share a heading ("Receivables"…).
   const groups = useMemo(() => {
     const out: { title?: string; pages: ErpPage[] }[] = []
-    for (const p of module.pages) {
+    for (const p of pagesOf(module)) {
       const last = out[out.length - 1]
       if (last && last.title === p.group) last.pages.push(p)
       else out.push({ title: p.group, pages: [p] })
@@ -173,8 +168,8 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
             aria-label={`Module: ${module.name}. Switch module`}
             className="bg-background/60 hover:bg-background focus-visible:ring-ring/40 flex h-10 w-full min-w-0 items-center gap-2.5 rounded-lg border px-2 text-left shadow-xs outline-none focus-visible:ring-2"
           >
-            <ModuleMark icon={module.icon} colour={module.colour} />
-            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{module.id === 'home' ? 'Launchpad' : module.name}</span>
+            <IconMark icon={module.icon} colour={module.colour} />
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{moduleLabel(module)}</span>
             <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
           </button>
         </ModuleMenu>
@@ -188,7 +183,7 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
         )}
       </div>
 
-      <nav aria-label={`${module.name} pages`} className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+      <nav aria-label={`${module.name} pages`} className={cn('px-2', Extra ? 'shrink-0 pb-1' : 'min-h-0 flex-1 overflow-y-auto pb-3')}>
         {groups.map((g, i) => (
           <div key={g.title ?? i} className={cn(!g.title && i === 0 && 'mt-1')}>
             {g.title && <NavHeading>{g.title}</NavHeading>}
@@ -208,7 +203,7 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
           </div>
         ))}
 
-        {recent.length > 0 && (
+        {!Extra && recent.length > 0 && (
           <>
             <NavHeading>Recent</NavHeading>
             <div className="grid gap-px">
@@ -227,6 +222,7 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
           </>
         )}
       </nav>
+      {Extra && <Extra onNavigate={onNavigate} />}
 
       <footer className="grid gap-px border-t p-2">
         <Notifications variant="row" />
@@ -247,7 +243,8 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
   onToggle: () => void
   onMenu: () => void
 }) {
-  const { setPaletteOpen, setCopilotOpen, company, headerStyle } = useErp()
+  const { setPaletteOpen, setCopilotOpen, company, headerStyle, pageTitle } = useErp()
+  const onAssistant = module.id === 'home' && page.id === 'assistant'
   const withSearch = headerStyle === 'crumbs-search' || collapsed
   const sectionStart = page.group ? module.pages.find((p) => p.group === page.group) : undefined
 
@@ -261,10 +258,11 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
     ...(module.id !== 'home' ? [{
       id: 'module',
       label: module.name,
-      icon: <ModuleMark icon={module.icon} colour={module.colour} size="sm" />,
+      icon: <IconMark icon={module.icon} colour={module.colour} size="sm" />,
       onSelect: () => go(module.id, module.pages[0].id),
     }] : []),
     ...(sectionStart ? [{ id: 'section', label: page.group!, onSelect: () => go(module.id, sectionStart.id) }] : []),
+    ...(pageTitle ? [{ id: 'page', label: page.label, onSelect: () => go(module.id, page.id) }] : []),
   ]
 
   return (
@@ -276,23 +274,25 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
         <Button variant="ghost" size="icon" className="shrink-0 md:hidden" aria-label="Open menu" onClick={onMenu}>
           <HugeiconsIcon icon={Menu01Icon} strokeWidth={2} />
         </Button>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="hidden shrink-0 md:inline-flex" aria-label={collapsed ? 'Show sidebar' : 'Hide sidebar'} aria-pressed={collapsed} onClick={onToggle}>
-              <HugeiconsIcon icon={SidebarLeftIcon} strokeWidth={2} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{collapsed ? 'Show sidebar' : 'Hide sidebar'} <Shortcut keys={['[']} className="ml-1" /></TooltipContent>
-        </Tooltip>
+        {/* aria-pressed, not `pressed`: the button keeps its plain look while the sidebar is hidden. */}
+        <IconAction
+          label={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+          icon={SidebarLeftIcon}
+          shortcut={['[']}
+          size="icon"
+          aria-pressed={collapsed}
+          onClick={onToggle}
+          className="text-foreground hidden shrink-0 md:inline-flex"
+        />
         {/* With the sidebar hidden, the module switcher moves up here. */}
         {collapsed && (
           <ModuleMenu module={module}>
             <Button variant="ghost" size="icon" className="hidden shrink-0 md:inline-flex" aria-label={`Module: ${module.name}. Switch module`}>
-              <ModuleMark icon={module.icon} colour={module.colour} size="sm" />
+              <IconMark icon={module.icon} colour={module.colour} size="sm" />
             </Button>
           </ModuleMenu>
         )}
-        <FoldingBreadcrumb trail={trail} current={page.label} />
+        <FoldingBreadcrumb trail={trail} current={pageTitle ?? page.label} />
       </div>
       {withSearch && (
         <SearchTrigger
@@ -306,15 +306,17 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
         <Button variant="ghost" size="icon" className={cn(withSearch && 'md:hidden')} aria-label="Search" onClick={() => setPaletteOpen(true)}>
           <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
         </Button>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="sm" onClick={() => setCopilotOpen(true)}>
-              <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" />
-              <span className="hidden sm:inline">Ask AI</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></TooltipContent>
-        </Tooltip>
+        {!onAssistant && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="sm" onClick={() => setCopilotOpen(true)}>
+                <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" />
+                <span className="hidden sm:inline">Ask AI</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></TooltipContent>
+          </Tooltip>
+        )}
         <div className="md:hidden"><Notifications variant="icon" /></div>
       </div>
     </header>
@@ -329,7 +331,7 @@ function useAlerts() {
       id: r.id, entity: 'purchaseOrders' as EntityId, actor: String(r.buyer), text: `asked you to approve ${r.id} for ${formatMoney(Number(r.amount))}`, time: '12 min ago',
     })),
     ...data.leave.filter((r) => r.status === 'Pending').slice(0, 2).map((r) => ({
-      id: r.id, entity: 'leave' as EntityId, actor: String(r.employee), text: `requested ${r.days} ${Number(r.days) === 1 ? 'day' : 'days'} of ${String(r.type).toLowerCase()}`, time: '1 h ago',
+      id: r.id, entity: 'leave' as EntityId, actor: String(r.employee), text: `requested ${plural(Number(r.days), 'day')} of ${String(r.type).toLowerCase()}`, time: '1 h ago',
     })),
     ...data.invoices.filter((r) => r.status === 'Overdue').slice(0, 1).map((r) => ({
       id: r.id, entity: 'invoices' as EntityId, actor: 'Accounts receivable', text: `${r.id} from ${r.customer} is overdue`, time: '3 h ago',
@@ -355,79 +357,87 @@ function Notifications({ variant }: { variant: 'row' | 'icon' }) {
   )
 }
 
+// The shared account menu, with the ERP's settings as sub-menus.
 function AccountMenu() {
-  const { session, setRole, signOut, headerStyle, setHeaderStyle } = useErp()
+  const { session, setRole, signOut, headerStyle, setHeaderStyle, startPage, setStartPage } = useErp()
   const { theme, setTheme } = useTheme()
   if (!session) return null
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button type="button" className="hover:bg-sidebar-accent focus-visible:ring-ring/40 aria-expanded:bg-sidebar-accent mt-1 flex h-10 w-full min-w-0 items-center gap-2 rounded-md px-1.5 text-left outline-none focus-visible:ring-2">
-          <UserAvatar name={session.name} className="size-7" />
-          <span className="grid min-w-0 flex-1 leading-tight">
-            <span className="truncate text-xs font-medium">{session.name}</span>
-            <span className="text-muted-foreground truncate text-[11px]">{session.title}</span>
-          </span>
-          <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="w-60">
-        <DropdownMenuLabel className="grid gap-0.5">
-          <span className="text-foreground text-xs font-medium">{session.name}</span>
-          <span className="font-normal">{session.email}</span>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
+    <KitAccountMenu
+      name={session.name}
+      detail={session.title}
+      email={session.email}
+      size="md"
+      menuClassName="w-60"
+      className="hover:bg-sidebar-accent focus-visible:ring-ring/40 aria-expanded:bg-sidebar-accent mt-1"
+    >
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <HugeiconsIcon icon={UserSwitchIcon} strokeWidth={2} /> Switch role <span className="text-muted-foreground ml-auto text-[11px]">Demo</span>
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-52">
+          <DropdownMenuRadioGroup value={session.role} onValueChange={(v) => {
+            const user = DEMO_USERS.find((u) => u.role === v)!
+            setRole(user.role, user.title)
+            toast(`Viewing as ${ROLE_LABEL[user.role]}`, { description: 'The module switcher and the launchpad now show this role’s modules.' })
+            go('home', 'launchpad')
+          }}>
+            {DEMO_USERS.map((u) => <DropdownMenuRadioItem key={u.role} value={u.role}>{ROLE_LABEL[u.role]}</DropdownMenuRadioItem>)}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <HugeiconsIcon icon={theme === 'light' ? Sun03Icon : theme === 'dark' ? Moon02Icon : ComputerIcon} strokeWidth={2} /> Theme
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-40">
+          <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as typeof theme)}>
+            <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} /> Header
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-52">
+          <DropdownMenuRadioGroup value={headerStyle} onValueChange={(v) => setHeaderStyle(v as HeaderStyle)}>
+            <DropdownMenuRadioItem value="crumbs-search">Breadcrumb and search</DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="crumbs">Breadcrumb only</DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      {edition().assistant && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={UserSwitchIcon} strokeWidth={2} /> Switch role <span className="text-muted-foreground ml-auto text-[11px]">Demo</span>
+            <HugeiconsIcon icon={Home01Icon} strokeWidth={2} /> Start page
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent className="w-52">
-            <DropdownMenuRadioGroup value={session.role} onValueChange={(v) => {
-              const user = DEMO_USERS.find((u) => u.role === v)!
-              setRole(user.role, user.title)
-              toast(`Viewing as ${ROLE_LABEL[user.role]}`, { description: 'The module switcher and the launchpad now show this role’s modules.' })
-              go('home', 'launchpad')
+            <DropdownMenuLabel>After you sign in</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={startPage} onValueChange={(v) => {
+              setStartPage(v as StartPage)
+              toast(`You'll start on the ${v === 'assistant' ? 'Assistant' : 'launchpad'}`, { description: 'From your next sign-in.' })
             }}>
-              {DEMO_USERS.map((u) => <DropdownMenuRadioItem key={u.role} value={u.role}>{ROLE_LABEL[u.role]}</DropdownMenuRadioItem>)}
+              <DropdownMenuRadioItem value="launchpad">Launchpad</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="assistant">Assistant</DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={theme === 'light' ? Sun03Icon : theme === 'dark' ? Moon02Icon : ComputerIcon} strokeWidth={2} /> Theme
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-40">
-            <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as typeof theme)}>
-              <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
-            <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} /> Header
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-52">
-            <DropdownMenuRadioGroup value={headerStyle} onValueChange={(v) => setHeaderStyle(v as HeaderStyle)}>
-              <DropdownMenuRadioItem value="crumbs-search">Breadcrumb and search</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="crumbs">Breadcrumb only</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <a href="#/overview">
-            <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} /> Back to the UI kit
-          </a>
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => {
-          signOut()
-          goScreen('login')
-        }}>
-          <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} /> Sign out
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      )}
+      <DropdownMenuSeparator />
+      <DropdownMenuItem asChild>
+        <a href="#/overview">
+          <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} /> Back to the UI kit
+        </a>
+      </DropdownMenuItem>
+      <DropdownMenuItem onSelect={() => {
+        signOut()
+        goScreen('login')
+      }}>
+        <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} /> Sign out
+      </DropdownMenuItem>
+    </KitAccountMenu>
   )
 }

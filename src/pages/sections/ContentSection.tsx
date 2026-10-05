@@ -1,23 +1,27 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent, type ReactNode } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type DragEvent, type KeyboardEvent } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Alert02Icon, Camera01Icon, Cancel01Icon, CheckmarkCircle02Icon, CloudUploadIcon, DragDropVerticalIcon,
-  File01Icon, Heading02Icon, LeftToRightListBulletIcon, LeftToRightListNumberIcon, Link01Icon, Pdf01Icon,
-  Image01Icon, Loading03Icon, QuoteDownIcon, SourceCodeIcon, TextBoldIcon, TextItalicIcon, TextStrikethroughIcon, Tick02Icon,
+  Heading02Icon, LeftToRightListBulletIcon, LeftToRightListNumberIcon, Link01Icon, QuoteDownIcon,
+  SourceCodeIcon, TextBoldIcon, TextItalicIcon, TextStrikethroughIcon, Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { Markdown } from '@/blocks/markdown'
+import { fileIcon } from '@/components/file-chip'
+import { IconAction } from '@/components/icon-action'
+import { UserAvatar } from '@/components/person'
+import { Shortcut } from '@/components/shortcut'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Shortcut } from '@/components/shortcut'
-import { Kbd } from '@/components/ui/kbd'
 import { Progress } from '@/components/ui/progress'
+import { Spinner } from '@/components/ui/spinner'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { formatFileSize } from '@/lib/format'
+import { plural } from '@/lib/text'
 import { PEOPLE } from '../data'
 import { Panel, Section } from './shared'
-import { UserAvatar } from '@/components/person'
 
 export default function ContentSection() {
   return (
@@ -40,8 +44,6 @@ const ACCEPT = '.png,.jpg,.jpeg,.pdf,image/png,image/jpeg,application/pdf'
 type Kind = 'image' | 'pdf' | 'other'
 type Upload = { id: string; name: string; size: number; kind: Kind; url?: string; progress: number; error?: string }
 
-const KIND_ICON: Record<Kind, IconSvgElement> = { image: Image01Icon, pdf: Pdf01Icon, other: File01Icon }
-
 const SEED: Upload[] = [
   { id: 'seed-pdf', name: 'brand-guidelines.pdf', size: 2_516_582, kind: 'pdf', progress: 100 },
   { id: 'seed-jpg', name: 'team-offsite.jpg', size: 3_250_585, kind: 'image', progress: 25 },
@@ -53,14 +55,6 @@ function kindOf(file: File): Kind {
   if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)) return 'pdf'
   return 'other'
 }
-
-function formatBytes(n: number) {
-  if (n < 1024) return `${n} B`
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`
-  return `${(n / 1024 / 1024).toFixed(1)} MB`
-}
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 function UploadPanel() {
   const [files, setFiles] = useState(SEED)
@@ -216,7 +210,7 @@ function FileRow({ file, onRemove }: { file: Upload; onRemove: () => void }) {
         {file.url ? (
           <img src={file.url} alt="" className="size-full object-cover" />
         ) : (
-          <HugeiconsIcon icon={KIND_ICON[file.kind]} strokeWidth={2} className="size-4" />
+          <HugeiconsIcon icon={fileIcon(file.name)} strokeWidth={2} className="size-4" />
         )}
       </span>
       <div className="grid min-w-0 flex-1 grid-cols-1 gap-1">
@@ -228,7 +222,7 @@ function FileRow({ file, onRemove }: { file: Upload; onRemove: () => void }) {
           </div>
         ) : (
           <span className="text-muted-foreground truncate text-[11px]">
-            <span className="tabular-nums">{formatBytes(file.size)}</span>
+            <span className="tabular-nums">{formatFileSize(file.size)}</span>
             {' · '}
             {status === 'error' ? <span className="text-destructive">{file.error}</span> : 'Uploaded'}
           </span>
@@ -462,7 +456,7 @@ function ReorderPanel() {
         </ol>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p id={hintId} className="text-muted-foreground flex flex-wrap items-center gap-1 text-[11px]">
-            Drag a row, or focus it and press <Kbd>Alt</Kbd> <Kbd>↑</Kbd> <Kbd>↓</Kbd>
+            Drag a row, or focus it and press <Shortcut keys={['alt', '↑', '↓']} />
           </p>
           <Button
             variant="ghost"
@@ -649,7 +643,7 @@ function EditorPanel() {
   const words = trimmed ? trimmed.split(/\s+/).length : 0
 
   return (
-    <Panel title="Writing editor" note="Markdown with a hand-written preview" wide>
+    <Panel title="Writing editor" note="Markdown, previewed with the Markdown block" wide>
       <Tabs value={tab} onValueChange={setTab} className="gap-0">
         <div className="has-[textarea:focus-visible]:border-ring has-[textarea:focus-visible]:ring-ring/30 bg-background min-w-0 overflow-hidden rounded-lg border transition-[border-color,box-shadow] has-[textarea:focus-visible]:ring-2">
           <div className="flex flex-wrap items-center gap-2 border-b px-2 py-1.5">
@@ -663,26 +657,15 @@ function EditorPanel() {
                   <div key={g} className="flex items-center gap-0.5">
                     {g > 0 && <span aria-hidden className="bg-border mx-1 h-4 w-px" />}
                     {group.map((tool) => (
-                      <Tooltip key={tool.id}>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={tool.label}
-                            aria-keyshortcuts={tool.key ? `Control+${tool.key.toUpperCase()}` : undefined}
-                            className="text-muted-foreground"
-                            // Keeps the textarea focused, so its selection stays visible.
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => run(tool)}
-                          >
-                            <HugeiconsIcon icon={tool.icon} strokeWidth={2} />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {tool.label}
-                          {tool.key && <Shortcut keys={['mod', tool.key.toUpperCase()]} className="ml-1" />}
-                        </TooltipContent>
-                      </Tooltip>
+                      <IconAction
+                        key={tool.id}
+                        label={tool.label}
+                        icon={tool.icon}
+                        shortcut={tool.key ? ['mod', tool.key.toUpperCase()] : undefined}
+                        // Keeps the textarea focused, so its selection stays visible.
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => run(tool)}
+                      />
                     ))}
                   </div>
                 ))}
@@ -702,12 +685,8 @@ function EditorPanel() {
             />
           </TabsContent>
           <TabsContent value="preview">
-            <div className="min-h-72 min-w-0 px-4 py-3 text-[13px] leading-relaxed break-words">
-              {trimmed ? (
-                <div className="grid grid-cols-1 gap-3">{renderMarkdown(value)}</div>
-              ) : (
-                <p className="text-muted-foreground">Nothing to preview yet.</p>
-              )}
+            <div className="min-h-72 min-w-0 px-4 py-3">
+              {trimmed ? <Markdown text={value} /> : <p className="text-muted-foreground text-[13px]">Nothing to preview yet.</p>}
             </div>
           </TabsContent>
 
@@ -717,7 +696,7 @@ function EditorPanel() {
             </span>
             {saving ? (
               <span className="flex items-center gap-1">
-                <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-3 animate-spin motion-reduce:animate-none" /> Saving…
+                <Spinner aria-hidden className="size-3 motion-reduce:animate-none" /> Saving…
               </span>
             ) : (
               <span className="flex items-center gap-1">
@@ -729,132 +708,4 @@ function EditorPanel() {
       </Tabs>
     </Panel>
   )
-}
-
-/* ---------- A tiny Markdown renderer ---------- */
-
-// Builds React elements, so nothing typed can become live HTML.
-const INLINE = /`([^`\n]+)`|\[([^\]\n]+)\]\(([^)\s]+)\)|\*\*(.+?)\*\*|~~(.+?)~~|(?<![\w*])\*(?!\s)([^*\n]+?)\*(?![\w*])|(?<!\w)_(?!\s)(.+?)_(?!\w)/
-const SAFE_HREF = /^(https?:\/\/|mailto:|#|\/)/i
-const LIST = /^\s*[-*+]\s+/
-const ORDERED = /^\s*(\d+)[.)]\s+/
-const HEADING = /^(#{1,6})\s+(.*)$/
-const BLOCK_START = /^(```|#{1,6}\s|>|\s*[-*+]\s+|\s*\d+[.)]\s+)/
-
-function inline(text: string, key: string): ReactNode[] {
-  const out: ReactNode[] = []
-  let rest = text
-  let n = 0
-  while (rest) {
-    const m = INLINE.exec(rest)
-    if (!m) {
-      out.push(rest)
-      break
-    }
-    if (m.index > 0) out.push(rest.slice(0, m.index))
-    const k = `${key}.${n++}`
-    const [, codeText, linkText, href, bold, strike, star, under] = m
-    if (codeText !== undefined) {
-      out.push(<code key={k} className="bg-muted rounded px-1 py-0.5 font-mono text-[0.9em]">{codeText}</code>)
-    } else if (linkText !== undefined) {
-      out.push(
-        SAFE_HREF.test(href) ? (
-          <a key={k} href={href} target="_blank" rel="noreferrer" className="text-brand underline underline-offset-2 hover:no-underline">
-            {inline(linkText, k)}
-          </a>
-        ) : (
-          <span key={k}>{inline(linkText, k)}</span>
-        ),
-      )
-    } else if (bold !== undefined) {
-      out.push(<strong key={k} className="font-semibold">{inline(bold, k)}</strong>)
-    } else if (strike !== undefined) {
-      out.push(<del key={k} className="text-muted-foreground">{inline(strike, k)}</del>)
-    } else {
-      out.push(<em key={k}>{inline(star ?? under, k)}</em>)
-    }
-    rest = rest.slice(m.index + m[0].length)
-  }
-  return out
-}
-
-const HEADING_STYLE = ['text-base font-semibold tracking-tight', 'text-sm font-semibold tracking-tight', 'text-[13px] font-semibold']
-const HEADING_TAG = ['h4', 'h5', 'h6'] as const
-
-function renderMarkdown(src: string): ReactNode[] {
-  const lines = src.replace(/\r\n?/g, '\n').split('\n')
-  const out: ReactNode[] = []
-  let i = 0
-
-  while (i < lines.length) {
-    const line = lines[i]
-    const k = `b${out.length}`
-
-    if (!line.trim()) {
-      i++
-      continue
-    }
-
-    if (line.startsWith('```')) {
-      const body: string[] = []
-      i++
-      while (i < lines.length && !lines[i].startsWith('```')) body.push(lines[i++])
-      i++
-      out.push(
-        <pre key={k} className="bg-muted overflow-x-auto rounded-md px-3 py-2 font-mono text-xs leading-relaxed">
-          <code>{body.join('\n')}</code>
-        </pre>,
-      )
-      continue
-    }
-
-    const h = HEADING.exec(line)
-    if (h) {
-      const level = Math.min(h[1].length, 3) - 1
-      const Tag = HEADING_TAG[level]
-      out.push(<Tag key={k} className={HEADING_STYLE[level]}>{inline(h[2], k)}</Tag>)
-      i++
-      continue
-    }
-
-    if (line.startsWith('>')) {
-      const quoted: string[] = []
-      while (i < lines.length && lines[i].startsWith('>')) quoted.push(lines[i++].replace(/^>\s?/, ''))
-      out.push(
-        <blockquote key={k} className="text-muted-foreground grid grid-cols-1 gap-2 border-l-2 pl-3">
-          {renderMarkdown(quoted.join('\n'))}
-        </blockquote>,
-      )
-      continue
-    }
-
-    if (LIST.test(line)) {
-      const items: string[] = []
-      while (i < lines.length && LIST.test(lines[i])) items.push(lines[i++].replace(LIST, ''))
-      out.push(
-        <ul key={k} className="marker:text-muted-foreground grid list-disc gap-0.5 pl-5">
-          {items.map((t, j) => <li key={j}>{inline(t, `${k}.${j}`)}</li>)}
-        </ul>,
-      )
-      continue
-    }
-
-    const o = ORDERED.exec(line)
-    if (o) {
-      const items: string[] = []
-      while (i < lines.length && ORDERED.test(lines[i])) items.push(lines[i++].replace(ORDERED, ''))
-      out.push(
-        <ol key={k} start={Number(o[1])} className="marker:text-muted-foreground grid list-decimal gap-0.5 pl-5">
-          {items.map((t, j) => <li key={j}>{inline(t, `${k}.${j}`)}</li>)}
-        </ol>,
-      )
-      continue
-    }
-
-    const para = [line.trim()]
-    i++
-    while (i < lines.length && lines[i].trim() && !BLOCK_START.test(lines[i])) para.push(lines[i++].trim())
-    out.push(<p key={k}>{inline(para.join(' '), k)}</p>)
-  }
-  return out
 }

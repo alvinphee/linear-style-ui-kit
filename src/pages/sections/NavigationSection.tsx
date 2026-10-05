@@ -22,10 +22,13 @@ import {
 } from '@/components/ui/pagination'
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 import { Textarea } from '@/components/ui/textarea'
-import { LABELS, PRIORITY, STATUS, type Priority, type Status } from '../data'
+import { LABEL_BY_ID, PRIORITY, STATUS, type Priority, type Status } from '../data'
 import { Panel, Section } from './shared'
+import { LabelChip } from '@/components/label-dot'
+import { LetterMark } from '@/components/mark'
 import { Person, UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from './StatusSection'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusIcon } from '@/components/status-icon'
 
 // Demo links stay on the page instead of jumping to the top.
 const stay = (e: MouseEvent) => e.preventDefault()
@@ -75,9 +78,7 @@ function BreadcrumbPanel() {
           <BreadcrumbList className="gap-1">
             <BreadcrumbItem>
               <BreadcrumbLink href="#" onClick={stay} className="flex items-center gap-1.5">
-                <span className="bg-brand/15 text-brand flex size-4 items-center justify-center rounded-sm text-[9px] font-semibold">
-                  EN
-                </span>
+                <LetterMark text="EN" colour="var(--brand)" size="xs" />
                 Engineering
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -398,15 +399,9 @@ function ResizablePanesPanel() {
                   <div className="grid gap-1">
                     <dt className="text-muted-foreground text-[11px]">Labels</dt>
                     <dd className="flex min-w-0 flex-wrap gap-1">
-                      {item.labels.map((id) => {
-                        const label = LABELS.find((l) => l.id === id)!
-                        return (
-                          <span key={id} className="inline-flex max-w-full items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px]">
-                            <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: label.colour }} />
-                            <span className="truncate">{label.name}</span>
-                          </span>
-                        )
-                      })}
+                      {item.labels.map((id) => (
+                        <LabelChip key={id} name={LABEL_BY_ID[id].name} colour={LABEL_BY_ID[id].colour} className="text-foreground" />
+                      ))}
                     </dd>
                   </div>
                 )}

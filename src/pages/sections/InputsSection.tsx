@@ -2,8 +2,8 @@ import { useRef, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Building03Icon, Calendar03Icon,
-  Cancel01Icon, CheckmarkCircle02Icon, FloppyDiskIcon, MinusSignIcon, PlusSignIcon, TextBoldIcon,
-  TextItalicIcon, TextUnderlineIcon, Tick02Icon, UnfoldMoreIcon,
+  CheckmarkCircle02Icon, FloppyDiskIcon, MinusSignIcon, PlusSignIcon, TextBoldIcon, TextItalicIcon,
+  TextUnderlineIcon, Tick02Icon, UnfoldMoreIcon,
 } from '@hugeicons/core-free-icons'
 import { differenceInCalendarDays, endOfMonth, format, startOfMonth, subDays } from 'date-fns'
 import { REGEXP_ONLY_DIGITS } from 'input-otp'
@@ -21,14 +21,15 @@ import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot } from '@/comp
 import { Kbd } from '@/components/ui/kbd'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { CUSTOMERS, LABELS } from '../data'
+import { IconAction } from '@/components/icon-action'
+import { LabelChip, LabelDot } from '@/components/label-dot'
+import { CUSTOMERS, LABEL_BY_ID, LABELS } from '../data'
 import { Panel, Row, Section } from './shared'
 
 const FORMATS = [
-  { id: 'bold', label: 'Bold', keys: 'Ctrl B', icon: TextBoldIcon },
-  { id: 'italic', label: 'Italic', keys: 'Ctrl I', icon: TextItalicIcon },
-  { id: 'underline', label: 'Underline', keys: 'Ctrl U', icon: TextUnderlineIcon },
+  { id: 'bold', label: 'Bold', key: 'B', icon: TextBoldIcon },
+  { id: 'italic', label: 'Italic', key: 'I', icon: TextItalicIcon },
+  { id: 'underline', label: 'Underline', key: 'U', icon: TextUnderlineIcon },
 ] as const
 
 type Mark = (typeof FORMATS)[number]['id']
@@ -48,23 +49,17 @@ function ButtonGroupsPanel() {
         <Row className="gap-3">
           <ButtonGroup aria-label="Text format">
             {FORMATS.map((f) => (
-              <Tooltip key={f.id}>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label={f.label}
-                    aria-pressed={marks.includes(f.id)}
-                    className="aria-pressed:bg-muted aria-pressed:text-foreground"
-                    onClick={() => toggle(f.id)}
-                  >
-                    <HugeiconsIcon icon={f.icon} strokeWidth={2} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {f.label} <Kbd className="ml-1">{f.keys}</Kbd>
-                </TooltipContent>
-              </Tooltip>
+              <IconAction
+                key={f.id}
+                label={f.label}
+                icon={f.icon}
+                shortcut={['mod', f.key]}
+                pressed={marks.includes(f.id)}
+                variant="outline"
+                size="icon"
+                className="text-foreground"
+                onClick={() => toggle(f.id)}
+              />
             ))}
           </ButtonGroup>
 
@@ -431,26 +426,18 @@ function TagsPanel() {
               className="border-input bg-input/20 dark:bg-input/30 flex min-h-7 w-full min-w-0 flex-wrap items-center gap-1 rounded-md border p-1"
               onClick={(e) => e.target === e.currentTarget && setOpen(true)}
             >
-              {selected.map((id) => {
-                const label = LABELS.find((l) => l.id === id)!
-                return (
-                  <span key={id} className="bg-muted inline-flex h-5 max-w-full items-center gap-1 rounded-sm pr-0.5 pl-1.5 text-[11px]">
-                    <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: label.colour }} />
-                    <span className="truncate">{label.name}</span>
-                    <button
-                      type="button"
-                      aria-label={`Remove ${label.name}`}
-                      className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-ring/30 rounded-xs p-0.5 outline-none focus-visible:ring-2"
-                      onClick={() => {
-                        toggle(id)
-                        triggerRef.current?.focus()
-                      }}
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-                    </button>
-                  </span>
-                )
-              })}
+              {selected.map((id) => (
+                <LabelChip
+                  key={id}
+                  name={LABEL_BY_ID[id].name}
+                  colour={LABEL_BY_ID[id].colour}
+                  variant="soft"
+                  onRemove={() => {
+                    toggle(id)
+                    triggerRef.current?.focus()
+                  }}
+                />
+              ))}
               <PopoverTrigger asChild>
                 <Button ref={triggerRef} id="labels-trigger" variant="ghost" size="xs" className="text-muted-foreground">
                   <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
@@ -488,7 +475,7 @@ function TagsPanel() {
                         >
                           {on && <HugeiconsIcon icon={Tick02Icon} strokeWidth={3} className="size-2.5" />}
                         </span>
-                        <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: l.colour }} />
+                        <LabelDot colour={l.colour} />
                         {l.name}
                       </CommandItem>
                     )

@@ -8,7 +8,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { FileChip, fileIcon, formatFileSize } from '@/components/file-chip'
+import { FileChip } from '@/components/file-chip'
 import { IconAction } from '@/components/icon-action'
 import { UserAvatar } from '@/components/person'
 import { AiMotion, useNow } from '@/components/thinking-indicator'
@@ -21,6 +21,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Kbd } from '@/components/ui/kbd'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { formatTimer } from '@/lib/format'
+import { plural } from '@/lib/text'
 
 // The prompt box (composer) of an AI chat. A text area that grows with what
 // is written (Enter sends, Shift+Enter adds a line), attached files as chips
@@ -108,8 +110,6 @@ type Item = {
   command?: boolean
 }
 
-// fileIcon, formatFileSize and the chip are the kit's (components/file-chip).
-export { fileIcon, formatFileSize }
 
 let attachmentSeq = 0
 const toAttachment = (file: File): PromptAttachment => ({
@@ -228,7 +228,6 @@ export function ModelPicker({ models, value, onChange, label = 'Model', defaultI
 
 function RecordingBar({ since, onStop, onCancel }: { since: number; onStop: () => void; onCancel: () => void }) {
   const time = useNow(true, 250)
-  const seconds = Math.max(0, Math.floor((time - since) / 1000))
   return (
     <div className="flex min-w-0 flex-1 items-center gap-2 pl-1" role="status" aria-label="Recording">
       <AiMotion />
@@ -237,7 +236,7 @@ function RecordingBar({ since, onStop, onCancel }: { since: number; onStop: () =
         <span className="bg-destructive relative size-2.5 rounded-full" />
       </span>
       <span className="text-xs font-medium">Listening</span>
-      <span className="text-muted-foreground text-xs tabular-nums">{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span>
+      <span className="text-muted-foreground text-xs tabular-nums">{formatTimer((time - since) / 1000)}</span>
       <span aria-hidden="true" className="flex h-4 min-w-0 flex-1 items-center gap-0.5 overflow-hidden">
         {Array.from({ length: 24 }, (_, i) => (
           <span
@@ -401,12 +400,12 @@ export function PromptBox({
     const incoming = Array.from(list)
     if (!incoming.length || !canAttach) return
     const room = maxAttachments - files.length
-    const limit = `Up to ${maxAttachments} ${maxAttachments === 1 ? 'file' : 'files'} per message`
+    const limit = `Up to ${plural(maxAttachments, 'file')} per message`
     if (room <= 0) {
       toast(limit)
       return
     }
-    if (incoming.length > room) toast(`Only the first ${room} ${room === 1 ? 'file was' : 'files were'} added`, { description: `${limit}.` })
+    if (incoming.length > room) toast(`Only the first ${plural(room, 'file was', 'files were')} added`, { description: `${limit}.` })
     setFiles((current) => [...current, ...incoming.slice(0, room).map(toAttachment)])
   }
 

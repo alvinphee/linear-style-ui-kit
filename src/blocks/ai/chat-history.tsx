@@ -3,25 +3,19 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowRight01Icon, Cancel01Icon, CopyPlusIcon, Delete02Icon, Download01Icon, Edit02Icon, Folder01Icon,
   FolderOpenIcon, FolderRemoveIcon, FolderTransferIcon, MoreHorizontalIcon, PencilEdit02Icon, PinIcon, PinOffIcon,
-  Search01Icon, Tick02Icon, UnfoldMoreIcon,
+  Tick02Icon,
 } from '@hugeicons/core-free-icons'
+import { startOfDay, subDays } from 'date-fns'
 import { cn } from 'cn'
-import { UserAvatar } from '@/components/person'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { SearchField } from '@/components/search-field'
+import { CONTEXT_MENU_KIT, DROPDOWN_MENU_KIT, type MenuKit } from '@/components/menu-kit'
 import { Button } from '@/components/ui/button'
-import {
-  ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuSub,
-  ContextMenuSubContent, ContextMenuSubTrigger, ContextMenuTrigger,
-} from '@/components/ui/context-menu'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
-  DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Progress } from '@/components/ui/progress'
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
+import { relativeDay } from '@/lib/format'
+import { plural } from '@/lib/text'
 
 // The chat history: the sidebar of an AI chat app. From the top: New chat
 // (with its keys, if you pass them), a search over chat titles, projects
@@ -31,7 +25,8 @@ import { Spinner } from '@/components/ui/spinner'
 // renames it in place; its menu (the … button, or a right click) offers pin,
 // rename, move to project, duplicate, export and delete, which asks first.
 // Only the actions you pass a callback for are offered. `footer` sits at the
-// bottom: CreditsMeter and AccountMenu below are made for it.
+// bottom: UsageMeter (components/usage-meter) and AccountMenu
+// (blocks/account-menu) are made for it.
 //
 // It fills its parent's height, so put it in a fixed-width column (an aside
 // or a sheet). The New chat keys are only shown; handle them yourself.
@@ -60,33 +55,18 @@ export type HistoryProject = {
   colour?: string
 }
 
-const DAY = 24 * 60 * 60_000
-
-// Today, Yesterday, Previous 7 days or Older, counted from `now`.
+// Today, Yesterday, Previous 7 days or Older, in calendar days from `now`.
 export function dateGroup(time: number, now = Date.now()) {
-  const start = new Date(now).setHours(0, 0, 0, 0)
-  if (time >= start) return 'Today'
-  if (time >= start - DAY) return 'Yesterday'
-  if (time >= start - 7 * DAY) return 'Previous 7 days'
-  return 'Older'
+  const day = relativeDay(time, now)
+  if (day) return day
+  return time >= subDays(startOfDay(now), 7).getTime() ? 'Previous 7 days' : 'Older'
 }
-
-// The same items render in a dropdown (the … button) and a context menu
-// (right click); each kit is one menu family's parts.
-export const DROPDOWN_MENU_KIT = {
-  Item: DropdownMenuItem, Sub: DropdownMenuSub, SubTrigger: DropdownMenuSubTrigger,
-  SubContent: DropdownMenuSubContent, Separator: DropdownMenuSeparator,
-}
-export const CONTEXT_MENU_KIT = {
-  Item: ContextMenuItem, Sub: ContextMenuSub, SubTrigger: ContextMenuSubTrigger,
-  SubContent: ContextMenuSubContent, Separator: ContextMenuSeparator,
-}
-export type ChatMenuKit = typeof DROPDOWN_MENU_KIT | typeof CONTEXT_MENU_KIT
 
 // A chat's actions, for the history's row menus and a chat header's menu.
-// `extra` goes after Duplicate (and Export), before Delete.
+// The same items render in the … dropdown and the right-click menu: pass a
+// menu kit. `extra` goes after Duplicate (and Export), before Delete.
 export function ChatMenuItems({ kit, chat, projects, onPin, onRename, onMove, onDuplicate, onExport, onDelete, extra }: {
-  kit: ChatMenuKit
+  kit: MenuKit
   chat: Pick<HistoryChat, 'pinned' | 'projectId'>
   projects?: HistoryProject[]
   onPin?: (pinned: boolean) => void
@@ -226,101 +206,23 @@ export function DeleteChatDialog({ open, title, onClose, onConfirm, onDeleted }:
   onConfirm: () => void
   onDeleted?: () => void
 }) {
-  const deleted = useRef(false)
+  // Keeps the title on screen while the dialog animates closed.
   const shown = useRef(title)
   if (title) shown.current = title
   return (
-    <AlertDialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <AlertDialogContent
-        onCloseAutoFocus={(e) => {
-          if (!deleted.current) return
-          deleted.current = false
-          if (!onDeleted) return
-          e.preventDefault()
-          onDeleted()
-        }}
-      >
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete this chat?</AlertDialogTitle>
-          <AlertDialogDescription>
-            “{shown.current}” and all its replies will be deleted. This cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant="destructive"
-            onClick={() => {
-              if (!open) return
-              deleted.current = true
-              onConfirm()
-              onClose()
-            }}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  )
-}
-
-// How much of the plan's credits are used, as a thin bar with a line above.
-export function CreditsMeter({ value, label, note, className }: {
-  // Percent used, 0 to 100.
-  value: number
-  // Defaults to "N% of monthly credits".
-  label?: ReactNode
-  // On the right of the line, such as "Resets 1 Oct".
-  note?: ReactNode
-  className?: string
-}) {
-  const percent = Math.round(value)
-  return (
-    <div className={cn('grid gap-1.5 px-1.5 pt-1', className)}>
-      <div className="flex items-baseline justify-between gap-2 text-[11px]">
-        <span className="text-muted-foreground">{label ?? `${percent}% of monthly credits`}</span>
-        {note && <span className="text-muted-foreground">{note}</span>}
-      </div>
-      <Progress value={value} aria-label={`${percent}% of monthly credits used`} />
-    </div>
-  )
-}
-
-// The signed-in person at the foot of the sidebar, opening a menu upwards.
-// Put DropdownMenuItems (Settings, Sign out…) in `children`.
-export function AccountMenu({ name, detail, label, children, className }: {
-  name: string
-  // Under the name, such as the plan.
-  detail?: ReactNode
-  // The menu's heading, such as the email address.
-  label?: ReactNode
-  children?: ReactNode
-  className?: string
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className={cn(
-            'hover:bg-accent/60 focus-visible:ring-ring/30 aria-expanded:bg-accent flex h-9 w-full min-w-0 items-center gap-2 rounded-md px-1.5 text-left outline-none focus-visible:ring-2',
-            className,
-          )}
-        >
-          <UserAvatar name={name} />
-          <span className="grid min-w-0 flex-1 leading-4">
-            <span className="truncate text-xs font-medium">{name}</span>
-            {detail && <span className="text-muted-foreground truncate text-[11px]">{detail}</span>}
-          </span>
-          <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="w-56">
-        {label && <DropdownMenuLabel>{label}</DropdownMenuLabel>}
-        {children}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <DeleteConfirm
+      open={open}
+      onOpenChange={(next) => !next && onClose()}
+      title="Delete this chat?"
+      description={<>“{shown.current}” and all its replies will be deleted. This cannot be undone.</>}
+      icon={null}
+      onConfirm={() => {
+        if (!open) return
+        onConfirm()
+        onClose()
+      }}
+      afterConfirm={onDeleted}
+    />
   )
 }
 
@@ -355,7 +257,7 @@ function ChatRow({ chat, active, onOpen, actions }: {
     e.preventDefault()
     skipFocusReturn.current = false
   }
-  const items = (kit: ChatMenuKit) => (
+  const items = (kit: MenuKit) => (
     <ChatMenuItems
       kit={kit}
       chat={chat}
@@ -549,34 +451,13 @@ export function ChatHistory({
             )}
           </div>
         )}
-        <label className="bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 flex h-7 items-center gap-1.5 rounded-md border px-2 focus-within:ring-2">
-          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape' && query) {
-                e.stopPropagation()
-                setQuery('')
-              }
-            }}
-            placeholder={searchPlaceholder}
-            aria-label="Search chats by title"
-            className="placeholder:text-muted-foreground h-full min-w-0 flex-1 bg-transparent text-xs outline-none [&::-webkit-search-cancel-button]:hidden"
-          />
-          {query && (
-            <Button variant="ghost" size="icon-xs" aria-label="Clear search" className="text-muted-foreground -mr-1" onClick={() => setQuery('')}>
-              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-            </Button>
-          )}
-        </label>
+        <SearchField value={query} onChange={setQuery} placeholder={searchPlaceholder} label="Search chats by title" className="text-xs" />
       </div>
 
       <nav aria-label="Chats" className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {q ? (
           <section aria-label="Search results">
-            <GroupLabel>{results.length ? `${results.length} ${results.length === 1 ? 'result' : 'results'}` : 'Results'}</GroupLabel>
+            <GroupLabel>{results.length ? plural(results.length, 'result') : 'Results'}</GroupLabel>
             {results.map(row)}
             {!results.length && <p className="text-muted-foreground px-2 py-3 text-xs">No chats match “{query.trim()}”.</p>}
           </section>
@@ -630,7 +511,7 @@ export function ChatHistory({
                         >
                           <HugeiconsIcon icon={open && mine.length ? FolderOpenIcon : Folder01Icon} strokeWidth={2} className="size-3.5 shrink-0" style={{ color: project.colour }} />
                           <span className="min-w-0 flex-1 truncate font-medium">{project.name}</span>
-                          <span className="text-muted-foreground text-[11px] tabular-nums" aria-label={`${mine.length} chats`}>{mine.length}</span>
+                          <span className="text-muted-foreground text-[11px] tabular-nums" aria-label={plural(mine.length, 'chat')}>{mine.length}</span>
                         </button>
                       </div>
                       {open && mine.length > 0 && (

@@ -1,8 +1,9 @@
 import { useMemo, type Ref } from 'react'
 import { ArtifactPanel as ArtifactPanelBlock, parseCsv } from '@/blocks/ai/artifact-panel'
+import { CodeBlock } from '@/blocks/markdown'
 import { formatWhen } from './data'
 import { artifactFileName } from './helpers'
-import { CodeBlock, Markdown, MdTable } from './markdown'
+import { Markdown, MdTable } from './markdown'
 import { KIND_ICONS, KIND_LABELS } from './parts'
 import type { Artifact } from './types'
 

@@ -6,6 +6,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { Mention } from '@/components/mention'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -369,8 +370,6 @@ function DrawerDemos() {
 
 /* Hover card */
 
-const MENTION = 'bg-brand/10 text-brand hover:bg-brand/15 focus-visible:ring-ring/30 rounded px-1 py-px font-medium outline-none focus-visible:ring-2'
-
 function Profile() {
   return (
     <div className="flex gap-3">
@@ -405,7 +404,7 @@ function HoverCardDemos() {
             Assigned to{' '}
             <HoverCard openDelay={Number(str(v, 'openDelay'))}>
               <HoverCardTrigger asChild>
-                <a href="#" onClick={stay} className={MENTION}>@alex</a>
+                <Mention href="#" onClick={stay}>@alex</Mention>
               </HoverCardTrigger>
               <HoverCardContent side={str(v, 'side') as Side} align={str(v, 'align') as Align}>
                 <Profile />
@@ -419,11 +418,12 @@ function HoverCardDemos() {
           const head = imports({
             '@hugeicons/react': ['HugeiconsIcon'],
             '@hugeicons/core-free-icons': ['Calendar03Icon'],
+            '@/components/mention': ['Mention'],
             '@/components/ui/avatar': ['Avatar', 'AvatarFallback'],
             '@/components/ui/hover-card': ['HoverCard', 'HoverCardContent', 'HoverCardTrigger'],
           })
           const body = jsx('HoverCard', { openDelay: delay === undefined ? undefined : Number(delay) }, [
-            jsx('HoverCardTrigger', { asChild: true }, '<a href="/people/alex">@alex</a>'),
+            jsx('HoverCardTrigger', { asChild: true }, '<Mention href="/people/alex">@alex</Mention>'),
             jsx('HoverCardContent', {
               side: unless(str(v, 'side'), 'bottom'),
               align: unless(str(v, 'align'), 'center'),
@@ -450,7 +450,7 @@ function HoverCardDemos() {
         render={(side) => (
           <HoverCard openDelay={150}>
             <HoverCardTrigger asChild>
-              <a href="#" onClick={stay} className={MENTION}>@alex</a>
+              <Mention href="#" onClick={stay}>@alex</Mention>
             </HoverCardTrigger>
             <HoverCardContent side={side} className="w-64">
               <Profile />

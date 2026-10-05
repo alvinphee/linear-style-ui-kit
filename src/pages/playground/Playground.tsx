@@ -1,8 +1,8 @@
 import { Fragment, useId, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { CodeIcon, Copy01Icon, RefreshIcon, Tick02Icon } from '@hugeicons/core-free-icons'
-import { toast } from 'sonner'
 import { cn } from 'cn'
+import { copyText, useCopied } from '@/lib/clipboard'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -185,6 +185,34 @@ export function Gallery({ title, note, items }: {
   )
 }
 
+// A fixed example (no props pane) with its code one click away. The body is
+// an @container, for the blocks' @sm / @md details.
+export function Example({ title, note, code, children }: { title: string; note?: string; code: string; children: ReactNode }) {
+  const [showCode, setShowCode] = useState(false)
+  return (
+    <article aria-label={title} className="bg-card min-w-0 overflow-hidden rounded-lg border">
+      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b py-1.5 pr-1.5 pl-3.5">
+        <h3 className="text-xs font-medium">{title} <span className="text-muted-foreground font-normal">example</span></h3>
+        <div className="flex min-w-0 items-center gap-2">
+          {note && <span className="text-muted-foreground hidden truncate text-[11px] sm:inline">{note}</span>}
+          <Button variant={showCode ? 'secondary' : 'ghost'} size="sm" aria-pressed={showCode} onClick={() => setShowCode(!showCode)}>
+            <HugeiconsIcon icon={CodeIcon} strokeWidth={2} data-icon="inline-start" />
+            {showCode ? 'Hide code' : 'Show code'}
+          </Button>
+        </div>
+      </header>
+      <div className="@container min-w-0 p-4 sm:p-6">{children}</div>
+      {showCode && <CodeBlock code={code} className="rounded-none border-0 border-t" />}
+    </article>
+  )
+}
+
+// A card under text-heavy previews, so they read well over the dot grid.
+// It is an @container, for the blocks' @sm / @md details.
+export function Surface({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('bg-card @container w-full min-w-0 rounded-lg border p-4 shadow-xs', className)}>{children}</div>
+}
+
 // Light JSX colouring: tags, attribute names and strings. Enough to read, no parser.
 function highlight(code: string) {
   // split() with a capture group puts the matches at the odd indexes.
@@ -200,16 +228,11 @@ function highlight(code: string) {
 }
 
 export function CodeBlock({ code, className }: { code: string; className?: string }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, flagCopied] = useCopied()
 
+  // The tick on the button says it worked, so no toast unless it fails.
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      toast.error('Copy failed', { description: 'Your browser blocked the clipboard.' })
-    }
+    if (await copyText(code, { success: false })) flagCopied()
   }
 
   return (
@@ -245,6 +268,41 @@ export function jsx(tag: string, props: Record<string, string | number | boolean
   if (!kids.length) return `${open} />`
   if (kids.length === 1 && !kids[0].includes('\n') && kids[0].length < 40) return `${open}>${kids[0]}</${tag}>`
   return `${open}>\n${kids.map((k) => k.replace(/^/gm, '  ')).join('\n')}\n</${tag}>`
+}
+
+// A prop equal to its default stays out of the snippet: unless(size, 'sm').
+export const unless = (value: string, fallback: string) => (value === fallback ? undefined : value)
+
+// The names that are set, for imports and prop lists: pick('a', on && 'b').
+export const pick = (...names: (string | false | undefined)[]) => names.filter((n): n is string => Boolean(n))
+
+// Indents every non-empty line.
+export const indent = (text: string, by = '  ') => text.replace(/^(?=.)/gm, by)
+
+// A value as a JavaScript literal, single-quoted: { status: 'overdue' }.
+export function lit(value: unknown): string {
+  if (typeof value === 'string') return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
+  if (Array.isArray(value)) return `[${value.map(lit).join(', ')}]`
+  if (value && typeof value === 'object') {
+    const entries = Object.entries(value)
+      .filter(([, v]) => v !== undefined)
+      .map(([k, v]) => `${/^[A-Za-z_$][\w$]*$/.test(k) ? k : lit(k)}: ${lit(v)}`)
+    return entries.length ? `{ ${entries.join(', ')} }` : '{}'
+  }
+  return String(value)
+}
+
+// A JSX element with one prop per line, for props too long for jsx().
+export function element(tag: string, attrs: (string | false | undefined)[], children?: string) {
+  const open = `<${tag}\n${pick(...attrs).map((a) => indent(a)).join('\n')}\n`
+  return children ? `${open}>\n${indent(children)}\n</${tag}>` : `${open}/>`
+}
+
+// A snippet that needs state, wrapped in a small component; without state it
+// is the body alone.
+export function component(name: string, state: string[], body: string) {
+  if (!state.length) return body
+  return `function ${name}() {\n${indent(state.join('\n'))}\n  return (\n${indent(body, '    ')}\n  )\n}`
 }
 
 // Lists the imports a snippet needs, one line per module.

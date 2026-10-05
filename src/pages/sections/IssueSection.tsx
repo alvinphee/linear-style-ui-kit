@@ -3,16 +3,18 @@ import { addDays, format, isValid, parse } from 'date-fns'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Add01Icon, ArrowDown01Icon, ArrowUp01Icon, Attachment01Icon, Building03Icon, Calendar03Icon,
-  Camera01Icon, Cancel01Icon, Clock01Icon, Copy01Icon, CopyPlusIcon, Delete02Icon, Link01Icon,
-  MediumSignalIcon, MoreHorizontalIcon, RefreshIcon, StarIcon, Tag01Icon, Tick02Icon, UserCircleIcon,
-  UserSwitchIcon,
+  Camera01Icon, Clock01Icon, Copy01Icon, CopyPlusIcon, Delete02Icon, Link01Icon,
+  MediumSignalIcon, MoreHorizontalIcon, RefreshIcon, StarIcon, Tag01Icon, Tick02Icon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { CommentBox } from '@/components/comment-box'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { IconAction } from '@/components/icon-action'
+import { LabelChip } from '@/components/label-dot'
+import { NoAssignee, Person, UserAvatar } from '@/components/person'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusIcon } from '@/components/status-icon'
 import {
   Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
@@ -24,28 +26,22 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Kbd } from '@/components/ui/kbd'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
-import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { copyText } from '@/lib/clipboard'
+import { isTyping } from '@/lib/keyboard'
+import { plural } from '@/lib/text'
+import { CUSTOMERS, DUE_OPTIONS, LABELS, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
 import {
-  CUSTOMERS, DUE_OPTIONS, LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status,
-} from '../data'
+  ASSIGNEE_OPTIONS, LABEL_OPTIONS, PRIORITY_OPTIONS, STATUS_OPTIONS, assigneeValue, driverOf, type JobOption,
+} from '../job-options'
 import { useJobs, type Activity } from '../jobs-store'
 import { Section } from './shared'
-import { Person, UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from './StatusSection'
 
 const SMALL_AVATAR = 'size-5'
 const TRIGGER = 'w-full min-w-0 justify-start gap-2 px-1.5 font-normal'
-
-function copyText(text: string, message: string, description?: string) {
-  navigator.clipboard?.writeText(text).catch(() => {})
-  toast(message, { description })
-}
 
 export default function IssueSection() {
   const { jobs, selected, select } = useJobs()
@@ -58,7 +54,7 @@ export default function IssueSection() {
   function onKeyDown(e: KeyboardEvent<HTMLElement>) {
     const target = e.target as HTMLElement
     if (!e.currentTarget.contains(target) || e.ctrlKey || e.metaKey || e.altKey) return
-    if (target.closest('input, textarea, select, [contenteditable="true"]')) return
+    if (isTyping(target, { overlays: false })) return
     const to = e.key === 'j' ? next : e.key === 'k' ? prev : undefined
     if (to) {
       e.preventDefault()
@@ -131,41 +127,32 @@ function TopBar({ job, position, total, prev, next }: {
         <span className="text-muted-foreground mr-1 hidden text-xs tabular-nums sm:inline">
           {position} / {total}
         </span>
-        <IconButton label="Previous job" keys="K" disabled={!prev} onClick={() => prev && select(prev.id)}>
-          <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} />
-        </IconButton>
-        <IconButton label="Next job" keys="J" disabled={!next} onClick={() => next && select(next.id)}>
-          <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} />
-        </IconButton>
+        <IconAction label="Previous job" icon={ArrowUp01Icon} shortcut={['K']} disabled={!prev} onClick={() => prev && select(prev.id)} />
+        <IconAction label="Next job" icon={ArrowDown01Icon} shortcut={['J']} disabled={!next} onClick={() => next && select(next.id)} />
         <Separator orientation="vertical" className="mx-1 h-4" />
-        <IconButton
+        {/* aria-pressed rather than `pressed`, so a starred job shows the star's colour, not the pressed fill. */}
+        <IconAction
           label={isStarred ? 'Unstar job' : 'Star job'}
+          icon={StarIcon}
           aria-pressed={isStarred}
           className={isStarred ? 'text-status-progress hover:text-status-progress aria-expanded:text-status-progress' : undefined}
           onClick={() => setStarred((s) => (isStarred ? s.filter((id) => id !== job.id) : [...s, job.id]))}
-        >
-          <HugeiconsIcon icon={StarIcon} strokeWidth={2} />
-        </IconButton>
-        <IconButton
+        />
+        <IconAction
           label="Copy link"
-          onClick={() => copyText(`https://app.example.com/jobs/${job.id}`, 'Link copied', `app.example.com/jobs/${job.id}`)}
-        >
-          <HugeiconsIcon icon={Link01Icon} strokeWidth={2} />
-        </IconButton>
+          icon={Link01Icon}
+          onClick={() => copyText(`https://app.example.com/jobs/${job.id}`, {
+            success: 'Link copied',
+            description: `app.example.com/jobs/${job.id}`,
+          })}
+        />
 
         <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button ref={moreRef} variant="ghost" size="icon-sm" aria-label="More actions" className="text-muted-foreground">
-                  <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>More actions</TooltipContent>
-          </Tooltip>
+          <DropdownMenuTrigger asChild>
+            <IconAction ref={moreRef} label="More actions" icon={MoreHorizontalIcon} />
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuItem onSelect={() => copyText(job.id, `Copied ${job.id}`)}>
+            <DropdownMenuItem onSelect={() => copyText(job.id, { success: `Copied ${job.id}` })}>
               <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} /> Copy ID
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={duplicate}>
@@ -179,52 +166,16 @@ function TopBar({ job, position, total, prev, next }: {
         </DropdownMenu>
       </div>
 
-      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent
-          onCloseAutoFocus={(e) => {
-            e.preventDefault()
-            moreRef.current?.focus()
-          }}
-        >
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {job.id}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              “{job.title || 'Untitled job'}” disappears from every view. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={remove}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirm
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete ${job.id}?`}
+        description={`“${job.title || 'Untitled job'}” disappears from every view. This cannot be undone.`}
+        onConfirm={remove}
+        icon={null}
+        returnFocusRef={moreRef}
+      />
     </header>
-  )
-}
-
-function IconButton({ label, keys, className, children, ...props }: ComponentProps<typeof Button> & {
-  label: string
-  keys?: string
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label={label}
-          aria-keyshortcuts={keys}
-          className={cn('text-muted-foreground', className)}
-          {...props}
-        >
-          {children}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>
-        {label}
-        {keys && <Kbd>{keys}</Kbd>}
-      </TooltipContent>
-    </Tooltip>
   )
 }
 
@@ -346,14 +297,9 @@ const EVENT_ICONS: Record<Exclude<Activity['kind'], 'comment'>, IconSvgElement> 
 // The store writes "moved from A to B" / "set priority to B", so B is the new value.
 function EventIcon({ entry }: { entry: Activity }) {
   const value = entry.text.split(' to ').pop()
-  if (entry.kind === 'status') {
-    const status = (Object.keys(STATUS) as Status[]).find((s) => STATUS[s].label === value)
-    if (status) return <StatusIcon status={status} />
-  }
-  if (entry.kind === 'priority') {
-    const priority = (Object.keys(PRIORITY) as Priority[]).find((p) => PRIORITY[p].label === value)
-    if (priority) return <PriorityIcon priority={priority} />
-  }
+  const options: JobOption[] = entry.kind === 'status' ? STATUS_OPTIONS : entry.kind === 'priority' ? PRIORITY_OPTIONS : []
+  const option = options.find((o) => o.label === value)
+  if (option) return option.visual
   const icon = entry.kind === 'comment' ? RefreshIcon : EVENT_ICONS[entry.kind]
   return <HugeiconsIcon icon={icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
 }
@@ -393,45 +339,18 @@ function ActivityFeed({ job }: { job: Job }) {
           ),
         )}
       </ol>
-      <Composer key={job.id} onSubmit={(text) => addComment(job.id, text)} />
-    </div>
-  )
-}
-
-function Composer({ onSubmit }: { onSubmit: (text: string) => void }) {
-  const [text, setText] = useState('')
-  const empty = !text.trim()
-
-  function submit() {
-    if (empty) return
-    onSubmit(text.trim())
-    setText('')
-  }
-
-  return (
-    <div className="bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 mt-4 rounded-lg border transition-colors focus-within:ring-2">
-      <Textarea
-        aria-label="Comment"
-        placeholder="Leave a comment…"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault()
-            submit()
-          }
-        }}
-        className="min-h-14 border-0 bg-transparent px-3 py-2.5 focus-visible:ring-0 dark:bg-transparent"
+      <CommentBox
+        key={job.id}
+        onComment={(text) => addComment(job.id, text)}
+        actions={
+          <IconAction
+            label="Attach a file"
+            icon={Attachment01Icon}
+            onClick={() => toast('Attach a file', { description: 'Demo only.' })}
+          />
+        }
+        className="mt-4"
       />
-      <div className="flex items-center justify-end gap-1 px-2 pb-2">
-        <span className="text-muted-foreground mr-auto hidden pl-1 text-[11px] sm:inline">Ctrl + Enter to send</span>
-        <IconButton label="Attach a file" onClick={() => toast('Attach a file', { description: 'Demo only.' })}>
-          <HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} />
-        </IconButton>
-        <Button variant={empty ? 'secondary' : 'default'} disabled={empty} onClick={submit}>
-          Comment
-        </Button>
-      </div>
     </div>
   )
 }
@@ -449,7 +368,7 @@ function Properties({ job }: { job: Job }) {
       <PropertyRow label="Photos">
         <ReadOnly>
           <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-          {job.photos ? `${job.photos} ${job.photos === 1 ? 'photo' : 'photos'}` : 'None yet'}
+          {job.photos ? plural(job.photos, 'photo') : 'None yet'}
         </ReadOnly>
       </PropertyRow>
       <PropertyRow label="Created by">
@@ -492,9 +411,9 @@ function StatusMenu({ job }: { job: Job }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuRadioGroup value={job.status} onValueChange={(v) => updateJob(job.id, { status: v as Status })}>
-          {(Object.keys(STATUS) as Status[]).map((s) => (
-            <DropdownMenuRadioItem key={s} value={s}>
-              <StatusIcon status={s} /> {STATUS[s].label}
+          {STATUS_OPTIONS.map((o) => (
+            <DropdownMenuRadioItem key={o.value} value={o.value}>
+              {o.visual} {o.label}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
@@ -517,9 +436,9 @@ function PriorityMenu({ job }: { job: Job }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-48">
         <DropdownMenuRadioGroup value={job.priority} onValueChange={(v) => updateJob(job.id, { priority: v as Priority })}>
-          {(Object.keys(PRIORITY) as Priority[]).map((p) => (
-            <DropdownMenuRadioItem key={p} value={p}>
-              <PriorityIcon priority={p} /> {PRIORITY[p].label}
+          {PRIORITY_OPTIONS.map((o) => (
+            <DropdownMenuRadioItem key={o.value} value={o.value}>
+              {o.visual} {o.label}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
@@ -540,13 +459,9 @@ function AssigneePicker({ job }: { job: Job }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" className={TRIGGER} aria-label={`Assignee: ${job.driver || 'Unassigned'}`}>
-          {job.driver ? (
-            <UserAvatar name={job.driver} className={SMALL_AVATAR} />
-          ) : (
-            <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-4" />
-          )}
-          <span className={cn('truncate', !job.driver && 'text-muted-foreground')}>{job.driver || 'Unassigned'}</span>
+        <Button variant="ghost" className={TRIGGER} aria-label={`Assignee: ${job.driver || 'No assignee'}`}>
+          {job.driver ? <UserAvatar name={job.driver} className={SMALL_AVATAR} /> : <NoAssignee className={SMALL_AVATAR} />}
+          <span className={cn('truncate', !job.driver && 'text-muted-foreground')}>{job.driver || 'No assignee'}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-56 gap-0 p-0">
@@ -555,14 +470,15 @@ function AssigneePicker({ job }: { job: Job }) {
           <CommandList>
             <CommandEmpty>No one found.</CommandEmpty>
             <CommandGroup>
-              <CommandItem value="Unassigned" data-checked={!job.driver} onSelect={() => pick('')}>
-                <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-4" />
-                Unassigned
-              </CommandItem>
-              {PEOPLE.map((person) => (
-                <CommandItem key={person} value={person} data-checked={job.driver === person} onSelect={() => pick(person)}>
-                  <UserAvatar name={person} className={SMALL_AVATAR} />
-                  {person}
+              {ASSIGNEE_OPTIONS.map((o) => (
+                <CommandItem
+                  key={o.value}
+                  value={o.label}
+                  data-checked={assigneeValue(job.driver) === o.value}
+                  onSelect={() => pick(driverOf(o.value))}
+                >
+                  {o.visual}
+                  {o.label}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -590,7 +506,7 @@ function LabelsPicker({ job }: { job: Job }) {
             <Button variant="ghost" className={TRIGGER} aria-label={`Labels: ${chosen.map((l) => l.name).join(', ') || 'none'}`}>
               <HugeiconsIcon icon={Tag01Icon} strokeWidth={2} className="text-muted-foreground" />
               <span className={cn('truncate', !chosen.length && 'text-muted-foreground')}>
-                {chosen.length ? `${chosen.length} ${chosen.length === 1 ? 'label' : 'labels'}` : 'Add label'}
+                {chosen.length ? plural(chosen.length, 'label') : 'Add label'}
               </span>
             </Button>
           </PopoverTrigger>
@@ -600,15 +516,15 @@ function LabelsPicker({ job }: { job: Job }) {
               <CommandList>
                 <CommandEmpty>No labels found.</CommandEmpty>
                 <CommandGroup>
-                  {LABELS.map((label) => (
+                  {LABEL_OPTIONS.map((o) => (
                     <CommandItem
-                      key={label.id}
-                      value={label.name}
-                      data-checked={job.labels.includes(label.id)}
-                      onSelect={() => toggle(label.id)}
+                      key={o.value}
+                      value={o.label}
+                      data-checked={job.labels.includes(o.value)}
+                      onSelect={() => toggle(o.value)}
                     >
-                      <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: label.colour }} />
-                      {label.name}
+                      {o.visual}
+                      {o.label}
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -620,19 +536,13 @@ function LabelsPicker({ job }: { job: Job }) {
       {chosen.length > 0 && (
         <div className="flex flex-wrap gap-1 pb-1 pl-22">
           {chosen.map((label) => (
-            <span key={label.id} className="inline-flex h-5 items-center gap-1.5 rounded-full border pr-0.5 pl-2 text-[11px]">
-              <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: label.colour }} />
-              {label.name}
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={`Remove ${label.name}`}
-                className="text-muted-foreground size-4 rounded-full"
-                onClick={() => toggle(label.id)}
-              >
-                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-2.5" />
-              </Button>
-            </span>
+            <LabelChip
+              key={label.id}
+              name={label.name}
+              colour={label.colour}
+              onRemove={() => toggle(label.id)}
+              className="text-foreground"
+            />
           ))}
         </div>
       )}

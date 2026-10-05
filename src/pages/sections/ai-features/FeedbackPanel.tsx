@@ -1,22 +1,22 @@
 import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  Copy01Icon, InformationCircleIcon, RefreshIcon, SparklesIcon, ThumbsDownIcon, ThumbsUpIcon,
-} from '@hugeicons/core-free-icons'
+import { InformationCircleIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { Badge } from '@/components/ui/badge'
-import { FeedbackDialog, UserMessage } from '@/blocks/ai/chat-message'
-import { PRIORITY, type Job, type Priority } from '../../data'
+import { AssistantMessage, FeedbackDialog, MessageActions, UserMessage } from '@/blocks/ai/chat-message'
+import { AiLabel } from '@/components/ai-label'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon } from '@/components/priority-icon'
+import { Thinking } from '@/components/thinking-indicator'
+import { copyText } from '@/lib/clipboard'
+import { useTimers } from '@/lib/use-timers'
+import { PRIORITY, PRIORITY_RANK, type Job } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
 import { Panel } from '../shared'
-import { UserAvatar } from '@/components/person'
-import { PriorityIcon } from '../StatusSection'
-import { IconAction, Thinking, copyText, useTimers } from './shared'
 
 const QUESTION = 'Which jobs could run late today?'
 const REASONS = ['Not accurate', 'Missing a job', 'Out of date', 'Not helpful', 'Unsafe or offensive']
-const RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 }
+const ACTION_LABELS = { copy: 'Copy answer', regenerate: 'Regenerate answer', up: 'Good answer', down: 'Bad answer' }
 
 function progressOf(job: Job) {
   const total = job.subtasks.length
@@ -34,7 +34,7 @@ export function FeedbackPanel() {
   // The answer is worked out from the live store, so edits elsewhere change it.
   const atRisk = jobs
     .filter((j) => j.due === 'Today' && j.status !== 'done' && j.status !== 'cancelled')
-    .sort((a, b) => RANK[a.priority] - RANK[b.priority] || progressOf(b).left - progressOf(a).left)
+    .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] || progressOf(b).left - progressOf(a).left)
   const worst = atRisk[0]
 
   function answerText() {
@@ -57,9 +57,10 @@ export function FeedbackPanel() {
     later(() => setRegenerating(false), 900)
   }
 
-  function thumbsDown() {
-    if (vote === 'down') setVote(null)
-    else setDialogOpen(true)
+  // A thumbs down asks why first; the dialog records the vote.
+  function onFeedback(next: 'up' | 'down' | undefined) {
+    if (next === 'down') setDialogOpen(true)
+    else setVote(next ?? null)
   }
 
   function sendFeedback() {
@@ -72,20 +73,33 @@ export function FeedbackPanel() {
       <div className="grid min-w-0 gap-3">
         <UserMessage text={QUESTION} />
 
-        <article aria-label="AI answer" className="bg-subtle min-w-0 rounded-lg border">
-          <header className="flex items-center gap-2 border-b py-1.5 pr-1.5 pl-3">
-            <Badge variant="outline" className="gap-1">
-              <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-brand" />
-              AI-generated
-            </Badge>
-            <span className="text-muted-foreground truncate text-[11px]">from the live job list</span>
-            <div className="ml-auto flex items-center gap-0.5">
-              <IconAction label="Regenerate answer" disabled={regenerating} onClick={regenerate} icon={RefreshIcon} />
-              <IconAction label="Copy answer" onClick={() => copyText(answerText(), 'Answer copied')} icon={Copy01Icon} />
-            </div>
-          </header>
-
-          <div className="grid gap-2 px-3 py-2.5 text-[13px] leading-5" aria-busy={regenerating}>
+        <AssistantMessage
+          name="Assistant"
+          label="AI answer"
+          meta={(
+            <span className="inline-flex items-center gap-1.5 align-middle">
+              <AiLabel>AI-generated</AiLabel>
+              <span className="hidden sm:inline">from the live job list</span>
+            </span>
+          )}
+          className="bg-subtle rounded-lg border p-3"
+          actions={(
+            <MessageActions
+              className="-mb-1 -ml-1"
+              onCopy={() => copyText(answerText(), { success: 'Answer copied' })}
+              onRegenerate={regenerate}
+              regenerateDisabled={regenerating}
+              feedback={vote}
+              onFeedback={onFeedback}
+              labels={ACTION_LABELS}
+            >
+              <span className="text-muted-foreground ml-1 text-[11px]" aria-live="polite">
+                {vote === 'up' ? 'Thanks for the feedback.' : vote === 'down' ? 'Thanks. We will look into it.' : 'How was this?'}
+              </span>
+            </MessageActions>
+          )}
+        >
+          <div className="grid gap-2 text-[13px] leading-5" aria-busy={regenerating}>
             {regenerating ? (
               <Thinking label="Checking today’s jobs…" />
             ) : atRisk.length === 0 ? (
@@ -126,15 +140,7 @@ export function FeedbackPanel() {
               </>
             )}
           </div>
-
-          <footer className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t py-1 pr-1.5 pl-3">
-            <span className="text-muted-foreground mr-auto text-[11px]" aria-live="polite">
-              {vote === 'up' ? 'Thanks for the feedback.' : vote === 'down' ? 'Thanks. We will look into it.' : 'How was this?'}
-            </span>
-            <IconAction label="Good answer" pressed={vote === 'up'} onClick={() => setVote(vote === 'up' ? null : 'up')} icon={ThumbsUpIcon} />
-            <IconAction label="Bad answer" pressed={vote === 'down'} onClick={thumbsDown} icon={ThumbsDownIcon} />
-          </footer>
-        </article>
+        </AssistantMessage>
 
         <p className="text-muted-foreground flex items-start gap-1.5 text-[11px]">
           <HugeiconsIcon icon={InformationCircleIcon} strokeWidth={2} className="mt-px size-3.5 shrink-0" />

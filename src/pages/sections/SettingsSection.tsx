@@ -2,28 +2,29 @@ import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   CreditCardIcon, Delete02Icon, Download01Icon, Mail01Icon, MailSend01Icon, MoreHorizontalIcon,
-  Notification03Icon, Search01Icon, SentIcon, SmartPhone01Icon, UserAdd01Icon, UserGroupIcon, UserIcon,
+  Notification03Icon, SmartPhone01Icon, UserAdd01Icon, UserGroupIcon, UserIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
+import { FormDialog, type FormField } from '@/blocks/form-dialog'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { NavItem } from '@/components/nav-item'
 import { PageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
 import { UserAvatar } from '@/components/person'
+import { SearchField } from '@/components/search-field'
+import { StatusBadge } from '@/components/status-badge'
+import { UsageMeter } from '@/components/usage-meter'
+import { formatNumber } from '@/lib/format'
+import { plural } from '@/lib/text'
 import { Section } from './shared'
 
 const DEMO = 'Demo only. Nothing was sent.'
@@ -69,17 +70,16 @@ export default function SettingsSection() {
             className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 md:w-48 md:flex-col md:overflow-visible md:border-r md:border-b-0"
           >
             <p className="text-muted-foreground hidden px-2 pt-1 pb-1.5 text-[11px] font-medium md:block">Settings</p>
+            {/* Recoloured for a card, and only as wide as the label in the phone's row. */}
             {PAGES.map((p) => (
-              <button
+              <NavItem
                 key={p.id}
-                type="button"
+                icon={p.icon}
+                label={p.label}
+                active={page === p.id}
                 onClick={() => setPage(p.id)}
-                aria-current={page === p.id ? 'page' : undefined}
-                className="text-muted-foreground hover:bg-muted hover:text-foreground aria-[current=page]:bg-accent aria-[current=page]:text-foreground focus-visible:ring-ring/30 flex h-7 shrink-0 items-center gap-2 rounded-md px-2 text-xs font-medium whitespace-nowrap outline-none focus-visible:ring-2"
-              >
-                <HugeiconsIcon icon={p.icon} strokeWidth={2} className="size-3.5" />
-                {p.label}
-              </button>
+                className="text-muted-foreground hover:bg-muted hover:text-foreground data-[active=true]:bg-accent data-[active=true]:text-foreground focus-visible:ring-ring/30 w-auto shrink-0 font-medium md:w-full"
+              />
             ))}
           </nav>
 
@@ -97,10 +97,6 @@ export default function SettingsSection() {
 
 function SubHeading({ children }: { children: ReactNode }) {
   return <h4 className="mb-2 text-xs font-medium">{children}</h4>
-}
-
-function Dot({ className }: { className: string }) {
-  return <span className={`size-1.5 rounded-full ${className}`} />
 }
 
 /* ---------- Profile ---------- */
@@ -127,9 +123,7 @@ function ProfilePage() {
       <PageHeader title="Profile" description="How you appear to your teammates." size="sm" as="h3" className="border-b pb-4" />
 
       <div className="flex flex-wrap items-center gap-3">
-        <Avatar size="lg">
-          <AvatarFallback>AM</AvatarFallback>
-        </Avatar>
+        <UserAvatar name="Alex Morgan" className="size-10 *:data-[slot=avatar-fallback]:text-sm" />
         <div className="grid gap-1">
           <div className="flex gap-1.5">
             <Button type="button" variant="outline" size="sm" onClick={() => toast('Demo only. No photo was uploaded.')}>
@@ -169,13 +163,13 @@ function ProfilePage() {
         <p className="text-muted-foreground text-[11px]">Due dates and reminders use this timezone.</p>
       </div>
 
-      <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
-        <div className="grid gap-1">
-          <Label htmlFor="settings-weekly">Weekly summary email</Label>
-          <p className="text-muted-foreground text-[11px]">Every Monday: what shipped, what slipped and what is next.</p>
-        </div>
+      <Field orientation="horizontal" className="gap-4 rounded-lg border p-3">
+        <FieldContent>
+          <FieldLabel htmlFor="settings-weekly">Weekly summary email</FieldLabel>
+          <FieldDescription className="text-[11px]">Every Monday: what shipped, what slipped and what is next.</FieldDescription>
+        </FieldContent>
         <Switch id="settings-weekly" defaultChecked />
-      </div>
+      </Field>
 
       <div className="flex justify-end border-t pt-4">
         <Button type="submit">Save changes</Button>
@@ -224,17 +218,13 @@ function MembersPage({ members, setMembers }: {
         className="border-b pb-4"
       />
 
-      <InputGroup className="sm:max-w-xs">
-        <InputGroupAddon>
-          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-        </InputGroupAddon>
-        <InputGroupInput
-          aria-label="Search members"
-          placeholder="Search by name or email…"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </InputGroup>
+      <SearchField
+        value={query}
+        onChange={setQuery}
+        placeholder="Search by name or email…"
+        label="Search members"
+        className="sm:max-w-xs"
+      />
 
       <div className="min-w-0 rounded-lg border">
         <Table>
@@ -276,10 +266,9 @@ function MembersPage({ members, setMembers }: {
                   </Select>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline">
-                    <Dot className={m.status === 'active' ? 'bg-status-done' : 'bg-status-progress'} />
+                  <StatusBadge variant="outline" tone={m.status === 'active' ? 'success' : 'progress'}>
                     {m.status === 'active' ? 'Active' : 'Invited'}
-                  </Badge>
+                  </StatusBadge>
                 </TableCell>
                 <TableCell>
                   <DropdownMenu>
@@ -320,59 +309,32 @@ function MembersPage({ members, setMembers }: {
   )
 }
 
-function InviteDialog() {
-  const [open, setOpen] = useState(false)
+const INVITE_FIELDS: FormField[] = [
+  {
+    key: 'email', label: 'Email', type: 'email', required: true, requiredMessage: 'Enter an email address.',
+    placeholder: 'name@example.com', autoComplete: 'off',
+  },
+  { key: 'role', label: 'Role', type: 'select', options: ROLES.map((r) => ({ value: r.id, label: r.label })) },
+]
 
+function InviteDialog() {
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <FormDialog
+      trigger={
         <Button>
           <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" />
           Invite
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <form
-          className="grid grid-cols-1 gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            setOpen(false)
-            toast(DEMO, { description: 'In a real app, the person would get an email invite.' })
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle>Invite people</DialogTitle>
-            <DialogDescription>They get an email with a link to join this workspace.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input id="invite-email" type="email" placeholder="name@example.com" autoComplete="off" />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="invite-role">Role</Label>
-            <Select defaultValue="member">
-              <SelectTrigger id="invite-role" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button type="button" variant="ghost">Cancel</Button>
-            </DialogClose>
-            <Button type="submit">
-              <HugeiconsIcon icon={SentIcon} strokeWidth={2} data-icon="inline-start" />
-              Send invite
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      }
+      title="Invite people"
+      description="They get an email with a link to join this workspace."
+      fields={INVITE_FIELDS}
+      initialValues={{ role: 'member' }}
+      submitLabel="Send invite"
+      onSubmit={() => {
+        toast(DEMO, { description: 'In a real app, the person would get an email invite.' })
+      }}
+    />
   )
 }
 
@@ -387,11 +349,9 @@ const INVOICES = [
   { id: 'INV-0009', date: '1 Jun 2026', amount: 40, status: 'refunded' },
 ] as const
 
-const number = new Intl.NumberFormat('en-US')
-
 function BillingPage({ seats }: { seats: number }) {
   const usage = [
-    { label: 'Members', used: seats, limit: SEATS, unit: '', note: `${SEATS - seats} seats left` },
+    { label: 'Members', used: seats, limit: SEATS, unit: '', note: `${plural(SEATS - seats, 'seat')} left` },
     { label: 'Storage', used: 12, limit: 50, unit: ' GB', note: 'Files and attachments' },
     { label: 'API calls', used: 68_400, limit: 100_000, unit: '', note: 'Resets on 1 Oct' },
   ]
@@ -421,17 +381,20 @@ function BillingPage({ seats }: { seats: number }) {
           {usage.map((u) => {
             const pct = Math.round((u.used / u.limit) * 100)
             return (
-              <div key={u.label} className="grid gap-2 rounded-lg border p-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="text-muted-foreground text-[11px]">{u.label}</span>
-                  <span className="text-muted-foreground text-[11px] tabular-nums">{pct}%</span>
-                </div>
-                <span className="text-sm font-medium tabular-nums">
-                  {number.format(u.used)} <span className="text-muted-foreground font-normal">/ {number.format(u.limit)}{u.unit}</span>
-                </span>
-                <Progress value={pct} aria-label={`${u.label} used`} />
-                <span className="text-muted-foreground text-[11px]">{u.note}</span>
-              </div>
+              <UsageMeter
+                key={u.label}
+                value={pct}
+                label={u.label}
+                count={`${pct}%`}
+                amount={
+                  <>
+                    {formatNumber(u.used)}{' '}
+                    <span className="text-muted-foreground font-normal">/ {formatNumber(u.limit)}{u.unit}</span>
+                  </>
+                }
+                note={u.note}
+                className="gap-2 rounded-lg border p-3"
+              />
             )
           })}
         </div>
@@ -479,10 +442,9 @@ function BillingPage({ seats }: { seats: number }) {
                   <TableCell className="px-3 sm:px-2">{inv.date}</TableCell>
                   <TableCell className="text-right tabular-nums">${inv.amount.toFixed(2)}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">
-                      <Dot className={inv.status === 'paid' ? 'bg-status-done' : 'bg-status-todo'} />
+                    <StatusBadge variant="outline" tone={inv.status === 'paid' ? 'success' : 'neutral'}>
                       {inv.status === 'paid' ? 'Paid' : 'Refunded'}
-                    </Badge>
+                    </StatusBadge>
                   </TableCell>
                   <TableCell>
                     <Button
@@ -545,25 +507,32 @@ function NotificationsPage() {
       <PageHeader title="Notifications" description="Choose what reaches you, and where." size="sm" as="h3" className="border-b pb-4" />
 
       {CHANNELS.map((c) => (
-        <section key={c.id} aria-labelledby={`notif-${c.id}`} className="overflow-hidden rounded-lg border">
-          <header className="bg-subtle flex items-center gap-2 border-b px-3 py-2">
-            <HugeiconsIcon icon={c.icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-            <h4 id={`notif-${c.id}`} className="text-xs font-medium">{c.title}</h4>
-            <span className="text-muted-foreground truncate text-[11px]">{c.description}</span>
-          </header>
+        <Panel
+          key={c.id}
+          as="section"
+          headingAs="h4"
+          title={
+            <span className="flex items-center gap-2">
+              <HugeiconsIcon icon={c.icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
+              {c.title}
+            </span>
+          }
+          note={c.description}
+          bodyClassName="divide-y p-0"
+        >
           {c.items.map((item) => {
             const id = `notif-${c.id}-${item.id}`
             return (
-              <div key={item.id} className="flex items-start justify-between gap-4 border-b px-3 py-2.5 last:border-b-0">
-                <div className="grid min-w-0 gap-1">
-                  <Label htmlFor={id} className="font-normal">{item.label}</Label>
-                  <p className="text-muted-foreground text-[11px]">{item.hint}</p>
-                </div>
+              <Field key={item.id} orientation="horizontal" className="gap-4 px-3.5 py-2.5">
+                <FieldContent>
+                  <FieldLabel htmlFor={id} className="font-normal">{item.label}</FieldLabel>
+                  <FieldDescription className="text-[11px]">{item.hint}</FieldDescription>
+                </FieldContent>
                 <Switch id={id} defaultChecked={item.on} />
-              </div>
+              </Field>
             )
           })}
-        </section>
+        </Panel>
       ))}
 
       <p className="text-muted-foreground text-[11px]">Demo only. These switches are not saved.</p>

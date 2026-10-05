@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Add01Icon, BankIcon, Copy01Icon, CreditCardIcon, Delete02Icon, DeliveryTruck01Icon, FileExportIcon, FingerPrintIcon,
@@ -7,32 +7,38 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { FormDialog, type FormField } from '@/blocks/form-dialog'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { IconMark } from '@/components/mark'
+import { PageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
 import { UserAvatar } from '@/components/person'
-import { Panel as KitPanel } from '@/components/panel'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Empty, EmptyDescription } from '@/components/ui/empty'
+import {
+  Field, FieldContent, FieldDescription, FieldError, FieldLabel, FieldLegend, FieldSet,
+} from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
+import { copyText } from '@/lib/clipboard'
+import { plural, pluralWord } from '@/lib/text'
 import { ROLE_LABEL, type Company } from '../data'
 import { TODAY, addDays, formatDate } from '../format'
 import { MODULES } from '../modules'
 import { go } from '../route'
 import { useErp } from '../store'
 import type { Data, EntityId, Role, Row } from '../types'
-import { ModuleMark, PageHeader, StatusBadge } from '../ui'
+import { PAGE_HEADER, StatusBadge } from '../ui'
 
 // Administration: roles and permissions, company settings, integrations.
 // Everything here is local state: saving shows a toast and keeps the change
-// until the page is left.
+// until the page is left. Boxes are the kit's Panel as a section with an h2
+// (bodyClassName="p-0" for a table or a list); dialogs are the FormDialog block.
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
 
@@ -42,26 +48,9 @@ function omit<T>(record: Record<string, T>, key: string) {
   return copy
 }
 
-// The same box as Card in ../ui, plus a description line, and without the
-// padding when it holds a table or a list.
-// The kit's Panel, as a section with a description line; flush drops the
-// body padding for tables.
-function Panel({ title, description, action, flush, className, children }: {
-  title: string
-  description?: ReactNode
-  action?: ReactNode
-  flush?: boolean
-  className?: string
-  children: ReactNode
-}) {
-  return (
-    <KitPanel as="section" headingAs="h2" title={title} description={description} action={action} className={className} bodyClassName={flush ? 'p-0' : undefined}>
-      {children}
-    </KitPanel>
-  )
-}
-
-function FormField({ id, label, hint, error, className, children }: {
+// One labelled setting on the company settings form, from shadcn's Field:
+// the label, the control, then its error or else a hint.
+function SettingField({ id, label, hint, error, className, children }: {
   id: string
   label: string
   hint?: ReactNode
@@ -70,13 +59,13 @@ function FormField({ id, label, hint, error, className, children }: {
   children: ReactNode
 }) {
   return (
-    <div className={cn('grid min-w-0 content-start gap-1.5', className)}>
-      <Label htmlFor={id}>{label}</Label>
+    <Field data-invalid={!!error} className={cn('min-w-0 gap-1.5', className)}>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       {children}
       {error
-        ? <p id={`${id}-error`} className="text-destructive text-[11px]">{error}</p>
-        : hint && <p className="text-muted-foreground text-[11px]">{hint}</p>}
-    </div>
+        ? <FieldError id={`${id}-error`} className="text-[11px]">{error}</FieldError>
+        : hint && <FieldDescription className="text-[11px]">{hint}</FieldDescription>}
+    </Field>
   )
 }
 
@@ -158,7 +147,6 @@ export function RolesPermissions() {
     setSaved((s) => ({ ...s, [id]: copy }))
     setDraft((d) => ({ ...d, [id]: copy }))
     setSelected(id)
-    setCreating(false)
     toast.success(`Created role ${name}`, {
       description: `Permissions copied from ${roles.find((r) => r.id === from)?.name ?? 'Sales'}. Assign users to it from Users.`,
     })
@@ -176,6 +164,7 @@ export function RolesPermissions() {
   return (
     <>
       <PageHeader
+        className={PAGE_HEADER}
         title="Roles and permissions"
         description="Choose what each role can view, create, edit, approve and delete in every module."
         actions={
@@ -198,7 +187,7 @@ export function RolesPermissions() {
       />
 
       <div className="grid grid-cols-1 gap-3 px-4 pb-8 @2xl:px-6 @3xl:grid-cols-[15rem_minmax(0,1fr)]">
-        <Panel title="Roles" description={`${roles.length} roles · ${data.users.length} users`} flush className="self-start">
+        <Panel as="section" headingAs="h2" title="Roles" description={`${roles.length} roles · ${data.users.length} users`} bodyClassName="p-0" className="self-start">
           <ul className="grid gap-0.5 p-1.5">
             {roles.map((r) => {
               const count = membersOf(r).length
@@ -230,7 +219,7 @@ export function RolesPermissions() {
                     <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-[11px] tabular-nums">
                       <HugeiconsIcon icon={UserMultipleIcon} strokeWidth={2} className="size-3" />
                       {count}
-                      <span className="sr-only">{count === 1 ? 'member' : 'members'}</span>
+                      <span className="sr-only">{pluralWord(count, 'member')}</span>
                     </span>
                   </button>
                 </li>
@@ -240,6 +229,8 @@ export function RolesPermissions() {
         </Panel>
 
         <Panel
+          as="section"
+          headingAs="h2"
           title={`${role.name} permissions`}
           description={locked
             ? 'Administrators have every permission. This role can’t be changed.'
@@ -247,7 +238,7 @@ export function RolesPermissions() {
           action={locked
             ? <span className="text-muted-foreground flex items-center gap-1 text-[11px]"><HugeiconsIcon icon={LockIcon} strokeWidth={2} className="size-3" /> Locked</span>
             : role.custom && <Button variant="ghost" size="sm" className="text-destructive" onClick={deleteRole}>Delete role</Button>}
-          flush
+          bodyClassName="p-0"
         >
           <div className="overflow-x-auto">
             <table className="w-full min-w-[30rem] text-xs">
@@ -263,7 +254,7 @@ export function RolesPermissions() {
                   <tr key={m.id} className="hover:bg-accent/30">
                     <th scope="row" className="px-3.5 py-2 text-left font-normal">
                       <span className="flex min-w-0 items-center gap-2.5">
-                        <ModuleMark icon={m.icon} colour={m.colour} size="sm" />
+                        <IconMark icon={m.icon} colour={m.colour} size="sm" />
                         <span className="grid min-w-0">
                           <span className="truncate font-medium">{m.name}</span>
                           <span className="text-muted-foreground truncate text-[11px]">{m.pages.length} pages</span>
@@ -316,69 +307,25 @@ function NewRoleDialog({ open, onOpenChange, roles, onCreate }: {
   roles: RoleDef[]
   onCreate: (name: string, description: string, from: string) => void
 }) {
-  const id = useId()
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [from, setFrom] = useState('sales')
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    if (!open) return
-    setName('')
-    setDescription('')
-    setFrom('sales')
-    setError('')
-  }, [open])
-
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    const clean = name.trim()
-    if (!clean) return setError('Enter a role name.')
-    if (roles.some((r) => r.name.toLowerCase() === clean.toLowerCase())) return setError('A role with this name already exists.')
-    onCreate(clean, description.trim(), from)
-  }
-
+  const fields: FormField[] = [
+    {
+      key: 'name', label: 'Role name', type: 'text', required: true, requiredMessage: 'Enter a role name.', placeholder: 'Warehouse supervisor',
+      validate: (v) => (roles.some((r) => r.name.toLowerCase() === String(v).trim().toLowerCase()) ? 'A role with this name already exists.' : undefined),
+    },
+    { key: 'description', label: 'Description', type: 'textarea', rows: 2, placeholder: 'What people with this role do' },
+    { key: 'from', label: 'Copy permissions from', type: 'select', options: roles.map((r) => ({ value: r.id, label: r.name })) },
+  ]
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} noValidate className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>New role</DialogTitle>
-            <DialogDescription>Start from an existing role's permissions, then adjust them in the permission matrix.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3">
-            <FormField id={`${id}-name`} label="Role name" error={error}>
-              <Input
-                id={`${id}-name`}
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value)
-                  setError('')
-                }}
-                placeholder="Warehouse supervisor"
-                aria-invalid={!!error}
-                aria-describedby={error ? `${id}-name-error` : undefined}
-              />
-            </FormField>
-            <FormField id={`${id}-description`} label="Description">
-              <Textarea id={`${id}-description`} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What people with this role do" className="min-h-14" />
-            </FormField>
-            <FormField id={`${id}-from`} label="Copy permissions from">
-              <Select value={from} onValueChange={setFrom}>
-                <SelectTrigger id={`${id}-from`} className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent position="popper">
-                  {roles.map((r) => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </FormField>
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit">Create role</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="New role"
+      description="Start from an existing role's permissions, then adjust them in the permission matrix."
+      fields={fields}
+      initialValues={{ from: 'sales' }}
+      submitLabel="Create role"
+      onSubmit={(v) => onCreate(String(v.name), String(v.description), String(v.from))}
+    />
   )
 }
 
@@ -487,7 +434,7 @@ function validate(form: Settings) {
 
 export function CompanySettings() {
   const { company } = useErp()
-  if (!company) return <PageHeader title="Company settings" description="Choose a company first." />
+  if (!company) return <PageHeader className={PAGE_HEADER} title="Company settings" description="Choose a company first." />
   // A new key starts the form afresh when the company changes.
   return <CompanySettingsForm key={company.id} company={company} />
 }
@@ -550,10 +497,10 @@ function CompanySettingsForm({ company }: { company: Company }) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <PageHeader title="Company settings" description={`Legal details, localisation, document numbering and security for ${company.name}.`} />
+      <PageHeader className={PAGE_HEADER} title="Company settings" description={`Legal details, localisation, document numbering and security for ${company.name}.`} />
 
       <div className="grid w-full max-w-4xl grid-cols-1 gap-3 px-4 pb-6 @2xl:px-6">
-        <Panel title="Company profile" description="Printed on quotations, sales orders, purchase orders and customer invoices.">
+        <Panel as="section" headingAs="h2" title="Company profile" description="Printed on quotations, sales orders, purchase orders and customer invoices.">
           <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2">
             <div className="flex min-w-0 items-center gap-3 @xl:col-span-2">
               <div className="bg-muted/40 grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg border border-dashed">
@@ -573,73 +520,73 @@ function CompanySettingsForm({ company }: { company: Company }) {
               </div>
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={pickLogo} />
             </div>
-            <FormField id={`${id}-legalName`} label="Legal name" error={errors.legalName}>
+            <SettingField id={`${id}-legalName`} label="Legal name" error={errors.legalName}>
               <Input {...field('legalName')} value={form.legalName} onChange={(e) => set('legalName', e.target.value)} />
-            </FormField>
-            <FormField id={`${id}-tradingName`} label="Trading name" hint="The name customers know you by, if it differs.">
+            </SettingField>
+            <SettingField id={`${id}-tradingName`} label="Trading name" hint="The name customers know you by, if it differs.">
               <Input {...field('tradingName')} value={form.tradingName} onChange={(e) => set('tradingName', e.target.value)} />
-            </FormField>
-            <FormField id={`${id}-taxId`} label="Tax registration number" error={errors.taxId} hint="Shown on tax invoices.">
+            </SettingField>
+            <SettingField id={`${id}-taxId`} label="Tax registration number" error={errors.taxId} hint="Shown on tax invoices.">
               <Input {...field('taxId')} value={form.taxId} onChange={(e) => set('taxId', e.target.value)} className="font-mono" />
-            </FormField>
-            <FormField id={`${id}-email`} label="Billing email" error={errors.email}>
+            </SettingField>
+            <SettingField id={`${id}-email`} label="Billing email" error={errors.email}>
               <Input {...field('email')} type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
-            </FormField>
-            <FormField id={`${id}-street`} label="Address" className="@xl:col-span-2">
+            </SettingField>
+            <SettingField id={`${id}-street`} label="Address" className="@xl:col-span-2">
               <Input {...field('street')} value={form.street} onChange={(e) => set('street', e.target.value)} />
-            </FormField>
+            </SettingField>
             <div className="grid grid-cols-1 gap-3 @md:grid-cols-3 @xl:col-span-2">
-              <FormField id={`${id}-city`} label="City">
+              <SettingField id={`${id}-city`} label="City">
                 <Input {...field('city')} value={form.city} onChange={(e) => set('city', e.target.value)} />
-              </FormField>
-              <FormField id={`${id}-postalCode`} label="Postal code">
+              </SettingField>
+              <SettingField id={`${id}-postalCode`} label="Postal code">
                 <Input {...field('postalCode')} value={form.postalCode} onChange={(e) => set('postalCode', e.target.value)} />
-              </FormField>
-              <FormField id={`${id}-country`} label="Country">
+              </SettingField>
+              <SettingField id={`${id}-country`} label="Country">
                 <Input {...field('country')} value={form.country} onChange={(e) => set('country', e.target.value)} />
-              </FormField>
+              </SettingField>
             </div>
           </div>
         </Panel>
 
-        <Panel title="Localisation" description="How money, dates and periods work for this company.">
+        <Panel as="section" headingAs="h2" title="Localisation" description="How money, dates and periods work for this company.">
           <div className="grid grid-cols-1 gap-3 @xl:grid-cols-2">
-            <FormField id={`${id}-currency`} label="Base currency" hint="The ledger and financial reports use it. Other currencies convert at the daily rate.">
+            <SettingField id={`${id}-currency`} label="Base currency" hint="The ledger and financial reports use it. Other currencies convert at the daily rate.">
               <Select value={form.currency} onValueChange={(v) => set('currency', v)}>
                 <SelectTrigger id={`${id}-currency`} className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent position="popper">
                   {CURRENCIES.map(([code, name]) => <SelectItem key={code} value={code}>{code} · {name}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </FormField>
-            <FormField id={`${id}-fiscalStart`} label="Fiscal year start" hint={fiscalYear(Number(form.fiscalStart))}>
+            </SettingField>
+            <SettingField id={`${id}-fiscalStart`} label="Fiscal year start" hint={fiscalYear(Number(form.fiscalStart))}>
               <Select value={form.fiscalStart} onValueChange={(v) => set('fiscalStart', v)}>
                 <SelectTrigger id={`${id}-fiscalStart`} className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent position="popper">
                   {MONTHS.map((m, i) => <SelectItem key={m} value={String(i)}>1 {m}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </FormField>
-            <FormField id={`${id}-dateFormat`} label="Date format" hint={`Today shows as ${sampleDate(form.dateFormat)}.`}>
+            </SettingField>
+            <SettingField id={`${id}-dateFormat`} label="Date format" hint={`Today shows as ${sampleDate(form.dateFormat)}.`}>
               <Select value={form.dateFormat} onValueChange={(v) => set('dateFormat', v)}>
                 <SelectTrigger id={`${id}-dateFormat`} className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent position="popper">
                   {DATE_FORMATS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </FormField>
-            <FormField id={`${id}-timeZone`} label="Time zone" hint="For due dates, reminders and the audit trail.">
+            </SettingField>
+            <SettingField id={`${id}-timeZone`} label="Time zone" hint="For due dates, reminders and the audit trail.">
               <Select value={form.timeZone} onValueChange={(v) => set('timeZone', v)}>
                 <SelectTrigger id={`${id}-timeZone`} className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent position="popper">
                   {TIME_ZONES.map(([value, label]) => <SelectItem key={value} value={value}>{label}</SelectItem>)}
                 </SelectContent>
               </Select>
-            </FormField>
+            </SettingField>
           </div>
         </Panel>
 
-        <Panel title="Document numbering" description={<>Each new document takes the next number in its sequence. Use <code className="font-mono">{'{YYYY}'}</code> in a prefix for the year.</>} flush>
+        <Panel as="section" headingAs="h2" title="Document numbering" description={<>Each new document takes the next number in its sequence. Use <code className="font-mono">{'{YYYY}'}</code> in a prefix for the year.</>} bodyClassName="p-0">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[32rem] text-xs">
               <thead>
@@ -660,11 +607,11 @@ function CompanySettingsForm({ company }: { company: Company }) {
                       <th scope="row" className="px-3.5 py-2.5 text-left font-medium">{d.label}</th>
                       <td className="px-2 py-2">
                         <Input {...field(`${d.key}-prefix`)} aria-label={`${d.label} prefix`} value={n.prefix} onChange={(e) => setDoc(d.key, { prefix: e.target.value })} className="w-32 font-mono" />
-                        {prefixError && <p id={`${id}-${d.key}-prefix-error`} className="text-destructive mt-1 text-[11px]">{prefixError}</p>}
+                        {prefixError && <FieldError id={`${id}-${d.key}-prefix-error`} className="mt-1 text-[11px]">{prefixError}</FieldError>}
                       </td>
                       <td className="px-2 py-2">
                         <Input {...field(`${d.key}-next`)} aria-label={`${d.label} next number`} inputMode="numeric" value={n.next} onChange={(e) => setDoc(d.key, { next: e.target.value.trim() })} className="w-24 font-mono tabular-nums" />
-                        {nextError && <p id={`${id}-${d.key}-next-error`} className="text-destructive mt-1 text-[11px]">{nextError}</p>}
+                        {nextError && <FieldError id={`${id}-${d.key}-next-error`} className="mt-1 text-[11px]">{nextError}</FieldError>}
                       </td>
                       <td className="px-3.5 py-2.5">
                         <span className="bg-muted rounded px-1.5 py-0.5 font-mono text-[11.5px] whitespace-nowrap">{numberPreview(n)}</span>
@@ -677,7 +624,7 @@ function CompanySettingsForm({ company }: { company: Company }) {
           </div>
         </Panel>
 
-        <Panel title="Security" description="Sign-in rules for every member of this company.">
+        <Panel as="section" headingAs="h2" title="Security" description="Sign-in rules for every member of this company.">
           <div className="divide-y">
             <SwitchRow
               id={`${id}-2fa`}
@@ -729,6 +676,8 @@ function CompanySettingsForm({ company }: { company: Company }) {
   )
 }
 
+// A setting that is on or off, from shadcn's Field: the label and a line
+// under it, and the switch on the right.
 function SwitchRow({ id, label, description, checked, onChange }: {
   id: string
   label: string
@@ -737,13 +686,13 @@ function SwitchRow({ id, label, description, checked, onChange }: {
   onChange: (checked: boolean) => void
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 first:pt-0">
-      <div className="grid min-w-0 gap-0.5">
-        <Label htmlFor={id}>{label}</Label>
-        <p id={`${id}-description`} className="text-muted-foreground text-[11px]">{description}</p>
-      </div>
+    <Field orientation="horizontal" className="justify-between gap-4 py-3 first:pt-0">
+      <FieldContent className="min-w-0">
+        <FieldLabel htmlFor={id}>{label}</FieldLabel>
+        <FieldDescription id={`${id}-description`} className="text-[11px]">{description}</FieldDescription>
+      </FieldContent>
       <Switch id={id} checked={checked} onCheckedChange={onChange} aria-describedby={`${id}-description`} className="mt-0.5" />
-    </div>
+    </Field>
   )
 }
 
@@ -848,14 +797,14 @@ export function Integrations() {
 
   return (
     <>
-      <PageHeader title="Integrations" description={`${connected} of ${apps.length} connected · Link the services your company already uses, and manage API access.`} />
+      <PageHeader className={PAGE_HEADER} title="Integrations" description={`${connected} of ${apps.length} connected · Link the services your company already uses, and manage API access.`} />
 
       <div className="grid gap-6 px-4 pb-8 @2xl:px-6">
         <section aria-label="Connected services" className="grid grid-cols-1 gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
           {apps.map((app) => (
             <article key={app.id} className="bg-card flex min-w-0 flex-col gap-3 rounded-lg border p-3.5">
               <div className="flex items-start gap-3">
-                <ModuleMark icon={app.icon} colour={app.colour} size="lg" />
+                <IconMark icon={app.icon} colour={app.colour} size="lg" />
                 <div className="grid min-w-0 flex-1 gap-0.5">
                   <h3 className="truncate text-[13px] font-semibold">{app.name}</h3>
                   <p className="text-muted-foreground text-[11px]">{app.category}</p>
@@ -892,13 +841,25 @@ export function Integrations() {
   )
 }
 
+const KEY_FIELDS: FormField[] = [
+  { key: 'name', label: 'Key name', type: 'text', required: true, requiredMessage: 'Enter a name for the key.', placeholder: 'Warehouse scanners' },
+  {
+    key: 'scope', label: 'Scope', type: 'select',
+    options: [{ value: 'Read only', label: 'Read only' }, { value: 'Read and write', label: 'Read and write' }],
+  },
+]
+
 function ApiKeys() {
   const [keys, setKeys] = useState(API_KEYS)
   const [creating, setCreating] = useState(false)
+  // A key just created: shown once, then only its last four characters.
+  const [secret, setSecret] = useState<string | null>(null)
   const [revoking, setRevoking] = useState<ApiKey | null>(null)
 
   return (
     <Panel
+      as="section"
+      headingAs="h2"
       title="API keys"
       description="For your own scripts and apps. Keys act with the permissions of the scope you choose."
       action={
@@ -907,7 +868,7 @@ function ApiKeys() {
           Create key
         </Button>
       }
-      flush
+      bodyClassName="p-0"
       className="self-start"
     >
       {keys.length ? (
@@ -931,119 +892,63 @@ function ApiKeys() {
           ))}
         </ul>
       ) : (
-        <p className="text-muted-foreground px-3.5 py-6 text-center text-xs">No API keys. Create one to connect your own apps.</p>
+        <Empty className="px-3.5 py-6">
+          <EmptyDescription>No API keys. Create one to connect your own apps.</EmptyDescription>
+        </Empty>
       )}
 
-      <CreateKeyDialog open={creating} onOpenChange={setCreating} onCreate={(k) => setKeys((list) => [...list, k])} />
+      <FormDialog
+        open={creating}
+        onOpenChange={setCreating}
+        title="Create API key"
+        description="Name it after the app that will use it, so you know what breaks if you revoke it."
+        fields={KEY_FIELDS}
+        initialValues={{ scope: 'Read only' }}
+        submitLabel="Create key"
+        onSubmit={(v) => {
+          const token = makeKey()
+          setKeys((list) => [...list, { id: `key-${Date.now()}`, name: String(v.name), scope: String(v.scope), last4: token.slice(-4), created: TODAY, lastUsed: '' }])
+          setSecret(token)
+        }}
+      />
+      <NewKeyDialog secret={secret} onClose={() => setSecret(null)} />
 
-      <AlertDialog open={!!revoking} onOpenChange={(open) => !open && setRevoking(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Revoke {revoking?.name}?</AlertDialogTitle>
-            <AlertDialogDescription>Apps that use this key stop working straight away. This can’t be undone.</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => {
-              if (!revoking) return
-              setKeys((list) => list.filter((k) => k.id !== revoking.id))
-              toast(`Revoked ${revoking.name}`)
-            }}>
-              Revoke key
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirm
+        open={!!revoking}
+        onOpenChange={(open) => !open && setRevoking(null)}
+        title={`Revoke ${revoking?.name}?`}
+        description="Apps that use this key stop working straight away. This can’t be undone."
+        confirmLabel="Revoke key"
+        icon={null}
+        onConfirm={() => {
+          if (!revoking) return
+          setKeys((list) => list.filter((k) => k.id !== revoking.id))
+          toast(`Revoked ${revoking.name}`)
+        }}
+      />
     </Panel>
   )
 }
 
-function CreateKeyDialog({ open, onOpenChange, onCreate }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onCreate: (key: ApiKey) => void
-}) {
-  const id = useId()
-  const [name, setName] = useState('')
-  const [scope, setScope] = useState('Read only')
-  const [error, setError] = useState('')
-  const [secret, setSecret] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!open) return
-    setName('')
-    setScope('Read only')
-    setError('')
-    setSecret(null)
-  }, [open])
-
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    if (!name.trim()) return setError('Enter a name for the key.')
-    const token = makeKey()
-    onCreate({ id: `key-${Date.now()}`, name: name.trim(), scope, last4: token.slice(-4), created: TODAY, lastUsed: '' })
-    setSecret(token)
-  }
-
+// The one time a new key is shown in full, to copy into the app that uses it.
+function NewKeyDialog({ secret, onClose }: { secret: string | null; onClose: () => void }) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={secret !== null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
-        {secret ? (
-          <div className="grid gap-4">
-            <DialogHeader>
-              <DialogTitle>Copy your API key</DialogTitle>
-              <DialogDescription>For security you won’t see this key again. Store it in your app’s secrets, not in code.</DialogDescription>
-            </DialogHeader>
-            <div className="flex gap-1.5">
-              <Input readOnly value={secret} aria-label="New API key" className="font-mono" onFocus={(e) => e.currentTarget.select()} />
-              <Button variant="outline" onClick={() => {
-                navigator.clipboard?.writeText(secret).catch(() => {})
-                toast.success('API key copied')
-              }}>
-                <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />
-                Copy
-              </Button>
-            </div>
-            <DialogFooter>
-              <Button onClick={() => onOpenChange(false)}>Done</Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <form onSubmit={submit} noValidate className="grid gap-4">
-            <DialogHeader>
-              <DialogTitle>Create API key</DialogTitle>
-              <DialogDescription>Name it after the app that will use it, so you know what breaks if you revoke it.</DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-3">
-              <FormField id={`${id}-name`} label="Key name" error={error}>
-                <Input
-                  id={`${id}-name`}
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value)
-                    setError('')
-                  }}
-                  placeholder="Warehouse scanners"
-                  aria-invalid={!!error}
-                  aria-describedby={error ? `${id}-name-error` : undefined}
-                />
-              </FormField>
-              <FormField id={`${id}-scope`} label="Scope">
-                <Select value={scope} onValueChange={setScope}>
-                  <SelectTrigger id={`${id}-scope`} className="w-full"><SelectValue /></SelectTrigger>
-                  <SelectContent position="popper">
-                    <SelectItem value="Read only">Read only</SelectItem>
-                    <SelectItem value="Read and write">Read and write</SelectItem>
-                  </SelectContent>
-                </Select>
-              </FormField>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit">Create key</Button>
-            </DialogFooter>
-          </form>
-        )}
+        <DialogHeader>
+          <DialogTitle>Copy your API key</DialogTitle>
+          <DialogDescription>For security you won’t see this key again. Store it in your app’s secrets, not in code.</DialogDescription>
+        </DialogHeader>
+        <div className="flex gap-1.5">
+          <Input readOnly value={secret ?? ''} aria-label="New API key" className="font-mono" onFocus={(e) => e.currentTarget.select()} />
+          <Button variant="outline" onClick={() => secret && copyText(secret, { success: 'API key copied' })}>
+            <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />
+            Copy
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button onClick={onClose}>Done</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1064,6 +969,8 @@ function Webhooks() {
 
   return (
     <Panel
+      as="section"
+      headingAs="h2"
       title="Webhooks"
       description="We send a signed POST request to each endpoint when one of its events happens."
       action={
@@ -1072,7 +979,7 @@ function Webhooks() {
           Add endpoint
         </Button>
       }
-      flush
+      bodyClassName="p-0"
       className="self-start"
     >
       {hooks.length ? (
@@ -1114,7 +1021,9 @@ function Webhooks() {
           ))}
         </ul>
       ) : (
-        <p className="text-muted-foreground px-3.5 py-6 text-center text-xs">No endpoints. Add one to get events as they happen.</p>
+        <Empty className="px-3.5 py-6">
+          <EmptyDescription>No endpoints. Add one to get events as they happen.</EmptyDescription>
+        </Empty>
       )}
 
       <AddEndpointDialog
@@ -1122,86 +1031,70 @@ function Webhooks() {
         onOpenChange={setAdding}
         onAdd={(hook) => {
           setHooks((list) => [...list, hook])
-          setAdding(false)
-          toast.success('Endpoint added', { description: `${hook.events.length} ${hook.events.length === 1 ? 'event' : 'events'} → ${hook.url}` })
+          toast.success('Endpoint added', { description: `${plural(hook.events.length, 'event')} → ${hook.url}` })
         }}
       />
     </Panel>
   )
 }
 
+const HTTPS_URL = /^https:\/\/[^\s/]+\.[^\s]+$/
+const URL_MESSAGE = 'Enter an HTTPS URL, such as https://example.com/webhooks.'
+
+const ENDPOINT_FIELDS: FormField[] = [{
+  key: 'url', label: 'Endpoint URL', type: 'text', required: true, requiredMessage: URL_MESSAGE, placeholder: 'https://example.com/webhooks/erp',
+  autoComplete: 'url', validate: (v) => (HTTPS_URL.test(String(v).trim()) ? undefined : URL_MESSAGE),
+}]
+
+// The URL is a FormDialog field; the events are a checkbox group under it.
 function AddEndpointDialog({ open, onOpenChange, onAdd }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   onAdd: (hook: Webhook) => void
 }) {
-  const id = useId()
-  const [url, setUrl] = useState('')
   const [events, setEvents] = useState<string[]>(['invoice.paid'])
-  const [errors, setErrors] = useState<{ url?: string; events?: string }>({})
+  const [eventsError, setEventsError] = useState('')
 
   useEffect(() => {
     if (!open) return
-    setUrl('')
     setEvents(['invoice.paid'])
-    setErrors({})
+    setEventsError('')
   }, [open])
 
-  function submit(e: FormEvent) {
-    e.preventDefault()
-    const found: typeof errors = {}
-    if (!/^https:\/\/[^\s/]+\.[^\s]+$/.test(url.trim())) found.url = 'Enter an HTTPS URL, such as https://example.com/webhooks.'
-    if (!events.length) found.events = 'Choose at least one event.'
-    setErrors(found)
-    if (found.url) return document.getElementById(`${id}-url`)?.focus()
-    if (found.events) return
-    onAdd({ id: `wh-${Date.now()}`, url: url.trim(), events: WEBHOOK_EVENTS.filter((ev) => events.includes(ev)), enabled: true, lastDelivery: 'No deliveries yet' })
-  }
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <form onSubmit={submit} noValidate className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>Add webhook endpoint</DialogTitle>
-            <DialogDescription>Choose the events to send. Each request is signed, so your server can check it came from us.</DialogDescription>
-          </DialogHeader>
-          <FormField id={`${id}-url`} label="Endpoint URL" error={errors.url}>
-            <Input
-              id={`${id}-url`}
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com/webhooks/erp"
-              className="font-mono"
-              aria-invalid={!!errors.url}
-              aria-describedby={errors.url ? `${id}-url-error` : undefined}
-            />
-          </FormField>
-          <fieldset className="grid gap-2">
-            <legend className="mb-2 text-xs font-medium">Events</legend>
-            <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
-              {WEBHOOK_EVENTS.map((ev) => (
-                <label key={ev} className="flex min-w-0 items-center gap-2 text-xs">
-                  <Checkbox
-                    checked={events.includes(ev)}
-                    onCheckedChange={(on) => {
-                      setEvents((list) => (on === true ? [...list, ev] : list.filter((x) => x !== ev)))
-                      setErrors((s) => ({ ...s, events: undefined }))
-                    }}
-                  />
-                  <code className="truncate font-mono text-[11px]">{ev}</code>
-                </label>
-              ))}
-            </div>
-            {errors.events && <p className="text-destructive text-[11px]">{errors.events}</p>}
-          </fieldset>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit">Add endpoint</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Add webhook endpoint"
+      description="Choose the events to send. Each request is signed, so your server can check it came from us."
+      fields={ENDPOINT_FIELDS}
+      submitLabel="Add endpoint"
+      onSubmit={(v) => {
+        if (!events.length) {
+          setEventsError('Choose at least one event.')
+          return false
+        }
+        onAdd({ id: `wh-${Date.now()}`, url: String(v.url), events: WEBHOOK_EVENTS.filter((ev) => events.includes(ev)), enabled: true, lastDelivery: 'No deliveries yet' })
+      }}
+    >
+      <FieldSet className="min-w-0">
+        <FieldLegend variant="label">Events</FieldLegend>
+        <div className="grid grid-cols-1 gap-x-3 gap-y-2 sm:grid-cols-2">
+          {WEBHOOK_EVENTS.map((ev) => (
+            <label key={ev} className="flex min-w-0 items-center gap-2 text-xs">
+              <Checkbox
+                checked={events.includes(ev)}
+                onCheckedChange={(on) => {
+                  setEvents((list) => (on === true ? [...list, ev] : list.filter((x) => x !== ev)))
+                  setEventsError('')
+                }}
+              />
+              <code className="truncate font-mono text-[11px]">{ev}</code>
+            </label>
+          ))}
+        </div>
+        {eventsError && <FieldError className="text-[11px]">{eventsError}</FieldError>}
+      </FieldSet>
+    </FormDialog>
   )
 }

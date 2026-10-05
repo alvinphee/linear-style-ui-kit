@@ -183,7 +183,7 @@ export type RewriteRequest = {
   label: string
 }
 
-export type RewriteResult = { ok: true; text: string } | { ok: false; message: string }
+type RewriteResult = { ok: true; text: string } | { ok: false; message: string }
 
 export function rewrite(value: string, req: RewriteRequest): RewriteResult {
   const original = value.slice(req.start, req.end)

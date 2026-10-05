@@ -6,18 +6,20 @@ import {
   Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, ComputerIcon, KeyboardIcon, Moon02Icon, PaintBoardIcon,
   Search01Icon, Sun03Icon,
 } from '@hugeicons/core-free-icons'
+import { IconAction } from '@/components/icon-action'
+import { PageHeader } from '@/components/page-header'
 import { Button } from '@/components/ui/button'
 import {
   Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
   CommandSeparator, CommandShortcut,
 } from '@/components/ui/command'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Shortcut } from '@/components/shortcut'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { isTyping } from '@/lib/keyboard'
 import { PRESETS } from '@/lib/theme'
 import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, goTo } from './nav'
 import ShortcutsSheet from './ShortcutsSheet'
 import ShowcaseSidebar from './ShowcaseSidebar'
+import AiComponentsSection from './sections/AiComponentsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
 import AiWorkspaceSection from './sections/AiWorkspaceSection'
 import AppShellSection from './sections/AppShellSection'
@@ -59,11 +61,6 @@ const DEMOS: Record<string, ComponentType> = Object.fromEntries(
     .filter(([, component]) => typeof component === 'function'),
 )
 
-function isTyping(target: EventTarget | null) {
-  return target instanceof HTMLElement
-    && !!target.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')
-}
-
 export default function KitchenSink() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -91,6 +88,7 @@ export default function KitchenSink() {
     navigation: () => <NavigationSection />,
     content: () => <ContentSection />,
     'data-table': () => <DataTableSection />,
+    'ai-components': () => <AiComponentsSection />,
     'app-shell': () => <AppShellSection />,
     list: () => <JobListSection />,
     board: () => <BoardSection />,
@@ -119,12 +117,11 @@ export default function KitchenSink() {
   function overview() {
     return (
       <div className="grid grid-cols-[minmax(0,1fr)] gap-12">
-        <header className="grid gap-1">
-          <h1 className="text-xl font-semibold tracking-tight">All components</h1>
-          <p className="text-muted-foreground text-sm">
-            Every component at a glance. Open a section for its playground, variants and code.
-          </p>
-        </header>
+        <PageHeader
+          size="lg"
+          title="All components"
+          description="Every component at a glance. Open a section for its playground, variants and code."
+        />
         <InOverview.Provider value>
           {components.map((c) => <Fragment key={c.id}>{PAGES[c.id]?.()}</Fragment>)}
         </InOverview.Provider>
@@ -190,14 +187,14 @@ export default function KitchenSink() {
             <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={() => setCommandOpen(true)}>
               <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
             </Button>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="hidden md:inline-flex" aria-label="Keyboard shortcuts" onClick={() => setShortcutsOpen(true)}>
-                  <HugeiconsIcon icon={KeyboardIcon} strokeWidth={2} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Keyboard shortcuts <Shortcut keys={['?']} className="ml-1" /></TooltipContent>
-            </Tooltip>
+            <IconAction
+              label="Keyboard shortcuts"
+              icon={KeyboardIcon}
+              shortcut={['?']}
+              size="icon"
+              className="text-foreground hidden md:inline-flex"
+              onClick={() => setShortcutsOpen(true)}
+            />
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="sm" aria-label="Theme">
@@ -209,14 +206,14 @@ export default function KitchenSink() {
                 <ThemeControls compact />
               </PopoverContent>
             </Popover>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Toggle theme" onClick={() => setTheme(dark ? 'light' : 'dark')}>
-                  <HugeiconsIcon icon={Sun03Icon} altIcon={Moon02Icon} showAlt={dark} strokeWidth={2} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{dark ? 'Light mode' : 'Dark mode'}</TooltipContent>
-            </Tooltip>
+            <IconAction
+              label={dark ? 'Light mode' : 'Dark mode'}
+              size="icon"
+              className="text-foreground"
+              onClick={() => setTheme(dark ? 'light' : 'dark')}
+            >
+              <HugeiconsIcon icon={Sun03Icon} altIcon={Moon02Icon} showAlt={dark} strokeWidth={2} />
+            </IconAction>
             <Button size="sm" aria-label="New job" onClick={() => setCreateOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
               <span className="hidden sm:inline">New job</span>

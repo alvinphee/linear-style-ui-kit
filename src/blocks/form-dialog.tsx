@@ -2,7 +2,7 @@ import { Fragment, useId, useRef, useState, type FormEvent, type KeyboardEvent, 
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
-import { IS_MAC, MOD, keyLabel } from '@/components/shortcut'
+import { MOD, ariaKeyShortcuts, keyLabel } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
@@ -27,6 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { plural } from '@/lib/text'
 
 // The kit's create and edit dialogs, as blocks. Fields, values and what
 // happens on submit all come in as props.
@@ -54,7 +55,7 @@ export const DIALOG_BODY = 'min-h-0 flex-1 overflow-y-auto p-4'
 
 // One key cap ("⌘ ↵"), tinted to sit on the primary button.
 const SHORTCUT = `${MOD} ${keyLabel('enter')}`
-const SHORTCUT_ARIA = IS_MAC ? 'Meta+Enter' : 'Control+Enter'
+const SHORTCUT_ARIA = ariaKeyShortcuts(['mod', 'enter'])
 const isSubmitKey = (e: KeyboardEvent) => e.key === 'Enter' && (e.ctrlKey || e.metaKey)
 
 function useOpen(open: boolean | undefined, onOpenChange?: (open: boolean) => void) {
@@ -147,7 +148,7 @@ const overBy = (field: FormField, value: FormValue | undefined) =>
 function fieldError(field: FormField, value: FormValue | undefined, values: FormValues) {
   if (field.type === 'checkbox' || typeof value === 'boolean') return field.validate?.(value ?? false, values)
   const over = overBy(field, value)
-  if (over > 0) return `That is ${over} ${over === 1 ? 'character' : 'characters'} too long.`
+  if (over > 0) return `That is ${plural(over, 'character')} too long.`
   const text = (value ?? '').trim()
   if (!text) {
     if (!field.required) return undefined

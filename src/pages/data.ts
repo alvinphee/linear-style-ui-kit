@@ -33,10 +33,9 @@ import {
   // Assistant
   AiChat02Icon, BubbleChatIcon, SparklesIcon, AiBrain01Icon, AiMagicIcon, MessageMultiple01Icon,
   Mic01Icon, SentIcon,
-  // Job status and priority
-  CircleDashedIcon, CircleIcon, TimeHalfPassIcon, NoSignalIcon, LowSignalIcon, MediumSignalIcon,
-  FullSignalIcon, AlertSquareIcon,
 } from '@hugeicons/core-free-icons'
+import { PRIORITIES, type Priority } from '@/components/priority-icon'
+import { WORKFLOW_STATUS, type WorkflowStatus } from '@/components/status-icon'
 
 export type Icons = Record<string, IconSvgElement>
 
@@ -127,24 +126,13 @@ export const ICON_GROUPS: { title: string; note: string; icons: Icons }[] = [
   },
 ]
 
-export type Status = 'backlog' | 'todo' | 'progress' | 'done' | 'cancelled'
-export type Priority = 'none' | 'low' | 'medium' | 'high' | 'urgent'
-
-export const STATUS: Record<Status, { label: string; icon: IconSvgElement; className: string }> = {
-  backlog: { label: 'Backlog', icon: CircleDashedIcon, className: 'text-status-todo' },
-  todo: { label: 'Todo', icon: CircleIcon, className: 'text-status-todo' },
-  progress: { label: 'In progress', icon: TimeHalfPassIcon, className: 'text-status-progress' },
-  done: { label: 'Done', icon: CheckmarkCircle02Icon, className: 'text-status-done' },
-  cancelled: { label: 'Cancelled', icon: CancelCircleIcon, className: 'text-muted-foreground' },
-}
-
-export const PRIORITY: Record<Priority, { label: string; icon: IconSvgElement; className: string }> = {
-  none: { label: 'No priority', icon: NoSignalIcon, className: 'text-muted-foreground' },
-  low: { label: 'Low', icon: LowSignalIcon, className: 'text-muted-foreground' },
-  medium: { label: 'Medium', icon: MediumSignalIcon, className: 'text-muted-foreground' },
-  high: { label: 'High', icon: FullSignalIcon, className: 'text-foreground' },
-  urgent: { label: 'Urgent', icon: AlertSquareIcon, className: 'text-status-blocked' },
-}
+// A job's status and priority are the kit's workflow status and priority
+// (components/status-icon, components/priority-icon), under the names the
+// kit's pages use.
+export type Status = WorkflowStatus
+export type { Priority }
+export const STATUS = WORKFLOW_STATUS
+export const PRIORITY = PRIORITIES
 
 export type Job = {
   id: string
@@ -240,3 +228,35 @@ export const JOBS: Job[] = [
     createdBy: 'Siti', created: '2 weeks ago',
   },
 ]
+
+/* ---------- Job constants: the order and lookups every job page shares ---------- */
+
+// Workflow order, left to right: status menus and the board's columns.
+export const STATUS_ORDER: Status[] = ['backlog', 'todo', 'progress', 'done', 'cancelled']
+
+// A list reads top-down from what is moving: in progress first, closed last.
+export const STATUS_LIST_ORDER: Status[] = ['progress', 'todo', 'backlog', 'done', 'cancelled']
+
+// Sort key for priority, most urgent first (the order of PRIORITY_ORDER).
+export const PRIORITY_RANK: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3, none: 4 }
+
+const DUE_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// Sort key for a due date. The sample data writes them as words ("Today") or
+// "2 Oct", relative to 30 Sep; past dates sort first, no date last. Only the
+// order matters, so a month counts as 31 days.
+export function dueRank(due: string) {
+  if (!due) return 9999
+  if (due === 'Today') return 0
+  if (due === 'Tomorrow') return 1
+  if (due === 'Next week') return 7
+  const [day, month] = due.split(' ')
+  const m = DUE_MONTHS.indexOf(month)
+  return m < 0 ? 999 : (m - 8) * 31 + Number(day) - 30
+}
+
+// Filter and menu value for jobs with nobody assigned (Job.driver is '').
+export const UNASSIGNED = 'unassigned'
+
+// A label by its id: LABEL_BY_ID.fragile.
+export const LABEL_BY_ID = Object.fromEntries(LABELS.map((l) => [l.id, l]))

@@ -1,9 +1,11 @@
-import { useEffect, useId, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts'
-import { Badge } from '@/components/ui/badge'
+import { LegendLine, LegendRow } from '@/components/chart-legend'
+import { ProgressRing } from '@/components/progress-ring'
+import { StatusBadge } from '@/components/status-badge'
 import {
   ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig,
 } from '@/components/ui/chart'
+import { useSvgId } from '@/lib/use-svg-id'
 import { Panel, Section } from './shared'
 
 // Made-up numbers. 19–20 and 26–27 Sep are weekends, hence the dips.
@@ -51,9 +53,6 @@ const burndownConfig = {
   remaining: { label: 'Remaining', color: 'var(--chart-1)' },
   ideal: { label: 'Ideal', color: 'var(--muted-foreground)' },
 } satisfies ChartConfig
-
-// SVG ids end up in url(#…), which does not accept the colons useId can produce.
-const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '')
 
 function CompletedPanel() {
   const gradientId = `fill-${useSvgId()}`
@@ -121,32 +120,20 @@ const RINGS = [
   { label: 'Cycle', value: 58, color: 'var(--status-progress)', delta: 'Day 9 of 14' },
 ]
 
-function Ring({ label, value, color, delta, shown }: (typeof RINGS)[number] & { shown: boolean }) {
-  const r = 34
-  const circumference = 2 * Math.PI * r
-  const length = shown ? (circumference * value) / 100 : 0
-
+function Ring({ label, value, color, delta }: (typeof RINGS)[number]) {
   return (
     <figure className="flex min-w-0 flex-col items-center gap-2 text-center">
-      <div className="relative size-20">
-        <svg viewBox="0 0 80 80" className="size-full -rotate-90" role="img" aria-label={`${label}: ${value}%`}>
-          <circle cx="40" cy="40" r={r} fill="none" stroke="currentColor" strokeWidth="7" className="text-foreground/8" />
-          <circle
-            cx="40"
-            cy="40"
-            r={r}
-            fill="none"
-            stroke={color}
-            strokeWidth="7"
-            strokeLinecap="round"
-            strokeDasharray={`${length} ${circumference}`}
-            className="motion-safe:transition-[stroke-dasharray] motion-safe:duration-700 motion-safe:ease-out"
-          />
-        </svg>
-        <span aria-hidden className="absolute inset-0 flex items-center justify-center text-sm font-semibold tabular-nums">
-          {value}%
-        </span>
-      </div>
+      <ProgressRing
+        value={value}
+        size={80}
+        strokeWidth={7}
+        colour={color}
+        label={`${label}: ${value}%`}
+        animateIn
+        className="text-sm font-semibold"
+      >
+        {value}%
+      </ProgressRing>
       <figcaption className="grid gap-0.5">
         <span className="text-xs font-medium">{label}</span>
         <span className="text-muted-foreground text-[11px]">{delta}</span>
@@ -156,34 +143,15 @@ function Ring({ label, value, color, delta, shown }: (typeof RINGS)[number] & { 
 }
 
 function RingsPanel() {
-  const [shown, setShown] = useState(false)
-
-  // Start at 0 and fill on the next frame, so the rings animate in.
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setShown(true))
-    return () => cancelAnimationFrame(frame)
-  }, [])
-
   return (
-    <Panel title="Progress rings" note="Pure SVG, stroke-dasharray">
+    <Panel title="Progress rings" note="ProgressRing, pure SVG">
       <div className="grid grid-cols-3 gap-2 py-4">
         {RINGS.map((ring) => (
-          <Ring key={ring.label} {...ring} shown={shown} />
+          <Ring key={ring.label} {...ring} />
         ))}
       </div>
       <p className="text-muted-foreground border-t pt-3 text-[11px]">Targets: on time 95%, photos 80%. Compared with last month.</p>
     </Panel>
-  )
-}
-
-function LegendLine({ dashed, color, label }: { dashed?: boolean; color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <svg width="16" height="6" aria-hidden>
-        <line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '3 3' : undefined} />
-      </svg>
-      {label}
-    </span>
   )
 }
 
@@ -204,9 +172,7 @@ function CyclePanel() {
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <h4 className="text-sm font-medium">Cycle 12</h4>
           <span className="text-muted-foreground text-xs">· 22 Sep – 5 Oct</span>
-          <Badge variant="outline">
-            <span className="bg-status-progress size-1.5 rounded-full" /> Active
-          </Badge>
+          <StatusBadge tone="progress" variant="outline">Active</StatusBadge>
           <span className="text-muted-foreground ml-auto text-xs">5 days left</span>
         </div>
 
@@ -236,10 +202,10 @@ function CyclePanel() {
                 {SCOPE - completed - started} issues not started
               </p>
             </div>
-            <div className="text-muted-foreground flex flex-wrap gap-3 text-[11px]">
-              <LegendLine color="var(--chart-1)" label="Remaining" />
-              <LegendLine color="var(--muted-foreground)" label="Ideal" dashed />
-            </div>
+            <LegendRow>
+              <LegendLine colour="var(--chart-1)" label="Remaining" />
+              <LegendLine colour="var(--muted-foreground)" label="Ideal" dashed />
+            </LegendRow>
           </div>
 
           <ChartContainer config={burndownConfig} className="aspect-auto h-56 w-full">

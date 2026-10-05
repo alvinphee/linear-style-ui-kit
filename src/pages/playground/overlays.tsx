@@ -1,16 +1,21 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, Alert02Icon, Copy01Icon, Delete02Icon, InformationCircleIcon, Link01Icon, Logout01Icon,
+  Add01Icon, Alert02Icon, Archive01Icon, Copy01Icon, Delete02Icon, InformationCircleIcon, Link01Icon, Logout01Icon,
   MoreHorizontalIcon, PencilEdit02Icon, Settings01Icon, Share08Icon, TextBoldIcon, UserIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { IconAction } from '@/components/icon-action'
+import { CONTEXT_MENU_KIT, DROPDOWN_MENU_KIT, type MenuKit } from '@/components/menu-kit'
+import { MOD } from '@/components/shortcut'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'
 import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
   DialogTrigger,
@@ -28,7 +33,7 @@ import {
   Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger,
 } from '@/components/ui/popover'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Demos, Gallery, Playground, Variants, bool, imports, jsx, str } from './Playground'
+import { CodeBlock, Demos, Gallery, Playground, Variants, bool, element, imports, jsx, str } from './Playground'
 
 const SIDES = ['top', 'right', 'bottom', 'left'] as const
 const ALIGNS = ['start', 'center', 'end'] as const
@@ -710,7 +715,7 @@ function DialogDemos() {
 
 /* Alert dialog */
 
-function DeleteConfirm({ size, media, title, compact }: { size: AlertSize; media: boolean; title: string; compact?: boolean }) {
+function AlertDialogPreview({ size, media, title, compact }: { size: AlertSize; media: boolean; title: string; compact?: boolean }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -759,7 +764,7 @@ function AlertDialogDemos() {
           { kind: 'switch', name: 'media', label: 'Icon', initial: true },
         ]}
         render={(v) => (
-          <DeleteConfirm size={str(v, 'size') as AlertSize} media={bool(v, 'media')} title={str(v, 'title') || 'Delete this project?'} />
+          <AlertDialogPreview size={str(v, 'size') as AlertSize} media={bool(v, 'media')} title={str(v, 'title') || 'Delete this project?'} />
         )}
         code={(v) => {
           const media = bool(v, 'media')
@@ -795,9 +800,226 @@ function AlertDialogDemos() {
         note="size × media · click to open"
         rows={{ name: 'size', values: ALERT_SIZES }}
         cols={{ name: 'media', values: ['icon', 'none'] as const }}
-        render={(size, media) => <DeleteConfirm size={size} media={media === 'icon'} title="Delete this project?" compact />}
+        render={(size, media) => <AlertDialogPreview size={size} media={media === 'icon'} title="Delete this project?" compact />}
       />
     </>
+  )
+}
+
+/* DeleteConfirm: the kit's confirm step, built on the alert dialog */
+
+const CONFIRM_ICONS = {
+  trash: { icon: Delete02Icon, name: 'Delete02Icon' },
+  archive: { icon: Archive01Icon, name: 'Archive01Icon' },
+  none: { icon: null, name: '' },
+} as const
+
+type ConfirmIcon = keyof typeof CONFIRM_ICONS
+
+const CONFIRM_TEXT = 'Its 42 issues and their comments go with it. This cannot be undone.'
+
+const confirmed = (label: string) => () => toast(label, { description: 'Demo only. Nothing was changed.' })
+
+// Opened from a menu item: there is no trigger to go back to, so focus
+// returns to the menu's button once the dialog closes.
+function MenuDeleteConfirm() {
+  const [open, setOpen] = useState(false)
+  const more = useRef<HTMLButtonElement>(null)
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <IconAction ref={more} label="Project actions" icon={MoreHorizontalIcon} variant="outline" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="w-44">
+          <DropdownMenuItem onSelect={confirmed('Renamed')}>
+            <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} />
+            Rename
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onSelect={() => setOpen(true)}>
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+            Delete…
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DeleteConfirm
+        open={open}
+        onOpenChange={setOpen}
+        returnFocusRef={more}
+        title="Delete Website refresh?"
+        description={CONFIRM_TEXT}
+        onConfirm={confirmed('Project deleted')}
+      />
+    </>
+  )
+}
+
+function DeleteConfirmDemos() {
+  return (
+    <>
+      <Playground
+        title="DeleteConfirm"
+        description="The kit's confirm step: one component for any delete"
+        controls={[
+          { kind: 'text', name: 'title', label: 'Title', initial: 'Delete this project?' },
+          { kind: 'text', name: 'confirmLabel', label: 'Confirm label', initial: 'Delete' },
+          { kind: 'switch', name: 'destructive', label: 'Destructive', initial: true },
+          { kind: 'select', name: 'icon', label: 'Icon', options: Object.keys(CONFIRM_ICONS), initial: 'trash' },
+          { kind: 'select', name: 'size', label: 'Size', options: ALERT_SIZES, initial: 'default' },
+        ]}
+        render={(v) => {
+          const confirmLabel = str(v, 'confirmLabel') || 'Delete'
+          return (
+            <DeleteConfirm
+              title={str(v, 'title') || 'Delete this project?'}
+              description={CONFIRM_TEXT}
+              confirmLabel={confirmLabel}
+              destructive={bool(v, 'destructive')}
+              icon={CONFIRM_ICONS[str(v, 'icon') as ConfirmIcon].icon}
+              size={str(v, 'size') as AlertSize}
+              onConfirm={confirmed(confirmLabel)}
+            >
+              <Button variant="outline">{confirmLabel} project</Button>
+            </DeleteConfirm>
+          )
+        }}
+        code={(v) => {
+          const icon = str(v, 'icon') as ConfirmIcon
+          const confirmLabel = str(v, 'confirmLabel') || 'Delete'
+          const head = imports({
+            '@hugeicons/core-free-icons': icon === 'archive' ? ['Archive01Icon'] : [],
+            '@/components/delete-confirm': ['DeleteConfirm'],
+            '@/components/ui/button': ['Button'],
+          })
+          const body = element('DeleteConfirm', [
+            `title="${str(v, 'title') || 'Delete this project?'}"`,
+            `description="${CONFIRM_TEXT}"`,
+            confirmLabel !== 'Delete' && `confirmLabel="${confirmLabel}"`,
+            !bool(v, 'destructive') && 'destructive={false}',
+            icon === 'none' ? 'icon={null}' : icon === 'archive' && 'icon={Archive01Icon}',
+            unless(str(v, 'size'), 'default') && `size="${str(v, 'size')}"`,
+            'onConfirm={deleteProject}',
+          ], `<Button variant="outline">${confirmLabel} project</Button>`)
+          return `${head}\n\n${body}`
+        }}
+      />
+
+      <Gallery
+        title="DeleteConfirm in use"
+        note="Children are the trigger; or drive it with open and onOpenChange"
+        items={[
+          { label: 'from a menu item', node: <MenuDeleteConfirm /> },
+          {
+            label: 'milder: destructive={false}',
+            node: (
+              <DeleteConfirm
+                title="Archive Website refresh?"
+                description="It leaves the sidebar and stops showing in search. You can restore it from Settings."
+                confirmLabel="Archive"
+                destructive={false}
+                icon={Archive01Icon}
+                onConfirm={confirmed('Project archived')}
+              >
+                <Button variant="outline" size="sm">Archive</Button>
+              </DeleteConfirm>
+            ),
+          },
+          {
+            label: 'size="sm", icon={null}',
+            node: (
+              <DeleteConfirm
+                title="Remove this label?"
+                description="It comes off the 6 issues that have it."
+                confirmLabel="Remove"
+                icon={null}
+                size="sm"
+                onConfirm={confirmed('Label removed')}
+              >
+                <Button variant="outline" size="sm">Remove label</Button>
+              </DeleteConfirm>
+            ),
+          },
+        ]}
+      />
+    </>
+  )
+}
+
+/* ---------- Menu kit ---------- */
+
+// One list of items, written once against a kit, shown as a dropdown (the …
+// button) and as a right-click menu, as rows in a list usually offer both.
+function RecordMenuItems({ kit }: { kit: MenuKit }) {
+  const say = (what: string) => () => toast(what, { description: 'Demo only.' })
+  return (
+    <>
+      <kit.Item onSelect={say('Opened')}>Open</kit.Item>
+      <kit.Item onSelect={say('Link copied')}>Copy link<kit.Shortcut>{MOD} L</kit.Shortcut></kit.Item>
+      <kit.Sub>
+        <kit.SubTrigger>Set status</kit.SubTrigger>
+        <kit.SubContent>
+          {['Todo', 'In progress', 'Done'].map((s) => <kit.Item key={s} onSelect={say(`Status: ${s}`)}>{s}</kit.Item>)}
+        </kit.SubContent>
+      </kit.Sub>
+      <kit.Separator />
+      <kit.Item variant="destructive" onSelect={say('Deleted')}>Delete</kit.Item>
+    </>
+  )
+}
+
+const MENU_KIT_CODE = [
+  "import { CONTEXT_MENU_KIT, DROPDOWN_MENU_KIT, type MenuKit } from '@/components/menu-kit'",
+  '',
+  'function RecordMenuItems({ kit }: { kit: MenuKit }) {',
+  '  return (',
+  '    <>',
+  '      <kit.Item onSelect={open}>Open</kit.Item>',
+  '      <kit.Separator />',
+  '      <kit.Item variant="destructive" onSelect={remove}>Delete</kit.Item>',
+  '    </>',
+  '  )',
+  '}',
+  '',
+  '<DropdownMenuContent><RecordMenuItems kit={DROPDOWN_MENU_KIT} /></DropdownMenuContent>',
+  '<ContextMenuContent><RecordMenuItems kit={CONTEXT_MENU_KIT} /></ContextMenuContent>',
+].join('\n')
+
+function MenuKitDemos() {
+  return (
+    <Gallery
+      title="Menu kit"
+      note="one list of items as a dropdown and as a right-click menu"
+      items={[
+        {
+          label: 'DROPDOWN_MENU_KIT',
+          node: (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <IconAction label="Record actions" icon={MoreHorizontalIcon} />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                <RecordMenuItems kit={DROPDOWN_MENU_KIT} />
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ),
+        },
+        {
+          label: 'CONTEXT_MENU_KIT',
+          node: (
+            <ContextMenu>
+              <ContextMenuTrigger className="text-muted-foreground grid h-16 w-56 place-items-center rounded-md border border-dashed text-xs">
+                Right-click here
+              </ContextMenuTrigger>
+              <ContextMenuContent className="w-48">
+                <RecordMenuItems kit={CONTEXT_MENU_KIT} />
+              </ContextMenuContent>
+            </ContextMenu>
+          ),
+        },
+        { label: 'code', node: <CodeBlock code={MENU_KIT_CODE} className="w-[min(34rem,80vw)]" /> },
+      ]}
+    />
   )
 }
 
@@ -809,6 +1031,8 @@ export default function OverlaysDemos() {
       <DropdownDemos />
       <DialogDemos />
       <AlertDialogDemos />
+      <DeleteConfirmDemos />
+      <MenuKitDemos />
     </Demos>
   )
 }

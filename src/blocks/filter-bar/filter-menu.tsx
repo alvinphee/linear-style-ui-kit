@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
+import { useState, type ReactNode } from 'react'
+import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowRight01Icon, Cancel01Icon, FilterHorizontalIcon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
@@ -115,6 +115,50 @@ export function FilterMenu({ fields, filters, onToggle }: {
 
 const SEGMENT = 'flex items-center border-l outline-none transition-colors hover:bg-accent focus-visible:bg-accent focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40'
 
+// The chip's frame, for any filter: "Field | operator | value | ×". The value
+// is yours (plain text, or a menu trigger with the SEGMENT look); × removes
+// it. FilterChip is this with an options menu; use it alone for a filter that
+// has no options, such as "Title contains “late”".
+export function FilterPill({ icon, label, operator, removeLabel, onRemove, children }: {
+  icon: IconSvgElement
+  label: ReactNode
+  // "is", "is any of", "contains"…
+  operator: ReactNode
+  // Names the × button: "Remove status filter".
+  removeLabel: string
+  onRemove: () => void
+  // The value segment.
+  children: ReactNode
+}) {
+  return (
+    <div className="bg-card flex h-6 max-w-full min-w-0 items-stretch overflow-hidden rounded-md border text-xs">
+      <span className="flex shrink-0 items-center gap-1 px-1.5">
+        <HugeiconsIcon icon={icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
+        {label}
+      </span>
+      <span className="text-muted-foreground flex shrink-0 items-center border-l px-1.5">{operator}</span>
+      {children}
+      <button
+        type="button"
+        aria-label={removeLabel}
+        onClick={onRemove}
+        className={cn(SEGMENT, 'text-muted-foreground hover:text-foreground px-1')}
+      >
+        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
+      </button>
+    </div>
+  )
+}
+
+// A value segment that is plain text, for FilterPill.
+export function FilterPillValue({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex min-w-0 items-center border-l px-1.5">
+      <span className="truncate">{children}</span>
+    </span>
+  )
+}
+
 // One active filter as a chip: "Field | is any of | values | ×". The values
 // segment reopens the field's options; × removes the filter.
 export function FilterChip({ field, values, onChange }: {
@@ -128,14 +172,13 @@ export function FilterChip({ field, values, onChange }: {
   const name = field.label.toLowerCase()
 
   return (
-    <div className="bg-card flex h-6 max-w-full min-w-0 items-stretch overflow-hidden rounded-md border text-xs">
-      <span className="flex shrink-0 items-center gap-1 px-1.5">
-        <HugeiconsIcon icon={field.icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-        {field.label}
-      </span>
-      <span className="text-muted-foreground flex shrink-0 items-center border-l px-1.5">
-        {chosen.length === 1 ? 'is' : 'is any of'}
-      </span>
+    <FilterPill
+      icon={field.icon}
+      label={field.label}
+      operator={chosen.length === 1 ? 'is' : 'is any of'}
+      removeLabel={`Remove ${name} filter`}
+      onRemove={() => onChange([])}
+    >
       <DropdownMenu>
         <DropdownMenuTrigger
           className={cn(SEGMENT, 'min-w-0 gap-1.5 px-1.5')}
@@ -164,14 +207,6 @@ export function FilterChip({ field, values, onChange }: {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-      <button
-        type="button"
-        aria-label={`Remove ${name} filter`}
-        onClick={() => onChange([])}
-        className={cn(SEGMENT, 'text-muted-foreground hover:text-foreground px-1')}
-      >
-        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-      </button>
-    </div>
+    </FilterPill>
   )
 }

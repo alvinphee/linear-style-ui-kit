@@ -2,13 +2,14 @@ import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowDown01Icon, Delete02Icon, Download01Icon, FilterHorizontalIcon, KanbanIcon,
-  LeftToRightListBulletIcon, Loading03Icon, Calendar03Icon, MoreHorizontalIcon, Settings01Icon,
+  LeftToRightListBulletIcon, Calendar03Icon, MoreHorizontalIcon, Settings01Icon,
   Upload01Icon,
 } from '@hugeicons/core-free-icons'
+import { IconAction } from '@/components/icon-action'
 import { Button } from '@/components/ui/button'
 import { Kbd } from '@/components/ui/kbd'
+import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { Panel, Row, Section } from './shared'
 
 export default function ButtonsSection() {
@@ -51,7 +52,7 @@ export default function ButtonsSection() {
         </Row>
       </Panel>
 
-      <Panel title="With icons and shortcuts" note="The Linear habit: show the key">
+      <Panel title="With icons and shortcuts" note="Show the key next to the action">
         <Row>
           <Button>
             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
@@ -67,7 +68,7 @@ export default function ButtonsSection() {
             <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} data-icon="inline-end" />
           </Button>
           <Button variant="secondary" onClick={fakeSave} disabled={saving}>
-            {saving && <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="animate-spin" />}
+            {saving && <Spinner aria-hidden className="size-3.5" data-icon="inline-start" />}
             {saving ? 'Saving…' : 'Save (click me)'}
           </Button>
           <Button variant="destructive">
@@ -80,20 +81,11 @@ export default function ButtonsSection() {
       <Panel title="Icon buttons with tooltips" note="Hover each one">
         <Row>
           {[
-            { label: 'Filter', keys: 'F', icon: FilterHorizontalIcon },
-            { label: 'Download PDF', keys: 'Ctrl P', icon: Download01Icon },
-            { label: 'More actions', keys: '.', icon: MoreHorizontalIcon },
+            { label: 'Filter', keys: ['F'], icon: FilterHorizontalIcon },
+            { label: 'Download PDF', keys: ['mod', 'P'], icon: Download01Icon },
+            { label: 'More actions', keys: ['.'], icon: MoreHorizontalIcon },
           ].map((b) => (
-            <Tooltip key={b.label}>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label={b.label}>
-                  <HugeiconsIcon icon={b.icon} strokeWidth={2} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {b.label} <Kbd className="ml-1">{b.keys}</Kbd>
-              </TooltipContent>
-            </Tooltip>
+            <IconAction key={b.label} label={b.label} icon={b.icon} shortcut={b.keys} size="icon" className="text-foreground" />
           ))}
         </Row>
       </Panel>

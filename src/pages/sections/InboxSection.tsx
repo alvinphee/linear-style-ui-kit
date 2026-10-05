@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { IconAction } from '@/components/icon-action'
+import { Mention } from '@/components/mention'
 import { STATUS, type Job, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { Section } from './shared'
 import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from './StatusSection'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusIcon } from '@/components/status-icon'
 
 type Kind = 'mention' | 'assigned' | 'status' | 'comment' | 'due'
 type Tab = 'all' | 'unread' | 'mentions'
@@ -214,14 +216,13 @@ export default function InboxSection() {
                 <TabsTrigger value="mentions">Mentions</TabsTrigger>
               </TabsList>
             </Tabs>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Mark all as read" disabled={!unread} onClick={markAllRead}>
-                  <HugeiconsIcon icon={TickDouble01Icon} strokeWidth={2} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Mark all as read</TooltipContent>
-            </Tooltip>
+            <IconAction
+              label="Mark all as read"
+              icon={TickDouble01Icon}
+              disabled={!unread}
+              onClick={markAllRead}
+              className="text-foreground"
+            />
           </header>
 
           <div className="min-h-0 flex-1 overflow-y-auto" role="group" aria-label="Notifications" onKeyDown={onListKey}>
@@ -333,7 +334,7 @@ function NoteBody({ text }: { text: string }) {
     <p className="text-xs/relaxed">
       {parts.map((part, i) => (
         <span key={i}>
-          {i > 0 && <span className="bg-brand/10 text-brand rounded px-1 py-px font-medium">@you</span>}
+          {i > 0 && <Mention>@you</Mention>}
           {part}
         </span>
       ))}
@@ -364,16 +365,9 @@ function NoteDetail({ note, job, onBack, onOpenJob, onSnooze, onArchive }: {
           Open job
         </Button>
         <DropdownMenu>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" aria-label="Snooze">
-                  <HugeiconsIcon icon={AlarmClockIcon} strokeWidth={2} />
-                </Button>
-              </DropdownMenuTrigger>
-            </TooltipTrigger>
-            <TooltipContent>Snooze</TooltipContent>
-          </Tooltip>
+          <DropdownMenuTrigger asChild>
+            <IconAction label="Snooze" icon={AlarmClockIcon} className="text-foreground" />
+          </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel>Snooze until</DropdownMenuLabel>
             {SNOOZE.map((option) => (
@@ -384,14 +378,7 @@ function NoteDetail({ note, job, onBack, onOpenJob, onSnooze, onArchive }: {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon-sm" aria-label="Archive" onClick={onArchive}>
-              <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Archive</TooltipContent>
-        </Tooltip>
+        <IconAction label="Archive" icon={Archive01Icon} onClick={onArchive} className="text-foreground" />
       </header>
 
       <div className="grid min-h-0 flex-1 content-start gap-4 overflow-y-auto p-4">

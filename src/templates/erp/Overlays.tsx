@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { FormDialog, type FormField, type FormValues } from '@/blocks/form-dialog'
 import { RecordSheet, RecordSheetContent, type RecordActivity } from '@/blocks/record-sheet'
 import { Button } from '@/components/ui/button'
+import { copyText } from '@/lib/clipboard'
 import { TODAY, formatDate } from './format'
 import { specFor } from './modules'
 import { useErp } from './store'
@@ -71,8 +72,7 @@ export function RecordPeek() {
               variant="outline"
               size="sm"
               onClick={() => {
-                navigator.clipboard?.writeText(row.id).catch(() => {})
-                toast(`Copied ${row.id}`)
+                copyText(row.id, { success: `Copied ${row.id}` })
               }}
             >
               <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />

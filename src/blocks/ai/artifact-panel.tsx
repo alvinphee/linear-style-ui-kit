@@ -9,6 +9,9 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { copyText, useCopied } from '@/lib/clipboard'
+import { downloadText } from '@/lib/download'
+import { plural } from '@/lib/text'
 
 // The artifact panel: one artifact (a document, table or piece of code the
 // assistant made) opened beside the chat. A header with its kind icon, title,
@@ -76,25 +79,6 @@ export function CodeLines({ text, className }: { text: string; className?: strin
   )
 }
 
-function copyText(text: string) {
-  try {
-    navigator.clipboard?.writeText(text).catch(() => {})
-  } catch {
-    // No clipboard here (an insecure page, an old browser): nothing to do.
-  }
-}
-
-function saveText(name: string, content: string, type: string) {
-  const url = URL.createObjectURL(new Blob([content], { type }))
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
 export function ArtifactPanel({
   title, icon, kind, source, preview, versions, version, onVersionChange, fileName, fileType = 'text/plain',
   onDownload, onClose, actions, headingRef, className,
@@ -123,7 +107,7 @@ export function ArtifactPanel({
   className?: string
 }) {
   const [tab, setTab] = useState('preview')
-  const [copied, setCopied] = useState(false)
+  const [copied, flagCopied] = useCopied()
   const count = versions?.length ?? 0
   const index = count ? Math.min(Math.max(version ?? count, 1), count) - 1 : 0
   const when = versions?.[index]?.when
@@ -131,9 +115,9 @@ export function ArtifactPanel({
   const many = count > 4
 
   function copy() {
-    copyText(source)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1500)
+    // The tick on the button is the feedback, so no toast either way.
+    void copyText(source, { success: false, error: false })
+    flagCopied()
   }
 
   function download() {
@@ -142,13 +126,13 @@ export function ArtifactPanel({
       return
     }
     if (!fileName) return
-    saveText(fileName, source, fileType)
+    downloadText(fileName, source, fileType)
     toast(`Downloaded ${fileName}`, count ? { description: `Version ${index + 1}` } : undefined)
   }
 
   const meta = (
     <span className="text-muted-foreground ml-auto truncate text-[11px] tabular-nums">
-      {lines} {lines === 1 ? 'line' : 'lines'}{when && ` · ${when}`}
+      {plural(lines, 'line')}{when && ` · ${when}`}
     </span>
   )
 

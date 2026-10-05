@@ -6,8 +6,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import {
   Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Attachment01Icon, Building03Icon, Calendar03Icon,
   CalendarRemove01Icon, Camera01Icon, Cancel01Icon, Copy01Icon, Delete02Icon, InformationCircleIcon,
-  Mail01Icon, MailAdd01Icon, SentIcon, Tag01Icon, Tick02Icon, UserAdd01Icon, UserCircleIcon,
-  UserEdit01Icon,
+  Mail01Icon, MailAdd01Icon, SentIcon, Tag01Icon, Tick02Icon, UserAdd01Icon, UserEdit01Icon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
@@ -20,7 +19,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogMedia, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -32,19 +30,24 @@ import {
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { DUE_OPTIONS, LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
+import { IconAction } from '@/components/icon-action'
+import { UserAvatar } from '@/components/person'
+import { IS_MAC, Shortcut } from '@/components/shortcut'
+import { StatusIcon } from '@/components/status-icon'
+import { copyText } from '@/lib/clipboard'
+import { plural, slug as toSlug } from '@/lib/text'
+import { DUE_OPTIONS, UNASSIGNED, type Job, type Priority, type Status } from '../data'
+import {
+  ASSIGNEE_OPTIONS, LABEL_OPTIONS, PRIORITY_OPTIONS, STATUS_OPTIONS, assigneeValue, driverOf, type JobOption,
+} from '../job-options'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
 import { Panel, Row, Section } from './shared'
-import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from './StatusSection'
 
 export default function FormModalsSection() {
   return (
@@ -95,12 +98,14 @@ type Draft = {
 const EMPTY_DRAFT: Draft = { status: 'todo', priority: 'none', driver: '', labels: [], due: '' }
 const NO_DUE = 'none'
 
-const STATUS_OPTIONS: PropertyOption<Status>[] = (Object.keys(STATUS) as Status[]).map((s) => ({
-  value: s, label: STATUS[s].label, icon: <StatusIcon status={s} />,
-}))
-const PRIORITY_OPTIONS: PropertyOption<Priority>[] = (Object.keys(PRIORITY) as Priority[]).map((p) => ({
-  value: p, label: PRIORITY[p].label, icon: <PriorityIcon priority={p} />,
-}))
+// The shared job option lists, in the shape the property pills take.
+const pillOptions = <V extends string>(options: JobOption<V>[]): PropertyOption<V>[] =>
+  options.map(({ value, label, visual }) => ({ value, label, icon: visual }))
+
+const STATUS_PILL_OPTIONS = pillOptions(STATUS_OPTIONS)
+const PRIORITY_PILL_OPTIONS = pillOptions(PRIORITY_OPTIONS)
+const ASSIGNEE_PILL_OPTIONS = pillOptions(ASSIGNEE_OPTIONS)
+const LABEL_PILL_OPTIONS = pillOptions(LABEL_OPTIONS)
 const CALENDAR_ICON = <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
 const DUE_MENU: PropertyOption[] = [
   ...DUE_OPTIONS.map((d) => ({ value: d, label: d, icon: CALENDAR_ICON })),
@@ -109,23 +114,6 @@ const DUE_MENU: PropertyOption[] = [
     icon: <HugeiconsIcon icon={CalendarRemove01Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />,
   },
 ]
-const ASSIGNEE_OPTIONS: PropertyOption[] = [
-  {
-    value: '', label: 'Unassigned',
-    icon: <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-4" />,
-    pillIcon: <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} className="text-muted-foreground size-3.5" />,
-  },
-  ...PEOPLE.map((person) => ({
-    value: person, label: person,
-    icon: <UserAvatar name={person} className="size-5" />,
-    pillIcon: <UserAvatar name={person} className="size-4" />,
-  })),
-]
-const LABEL_OPTIONS: PropertyOption[] = LABELS.map((l) => ({
-  value: l.id, label: l.name,
-  icon: <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: l.colour }} />,
-  pillIcon: <span className="size-2 rounded-full" style={{ backgroundColor: l.colour }} />,
-}))
 
 function QuickCreatePanel() {
   const { jobs, select } = useJobs()
@@ -154,10 +142,7 @@ function QuickCreatePanel() {
         />
         <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
           Create with
-          <KbdGroup>
-            <Kbd>Ctrl</Kbd>
-            <Kbd>↵</Kbd>
-          </KbdGroup>
+          <Shortcut keys={['mod', 'enter']} />
         </span>
       </Row>
       {recent.length > 0 && (
@@ -210,7 +195,7 @@ export function QuickCreateDialog({ open, onOpenChange, onCreated, trigger }: {
       trigger={trigger}
       context={{ mark: 'OP', label: 'Operations' }}
       title="New job"
-      description="A title is required. Everything else is optional. Press Control Enter to create the job."
+      description={`A title is required. Everything else is optional. Press ${IS_MAC ? 'Command' : 'Control'} Enter to create the job.`}
       titleLabel="Job title"
       titlePlaceholder="Job title"
       requiredMessage="A job needs a title."
@@ -236,27 +221,27 @@ export function QuickCreateDialog({ open, onOpenChange, onCreated, trigger }: {
       }}
       properties={
         <>
-          <PropertyPill label="Status" value={draft.status} options={STATUS_OPTIONS} onChange={(v) => set('status', v)} />
+          <PropertyPill label="Status" value={draft.status} options={STATUS_PILL_OPTIONS} onChange={(v) => set('status', v)} />
           <PropertyPill
             label="Priority"
             value={draft.priority}
             unset="none"
-            options={PRIORITY_OPTIONS}
+            options={PRIORITY_PILL_OPTIONS}
             onChange={(v) => set('priority', v)}
           />
           <PropertyComboboxPill
             label="Assignee"
-            value={draft.driver}
-            unset=""
-            options={ASSIGNEE_OPTIONS}
+            value={assigneeValue(draft.driver)}
+            unset={UNASSIGNED}
+            options={ASSIGNEE_PILL_OPTIONS}
             searchPlaceholder="Assign to…"
             emptyText="No one found."
-            onChange={(v) => set('driver', v)}
+            onChange={(v) => set('driver', driverOf(v))}
           />
           <PropertyMultiPill
             label="Labels"
             value={draft.labels}
-            options={LABEL_OPTIONS}
+            options={LABEL_PILL_OPTIONS}
             unsetIcon={<HugeiconsIcon icon={Tag01Icon} strokeWidth={2} className="text-muted-foreground size-3.5" />}
             searchPlaceholder="Add labels…"
             emptyText="No labels found."
@@ -273,20 +258,11 @@ export function QuickCreateDialog({ open, onOpenChange, onCreated, trigger }: {
         </>
       }
       footerStart={
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label="Attach a file"
-              className="text-muted-foreground"
-              onClick={() => toast('Attach a file', { description: 'Demo only. Nothing is uploaded.' })}
-            >
-              <HugeiconsIcon icon={Attachment01Icon} strokeWidth={2} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Attach a file</TooltipContent>
-        </Tooltip>
+        <IconAction
+          label="Attach a file"
+          icon={Attachment01Icon}
+          onClick={() => toast('Attach a file', { description: 'Demo only. Nothing is uploaded.' })}
+        />
       }
     />
   )
@@ -398,9 +374,6 @@ const NOTIFICATIONS: { key: 'emailNotifications' | 'desktopNotifications' | 'wee
   { key: 'weeklyDigest', label: 'Weekly digest', description: 'A Monday summary of your team’s work.' },
 ]
 
-const initialsOf = (name: string) =>
-  name.trim().split(/\s+/).map((word) => word[0] ?? '').join('').slice(0, 2).toUpperCase() || '?'
-
 function EditProfilePanel() {
   const uid = useId()
   const [open, setOpen] = useState(false)
@@ -460,9 +433,7 @@ function EditProfilePanel() {
       </Intro>
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <Avatar>
-            <AvatarFallback className="text-[11px]">{initialsOf(saved.name)}</AvatarFallback>
-          </Avatar>
+          <UserAvatar name={saved.name || '?'} className="size-8 *:data-[slot=avatar-fallback]:text-[11px]" />
           <div className="min-w-0">
             <p className="truncate text-xs font-medium">{saved.name}</p>
             <p className="text-muted-foreground truncate text-[11px]">
@@ -491,9 +462,7 @@ function EditProfilePanel() {
                   <FieldDescription>Shown on your jobs, comments and mentions.</FieldDescription>
                   <FieldGroup>
                     <div className="flex items-center gap-3">
-                      <Avatar size="lg">
-                        <AvatarFallback>{initialsOf(draft.name)}</AvatarFallback>
-                      </Avatar>
+                      <UserAvatar name={draft.name || '?'} className="size-10 *:data-[slot=avatar-fallback]:text-sm" />
                       <div className="grid gap-1">
                         <Button
                           type="button"
@@ -771,7 +740,7 @@ function EmailRows({ rows, setRows, showErrors, withRole, inputs }: {
     })
     const skipped = parts.length - fresh.length
     setNote(
-      `Added ${fresh.length} ${fresh.length === 1 ? 'email' : 'emails'} from the paste.`
+      `Added ${plural(fresh.length, 'email')} from the paste.`
       + (skipped ? ` Skipped ${skipped} already on the list.` : ''),
     )
   }
@@ -863,10 +832,6 @@ function EmailRows({ rows, setRows, showErrors, withRole, inputs }: {
 /* ---------- 4. Multi-step wizard ---------- */
 
 const WIZARD = ['Workspace', 'Invite', 'Review']
-
-const slugify = (text: string) =>
-  text.normalize('NFKD').replace(/[̀-ͯ]/g, '').toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 32).replace(/-+$/, '')
 
 function Stepper({ steps, current }: { steps: string[]; current: number }) {
   return (
@@ -979,7 +944,7 @@ function WizardPanel() {
 
   function changeName(value: string) {
     setName(value)
-    if (!slugEdited) setSlug(slugify(value))
+    if (!slugEdited) setSlug(toSlug(value, { maxLength: 32 }))
   }
 
   // Clearing the slug by hand hands it back to the name.
@@ -1166,7 +1131,7 @@ function InvitePanel() {
   const [sending, setSending] = useState(false)
   const inputs = useRef(new Map<string, HTMLInputElement>())
   const count = rows.filter((r) => r.email.trim()).length
-  const label = count === 0 ? 'Send invites' : `Send ${count} ${count === 1 ? 'invite' : 'invites'}`
+  const label = count === 0 ? 'Send invites' : `Send ${plural(count, 'invite')}`
 
   function openChange(next: boolean) {
     if (sending) return
@@ -1195,8 +1160,7 @@ function InvitePanel() {
   }
 
   function copySample() {
-    navigator.clipboard?.writeText(SAMPLE_LIST).catch(() => {})
-    toast('Sample list copied', { description: 'Paste it into an email row.' })
+    copyText(SAMPLE_LIST, { success: 'Sample list copied', description: 'Paste it into an email row.' })
   }
 
   return (

@@ -1,47 +1,7 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { toast } from 'sonner'
+// The inline rewrite's word diff. The panels take everything else (AI label,
+// icon actions, thinking line, timers, clipboard) from the kit.
 
-// The AI pieces every panel uses are the kit's components, so AI in the
-// product looks like the AI workspace.
-export { AiLabel } from '@/components/ai-label'
-export { IconAction } from '@/components/icon-action'
-export { StreamCaret, Thinking } from '@/components/thinking-indicator'
-
-// setTimeout that is cleared when the component unmounts.
-export function useTimers() {
-  const timers = useRef(new Set<ReturnType<typeof setTimeout>>())
-
-  useEffect(() => {
-    const set = timers.current
-    return () => {
-      set.forEach(clearTimeout)
-      set.clear()
-    }
-  }, [])
-
-  const later = useCallback((fn: () => void, ms: number) => {
-    const id = setTimeout(() => {
-      timers.current.delete(id)
-      fn()
-    }, ms)
-    timers.current.add(id)
-    return id
-  }, [])
-
-  const clearAll = useCallback(() => {
-    timers.current.forEach(clearTimeout)
-    timers.current.clear()
-  }, [])
-
-  return { later, clearAll }
-}
-
-export function copyText(text: string, message: string) {
-  navigator.clipboard?.writeText(text).catch(() => {})
-  toast.success(message)
-}
-
-export type DiffPart = { type: 'same' | 'del' | 'add'; text: string }
+type DiffPart = { type: 'same' | 'del' | 'add'; text: string }
 
 // Word-level diff (longest common subsequence). Removals come before additions
 // inside a changed run, so "cause because" reads as a replacement.

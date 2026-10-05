@@ -1,21 +1,21 @@
 import { useId, useState } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, ArrowRight01Icon, Calendar03Icon, Cancel01Icon, Delete02Icon, Login03Icon, PencilEdit02Icon,
-  Search01Icon, UserAdd01Icon,
+  Add01Icon, ArrowRight01Icon, Cancel01Icon, Delete02Icon, Login03Icon, PencilEdit02Icon, UserAdd01Icon,
 } from '@hugeicons/core-free-icons'
-import { endOfDay, format, isSameDay, startOfDay, subDays } from 'date-fns'
-import type { DateRange } from 'react-day-picker'
+import { endOfDay, format, startOfDay, subDays } from 'date-fns'
 import { cn } from 'cn'
-import { Button } from '@/components/ui/button'
-import { Calendar } from '@/components/ui/calendar'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { PEOPLE } from '../data'
-import { FacetFilter } from './DataTableSection'
-import { Section } from './shared'
+import { FacetFilter } from '@/blocks/data-table'
+import { DateRangePicker, type DateRange, type DateRangePreset } from '@/blocks/period-picker'
 import { UserAvatar } from '@/components/person'
+import { SearchField } from '@/components/search-field'
+import { Button } from '@/components/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { formatDateRange, formatShortDate, formatTime, relativeDay } from '@/lib/format'
+import { seededRandom } from '@/lib/random'
+import { plural } from '@/lib/text'
+import { PEOPLE } from '../data'
+import { Section } from './shared'
 
 type Action = 'created' | 'updated' | 'deleted' | 'invited' | 'signed_in'
 
@@ -186,18 +186,9 @@ const TEMPLATES: { weight: number; make: Template }[] = [
 const NOW = new Date(2026, 8, 30, 16, 42)
 const MINUTE = 60_000
 
-// Same small seeded generator as the data table: deterministic events on every load.
-function seeded(seed: number) {
-  return () => {
-    seed = (seed + 0x6d2b79f5) | 0
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
 function makeEvents(count: number): AuditEvent[] {
-  const rand = seeded(4021)
+  // Seeded, so the events read the same on every load.
+  const rand = seededRandom(4021)
   const pick: Picker = (list) => list[Math.floor(rand() * list.length)]
   const total = TEMPLATES.reduce((sum, t) => sum + t.weight, 0)
   // Each person mostly works from one address.
@@ -243,20 +234,16 @@ function inRange(event: AuditEvent, range: DateRange | undefined) {
   return event.at >= startOfDay(range.from) && event.at <= endOfDay(range.to ?? range.from)
 }
 
-function dayLabel(date: Date) {
-  if (isSameDay(date, NOW)) return { label: 'Today', sub: format(date, 'd MMM') }
-  if (isSameDay(date, subDays(NOW, 1))) return { label: 'Yesterday', sub: format(date, 'd MMM') }
-  return { label: format(date, 'EEEE'), sub: format(date, 'd MMM') }
-}
+// "Today", "Yesterday", then the weekday, with the date beside it.
+const dayLabel = (date: Date) => ({ label: relativeDay(date, NOW) ?? format(date, 'EEEE'), sub: formatShortDate(date) })
 
-function rangeLabel(range: DateRange) {
-  const from = range.from!
-  const to = range.to ?? from
-  if (isSameDay(from, to)) return format(from, 'd MMM')
-  return `${format(from, 'd MMM')} – ${format(to, 'd MMM')}`
-}
-
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+const DATE_PRESETS: DateRangePreset[] = [
+  { label: 'Today', range: { from: NOW, to: NOW } },
+  { label: 'Last 3 days', range: { from: subDays(NOW, 2), to: NOW } },
+  { label: 'Last 7 days', range: { from: subDays(NOW, 6), to: NOW } },
+]
+// A preset without a range clears it.
+const DATE_PRESETS_WITH_CLEAR: DateRangePreset[] = [...DATE_PRESETS, { label: 'Clear' }]
 
 export default function AuditLogSection() {
   const [search, setSearch] = useState('')
@@ -295,24 +282,13 @@ export default function AuditLogSection() {
     <Section id="audit-log" title="Audit log" description="Who did what, filterable by person, action and date">
       <article className="bg-card min-w-0 overflow-hidden rounded-lg border lg:col-span-2">
         <header className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2">
-          <InputGroup className="w-full sm:w-60">
-            <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            </InputGroupAddon>
-            <InputGroupInput
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search people, targets or IPs"
-              aria-label="Search the audit log"
-            />
-            {search && (
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setSearch('')}>
-                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                </InputGroupButton>
-              </InputGroupAddon>
-            )}
-          </InputGroup>
+          <SearchField
+            value={search}
+            onChange={setSearch}
+            placeholder="Search people, targets or IPs"
+            label="Search the audit log"
+            className="w-full sm:w-60"
+          />
           <FacetFilter
             title="Actor"
             options={PEOPLE.map((name) => ({
@@ -321,7 +297,19 @@ export default function AuditLogSection() {
             selected={actors}
             onChange={setActors}
           />
-          <DateRangeFilter range={range} onChange={setRange} />
+          <DateRangePicker
+            value={range}
+            onChange={setRange}
+            presets={range?.from ? DATE_PRESETS_WITH_CLEAR : DATE_PRESETS}
+            defaultMonth={NOW}
+            // No events after now, so later days can't be picked.
+            disabled={{ after: NOW }}
+            size="sm"
+            placeholder="Date"
+            label={range?.from ? formatDateRange(range.from, range.to) : undefined}
+            // Weighted and dashed like the Actor filter beside it.
+            className={cn('font-medium', !range?.from && 'text-foreground border-dashed')}
+          />
           {active && (
             <Button variant="ghost" size="sm" onClick={reset}>
               Reset
@@ -430,7 +418,7 @@ function EventRow({ event, open, onToggle }: { event: AuditEvent; open: boolean;
         </span>
         <span className="text-muted-foreground hidden w-24 shrink-0 font-mono text-[11px] sm:inline">{event.ip}</span>
         <time dateTime={event.at.toISOString()} className="text-muted-foreground w-10 shrink-0 text-right tabular-nums">
-          {format(event.at, 'HH:mm')}
+          {formatTime(event.at)}
         </time>
       </button>
 
@@ -507,58 +495,5 @@ function DiffValue({ value, removed }: { value?: string; removed?: boolean }) {
       <span aria-hidden className="select-none">{removed ? '−' : '+'}</span>
       <span className="min-w-0">{value}</span>
     </span>
-  )
-}
-
-function DateRangeFilter({ range, onChange }: { range: DateRange | undefined; onChange: (range: DateRange | undefined) => void }) {
-  const [month, setMonth] = useState(NOW)
-  const presets: { label: string; range: DateRange }[] = [
-    { label: 'Today', range: { from: NOW, to: NOW } },
-    { label: 'Last 3 days', range: { from: subDays(NOW, 2), to: NOW } },
-    { label: 'Last 7 days', range: { from: subDays(NOW, 6), to: NOW } },
-  ]
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className={cn(!range?.from && 'border-dashed')}>
-          <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} data-icon="inline-start" />
-          {range?.from ? rangeLabel(range) : 'Date'}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto gap-0 p-0">
-        <Calendar
-          mode="range"
-          month={month}
-          onMonthChange={setMonth}
-          selected={range}
-          onSelect={onChange}
-          disabled={{ after: NOW }}
-        />
-        <div className="flex flex-wrap items-center gap-1 border-t p-2">
-          {presets.map((p) => {
-            const on = !!range?.from && isSameDay(range.from, p.range.from!) && isSameDay(range.to ?? range.from, p.range.to!)
-            return (
-              <Button
-                key={p.label}
-                variant={on ? 'secondary' : 'ghost'}
-                size="sm"
-                onClick={() => {
-                  onChange(p.range)
-                  setMonth(NOW)
-                }}
-              >
-                {p.label}
-              </Button>
-            )
-          })}
-          {range?.from && (
-            <Button variant="ghost" size="sm" className="text-muted-foreground ml-auto" onClick={() => onChange(undefined)}>
-              Clear
-            </Button>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
   )
 }

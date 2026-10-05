@@ -9,7 +9,7 @@ import type {
 // Made-up projects and chats. The chats are built by running the real
 // scripts on a virtual clock, so the history looks exactly like live replies.
 
-export const SEED_PROJECTS: Project[] = [
+const SEED_PROJECTS: Project[] = [
   {
     id: 'p-q4', name: 'Q4 planning', colour: 'var(--chart-1)',
     description: 'Targets, capacity and hiring for October to December.',
@@ -53,7 +53,7 @@ type Turn = {
   jobs?: Job[]
 }
 
-export type Seed = { projects: Project[]; chats: Chat[]; artifacts: Artifact[] }
+type Seed = { projects: Project[]; chats: Chat[]; artifacts: Artifact[] }
 
 export function seedState(): Seed {
   let artifacts: Artifact[] = []
@@ -90,7 +90,7 @@ export function seedState(): Seed {
       for (let attempt = 0; attempt < (turn.attempts ?? 1); attempt++) {
         const reply: Reply = { id: uid('r'), status: 'running', startedAt: t + 1200, parts: [], followUps: [] }
         const ctx = {
-          prompt: turn.prompt, model, modes, jobs: turn.jobs ?? JOBS, attempt,
+          prompt: turn.prompt, model, modes, jobs: turn.jobs ?? JOBS, reminded: [], attempt,
           attachments: turn.attachments ?? [], project,
           lastArtifact: lastArtifactIn(messages, artifacts, messages.length - 1), reviseId,
         }

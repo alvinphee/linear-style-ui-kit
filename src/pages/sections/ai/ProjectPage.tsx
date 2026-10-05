@@ -4,17 +4,18 @@ import {
   Add01Icon, BubbleChatIcon, Cancel01Icon, Delete02Icon, Edit02Icon, Folder01Icon, MoreHorizontalIcon,
   PencilEdit02Icon,
 } from '@hugeicons/core-free-icons'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { fileIcon } from '@/components/file-chip'
+import { IconAction } from '@/components/icon-action'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Empty, EmptyContent, EmptyDescription } from '@/components/ui/empty'
 import { Textarea } from '@/components/ui/textarea'
+import { formatFileSize } from '@/lib/format'
 import { useActions } from './context'
-import { FILE_ICONS, formatSize, formatWhen, toFileRef } from './data'
+import { formatWhen, toFileRef } from './data'
 import type { ChatSummary } from './Sidebar'
 import type { Project } from './types'
 
@@ -134,30 +135,28 @@ export function ProjectPage({ project, chats, sidebarToggle }: {
                 {project.files.map((file) => (
                   <li key={file.id} className="flex h-10 min-w-0 items-center gap-2.5 pr-1.5 pl-3 text-xs">
                     <span className="bg-muted grid size-6 shrink-0 place-items-center rounded">
-                      <HugeiconsIcon icon={FILE_ICONS[file.kind]} strokeWidth={2} className="size-3.5" />
+                      <HugeiconsIcon icon={fileIcon(file.name)} strokeWidth={2} className="size-3.5" />
                     </span>
                     <span className="min-w-0 flex-1 truncate">{file.name}</span>
-                    <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">{formatSize(file.size)}</span>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label={`Remove ${file.name}`}
-                      className="text-muted-foreground"
+                    <span className="text-muted-foreground shrink-0 text-[11px] tabular-nums">{formatFileSize(file.size)}</span>
+                    <IconAction
+                      label={`Remove ${file.name}`}
+                      icon={Cancel01Icon}
                       onClick={() => actions.removeProjectFile(project.id, file.id)}
-                    >
-                      <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                    </Button>
+                    />
                   </li>
                 ))}
               </ul>
             ) : (
-              <button
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                className="text-muted-foreground hover:bg-accent/40 focus-visible:ring-ring/30 rounded-lg border border-dashed px-3 py-5 text-center text-xs outline-none focus-visible:ring-2"
-              >
-                No files yet. Add PDFs, sheets or notes for the assistant to search.
-              </button>
+              <Empty className="gap-2 rounded-lg border px-3 py-5">
+                <EmptyDescription>No files yet. Add PDFs, sheets or notes for the assistant to search.</EmptyDescription>
+                <EmptyContent>
+                  <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                    <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
+                    Add files
+                  </Button>
+                </EmptyContent>
+              </Empty>
             )}
             <input
               ref={fileRef}
@@ -191,32 +190,28 @@ export function ProjectPage({ project, chats, sidebarToggle }: {
                 ))}
               </ul>
             ) : (
-              <div className="text-muted-foreground grid justify-items-center gap-2 rounded-lg border border-dashed px-3 py-5 text-center text-xs">
-                No chats in this project yet.
-                <Button variant="outline" size="sm" onClick={() => actions.newChat(project.id)}>
-                  <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} data-icon="inline-start" />
-                  Start one
-                </Button>
-              </div>
+              <Empty className="gap-2 rounded-lg border px-3 py-5">
+                <EmptyDescription>No chats in this project yet.</EmptyDescription>
+                <EmptyContent>
+                  <Button variant="outline" size="sm" onClick={() => actions.newChat(project.id)}>
+                    <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} data-icon="inline-start" />
+                    Start one
+                  </Button>
+                </EmptyContent>
+              </Empty>
             )}
           </Block>
         </div>
       </div>
 
-      <AlertDialog open={confirm} onOpenChange={setConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete “{project.name || 'Untitled project'}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Its instructions and files are removed. Its {chats.length === 1 ? 'chat moves' : `${chats.length} chats move`} to your history.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => actions.deleteProject(project.id)}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirm
+        open={confirm}
+        onOpenChange={setConfirm}
+        icon={null}
+        title={`Delete “${project.name || 'Untitled project'}”?`}
+        description={`Its instructions and files are removed. Its ${chats.length === 1 ? 'chat moves' : `${chats.length} chats move`} to your history.`}
+        onConfirm={() => actions.deleteProject(project.id)}
+      />
     </div>
   )
 }

@@ -16,13 +16,13 @@ import {
   DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut,
   DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverDescription, PopoverHeader, PopoverTitle, PopoverTrigger } from '@/components/ui/popover'
 import { STATUS, type Status } from '../data'
 import { Panel, Row, Section } from './shared'
 import { UserAvatar } from '@/components/person'
-import { StatusIcon } from './StatusSection'
+import { MOD, Shortcut } from '@/components/shortcut'
+import { StatusIcon } from '@/components/status-icon'
 
 export default function OverlaysSection({ onOpenCommand }: { onOpenCommand: () => void }) {
   const [status, setStatus] = useState<Status>('progress')
@@ -50,7 +50,7 @@ export default function OverlaysSection({ onOpenCommand }: { onOpenCommand: () =
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} /> Duplicate
-                  <DropdownMenuShortcut>Ctrl D</DropdownMenuShortcut>
+                  <DropdownMenuShortcut>{MOD} D</DropdownMenuShortcut>
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -149,16 +149,13 @@ export default function OverlaysSection({ onOpenCommand }: { onOpenCommand: () =
         </Dialog>
       </Panel>
 
-      <Panel title="Command menu" note="Linear's signature: everything from the keyboard">
+      <Panel title="Command menu" note="Everything from the keyboard">
         <Row>
           <Button variant="outline" onClick={onOpenCommand}>
             <HugeiconsIcon icon={CommandIcon} strokeWidth={2} data-icon="inline-start" />
             Open command menu
           </Button>
-          <KbdGroup>
-            <Kbd>Ctrl</Kbd>
-            <Kbd>K</Kbd>
-          </KbdGroup>
+          <Shortcut keys={['mod', 'K']} />
         </Row>
       </Panel>
 

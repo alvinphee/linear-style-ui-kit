@@ -2,21 +2,24 @@ import { useState } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Add01Icon, Building03Icon, Cancel01Icon, CheckmarkCircle02Icon, CircleIcon, Copy01Icon,
-  FilterRemoveIcon, FolderAddIcon, Link01Icon, PartyIcon, Plug01Icon, Search01Icon, SearchRemoveIcon,
-  Tick02Icon, UserAdd01Icon, UserIcon,
+  FilterRemoveIcon, FolderAddIcon, Link01Icon, PartyIcon, Plug01Icon, SearchRemoveIcon, Tick02Icon,
+  UserAdd01Icon, UserIcon,
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { toast } from 'sonner'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Kbd } from '@/components/ui/kbd'
+import { UserAvatar } from '@/components/person'
+import { ProgressRing } from '@/components/progress-ring'
+import { SearchField } from '@/components/search-field'
+import { StatusIcon } from '@/components/status-icon'
+import { copyText, useCopied } from '@/lib/clipboard'
+import { plural } from '@/lib/text'
 import type { Status } from '../data'
 import { Panel, Section } from './shared'
-import { UserAvatar } from '@/components/person'
-import { StatusIcon } from './StatusSection'
 
 export default function OnboardingSection() {
   return (
@@ -68,7 +71,9 @@ function ChecklistPanel() {
       ) : (
         <div className="grid grid-cols-1 gap-3">
           <div className="flex items-center gap-3">
-            <ProgressRing value={count} total={STEPS.length} />
+            <ProgressRing value={(count / STEPS.length) * 100} className="text-[10px] font-medium">
+              {count}/{STEPS.length}
+            </ProgressRing>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium">{allDone ? 'Setup complete' : 'Set up your workspace'}</p>
               <p className="text-muted-foreground text-[11px] tabular-nums" aria-live="polite">
@@ -143,30 +148,6 @@ function ChecklistPanel() {
   )
 }
 
-function ProgressRing({ value, total }: { value: number; total: number }) {
-  const r = 15
-  const circumference = 2 * Math.PI * r
-  return (
-    <div aria-hidden className="relative grid size-10 shrink-0 place-items-center">
-      <svg viewBox="0 0 36 36" className="absolute inset-0 size-10 -rotate-90">
-        <circle cx="18" cy="18" r={r} fill="none" strokeWidth="3" className="stroke-foreground/10" />
-        <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - value / total)}
-          className="stroke-brand transition-[stroke-dashoffset] duration-500"
-        />
-      </svg>
-      <span className="text-[10px] font-medium tabular-nums">{value}/{total}</span>
-    </div>
-  )
-}
-
 /* ---------- Empty: first run ---------- */
 
 function NoProjectsPanel() {
@@ -219,17 +200,13 @@ function NoResultsPanel() {
     <Panel title="No search results" note="Say why, offer a way out">
       <div className="grid grid-cols-1 gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <InputGroup className="min-w-0 flex-1 basis-40">
-            <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            </InputGroupAddon>
-            <InputGroupInput
-              aria-label="Search projects"
-              placeholder="Search projects…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </InputGroup>
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder="Search projects…"
+            label="Search projects"
+            className="min-w-0 flex-1 basis-40"
+          />
           {activeOnly && (
             <Badge variant="outline" className="h-6 gap-1 pr-1">
               Status: Active
@@ -283,9 +260,7 @@ function NoResultsPanel() {
               ))}
             </ul>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground text-[11px]">
-                {results.length} {results.length === 1 ? 'project' : 'projects'}
-              </span>
+              <span className="text-muted-foreground text-[11px]">{plural(results.length, 'project')}</span>
               <Button
                 variant="ghost"
                 size="xs"
@@ -309,17 +284,15 @@ function NoResultsPanel() {
 const INVITE_LINK = 'https://example.com/join/k3f9-x27q'
 
 function InvitePanel() {
-  const [copied, setCopied] = useState(false)
+  const [copied, flagCopied] = useCopied()
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(INVITE_LINK)
-      setCopied(true)
-      toast.success('Invite link copied')
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      toast.error('Could not copy', { description: 'Select the link and copy it yourself.' })
-    }
+    const done = await copyText(INVITE_LINK, {
+      success: 'Invite link copied',
+      error: 'Could not copy',
+      errorDescription: 'Select the link and copy it yourself.',
+    })
+    if (done) flagCopied()
   }
 
   return (
@@ -328,9 +301,7 @@ function InvitePanel() {
         <EmptyHeader>
           <EmptyMedia>
             <div className="flex -space-x-1.5">
-              <Avatar className="ring-card size-7 ring-2">
-                <AvatarFallback className="text-[10px]">AM</AvatarFallback>
-              </Avatar>
+              <UserAvatar name="Alex Morgan" className="ring-card size-7 ring-2" />
               {[0, 1].map((i) => (
                 <span
                   key={i}

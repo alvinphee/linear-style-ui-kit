@@ -1,43 +1,46 @@
-import { useState, type ReactNode } from 'react'
+import { useState, type ComponentProps, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, AiChat02Icon, ArrowDown01Icon, ArrowRight01Icon, Cancel01Icon, ChartLineData01Icon,
-  CubeIcon, HelpCircleIcon, Home01Icon, InboxIcon, KanbanIcon, Layers01Icon,
-  LeftToRightListBulletIcon, Menu01Icon, Message01Icon, MoreHorizontalIcon,
-  PanelLeftCloseIcon, PanelLeftOpenIcon, PencilEdit02Icon, RefreshIcon, Search01Icon, Settings01Icon,
-  Share08Icon, SidebarLeftIcon, StarIcon, Task01Icon, Tick02Icon, UnfoldMoreIcon,
-  UserAdd01Icon, UserCircleIcon,
+  Add01Icon, AiChat02Icon, ChartLineData01Icon, CubeIcon, HelpCircleIcon, Home01Icon, InboxIcon, Layers01Icon,
+  Menu01Icon, Message01Icon, MoreHorizontalIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PencilEdit02Icon,
+  RefreshIcon, Search01Icon, Settings01Icon, Share08Icon, SidebarLeftIcon, StarIcon, Task01Icon, Tick02Icon,
+  UnfoldMoreIcon, UserAdd01Icon, UserCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { AccountMenu } from '@/blocks/account-menu'
+import { FilterBar as FilterBarBlock, activeFields } from '@/blocks/filter-bar'
+import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
+import { WorkspaceSwitcher, type WorkspaceOption } from '@/blocks/workspace-switcher'
+import { IconAction } from '@/components/icon-action'
+import { LetterMark } from '@/components/mark'
+import { NavGroup, NavItem } from '@/components/nav-item'
+import { PageHeader } from '@/components/page-header'
+import { UserAvatar } from '@/components/person'
+import { SearchField } from '@/components/search-field'
+import { SearchTrigger } from '@/components/search-trigger'
+import { MOD, Shortcut } from '@/components/shortcut'
+import { UsageMeter } from '@/components/usage-meter'
+import { LIST_BOARD_VIEWS, ViewSwitch } from '@/components/view-switch'
 import { AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
-import { Progress } from '@/components/ui/progress'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { LetterMark } from '@/components/mark'
-import { NavItem } from '@/components/nav-item'
-import { UserAvatar } from '@/components/person'
-import { SearchTrigger } from '@/components/search-trigger'
-import { MOD, Shortcut } from '@/components/shortcut'
 import { PEOPLE, type Job, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { DisplayMenu } from './app-shell/DisplayMenu'
 import { DEFAULT_LIST_DISPLAY, arrangeJobs, type Group, type JobPatch, type Layout, type ListDisplay } from './app-shell/display'
 import { IssueBoard, IssueList } from './app-shell/IssueView'
 import { NotificationsMenu, useNotifications, type Notifications } from './app-shell/NotificationsMenu'
-import { FIELD_ORDER, FilterChip, FilterMenu, applyFilters, type FilterField, type Filters } from './FilterBar'
+import { FILTER_FIELDS, applyFilters, type Filters } from './FilterBar'
 import { QuickCreateDialog } from './FormModalsSection'
 import { JobPeek, openFullPage } from './JobActions'
-import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
 import { Section } from './shared'
 
 type SidebarStyle = 'teams' | 'rail' | 'inset' | 'icons' | 'top'
@@ -61,10 +64,10 @@ const HEADERS: { value: HeaderStyle; label: string; note: string }[] = [
 ]
 
 // Made-up workspaces and teams. Pages are ids; team pages are "team:page".
-const WORKSPACES = [
-  { name: 'Acme', plan: 'Business plan', colour: 'var(--primary)' },
-  { name: 'Nimbus Labs', plan: 'Free plan', colour: 'oklch(0.62 0.15 150)' },
-  { name: 'Side project', plan: 'Free plan', colour: 'oklch(0.7 0.15 60)' },
+const WORKSPACES: (WorkspaceOption & { plan: string })[] = [
+  { id: 'acme', name: 'Acme', plan: 'Business plan', colour: 'var(--primary)' },
+  { id: 'nimbus', name: 'Nimbus Labs', plan: 'Free plan', colour: 'oklch(0.62 0.15 150)' },
+  { id: 'side', name: 'Side project', plan: 'Free plan', colour: 'oklch(0.7 0.15 60)' },
 ]
 
 const TEAMS = [
@@ -173,21 +176,15 @@ export default function AppShellSection() {
         </Button>
       )}
       {sidebar !== 'top' && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden @2xl:inline-flex"
-              aria-label={folded ? 'Open sidebar' : 'Fold sidebar'}
-              aria-pressed={folded}
-              onClick={() => setFolded((f) => !f)}
-            >
-              <HugeiconsIcon icon={SidebarLeftIcon} strokeWidth={2} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{folded ? 'Open sidebar' : sidebar === 'icons' ? 'Show labels' : 'Hide sidebar'}</TooltipContent>
-        </Tooltip>
+        // aria-pressed rather than `pressed`: the button keeps its plain look either way.
+        <IconAction
+          label={sidebar === 'icons' ? (folded ? 'Show labels' : 'Fold to icons') : folded ? 'Open sidebar' : 'Hide sidebar'}
+          icon={SidebarLeftIcon}
+          size="icon"
+          aria-pressed={folded}
+          onClick={() => setFolded((f) => !f)}
+          className="text-foreground hidden @2xl:inline-flex"
+        />
       )}
     </>
   )
@@ -205,7 +202,7 @@ export default function AppShellSection() {
   const activeQuery = searching ? query : ''
   const groups = arrangeJobs(applyFilters(inTab, activeFilters, activeQuery), shownDisplay, layout)
   const order = groups.flatMap((g) => g.jobs.map((j) => j.id))
-  const narrowed = FIELD_ORDER.some((f) => activeFilters[f]?.length) || activeQuery.trim() !== ''
+  const narrowed = activeFields(FILTER_FIELDS, activeFilters).length > 0 || activeQuery.trim() !== ''
 
   // "+" on a group: a blank issue already in that group, opened for editing.
   function addIn(group: Group) {
@@ -370,48 +367,23 @@ function Picker({ label, value, options, onChange }: {
 
 // Shared bits
 
-function Group({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
-  const [open, setOpen] = useState(true)
-  return (
-    <div className="mt-3">
-      <div className="flex items-center">
-        <button
-          type="button"
-          aria-expanded={open}
-          onClick={() => setOpen(!open)}
-          className="text-muted-foreground hover:text-foreground flex h-6 flex-1 items-center gap-1 rounded px-2 text-[11px] font-medium"
-        >
-          {title}
-          <HugeiconsIcon icon={open ? ArrowDown01Icon : ArrowRight01Icon} strokeWidth={2} className="size-3" />
-        </button>
-        {action}
-      </div>
-      {open && <div className="mt-0.5 grid gap-px">{children}</div>}
-    </div>
-  )
-}
-
 type Ws = { workspace: (typeof WORKSPACES)[number]; setWorkspace: (w: (typeof WORKSPACES)[number]) => void }
 
-function WorkspaceMenu({ workspace, setWorkspace, children }: Ws & { children: ReactNode }) {
+// The shared workspace switcher block, over the demo's workspaces.
+function WorkspaceMenu({ workspace, setWorkspace, ...props }: Ws & Pick<
+  ComponentProps<typeof WorkspaceSwitcher>, 'detail' | 'variant' | 'badgeClassName' | 'className'
+>) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-56">
-        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
-        {WORKSPACES.map((w) => (
-          <DropdownMenuItem key={w.name} onSelect={() => setWorkspace(w)}>
-            <LetterMark size="xs" text={w.name.slice(0, 1)} colour={w.colour} className="size-5 text-[9px]" />
-            <span className="flex-1">{w.name}</span>
-            {w.name === workspace.name && <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} />}
-          </DropdownMenuItem>
-        ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => toast('Create workspace', { description: 'Demo only.' })}>
-          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} /> Create workspace
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <WorkspaceSwitcher
+      workspaces={WORKSPACES}
+      currentId={workspace.id}
+      onSelect={(id) => setWorkspace(WORKSPACES.find((w) => w.id === id)!)}
+      {...props}
+    >
+      <DropdownMenuItem onSelect={() => toast('Create workspace', { description: 'Demo only.' })}>
+        <HugeiconsIcon icon={Add01Icon} strokeWidth={2} /> Create workspace
+      </DropdownMenuItem>
+    </WorkspaceSwitcher>
   )
 }
 
@@ -422,24 +394,15 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex h-11 shrink-0 items-center gap-1 px-2">
-        <WorkspaceMenu {...ws}>
-          <button
-            type="button"
-            className="hover:bg-sidebar-accent flex h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 text-left outline-none focus-visible:ring-2"
-          >
-            <LetterMark size="xs" text={ws.workspace.name.slice(0, 1)} colour={ws.workspace.colour} className="size-5 text-[9px]" />
-            <span className="truncate text-[13px] font-medium">{ws.workspace.name}</span>
-            <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0" />
-          </button>
-        </WorkspaceMenu>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="outline" size="icon-sm" aria-label="New issue" onClick={onNew}>
-              <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>New issue <Shortcut keys={['C']} className="ml-1" /></TooltipContent>
-        </Tooltip>
+        <WorkspaceMenu {...ws} className="flex-1" />
+        <IconAction
+          label="New issue"
+          icon={PencilEdit02Icon}
+          shortcut={['C']}
+          variant="outline"
+          onClick={onNew}
+          className="text-foreground"
+        />
       </div>
       <div className="px-2">
         <SearchTrigger
@@ -453,33 +416,29 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
           <NavItem icon={InboxIcon} label="Inbox" count={INBOX_COUNT} active={page === 'inbox'} onClick={() => onPage('inbox')} />
           <NavItem icon={UserCircleIcon} label="My issues" active={page === 'my-issues'} onClick={() => onPage('my-issues')} />
         </div>
-        <Group title="Workspace">
+        <NavGroup title="Workspace">
           <NavItem icon={CubeIcon} label="Projects" active={page === 'projects'} onClick={() => onPage('projects')} />
           <NavItem icon={Layers01Icon} label="Views" active={page === 'views'} onClick={() => onPage('views')} />
-        </Group>
-        <Group title="Favourites">
+        </NavGroup>
+        <NavGroup title="Favourites">
           <NavItem
             icon={StarIcon}
             label="Urgent this week"
             active={page === 'urgent'}
             onClick={() => onPage('urgent')}
           />
-        </Group>
-        <Group title="Your teams">
+        </NavGroup>
+        <NavGroup title="Your teams">
           {TEAMS.map((team) => {
             const open = !closed[team.id]
             return (
               <div key={team.id}>
-                <button
-                  type="button"
-                  aria-expanded={open}
+                <NavItem
+                  mark={<LetterMark size="xs" text={team.short} colour={team.colour} />}
+                  label={team.name}
+                  expanded={open}
                   onClick={() => setClosed((c) => ({ ...c, [team.id]: open }))}
-                  className="hover:bg-sidebar-accent flex h-7 w-full items-center gap-2 rounded-md px-2 text-left text-xs"
-                >
-                  <LetterMark size="xs" text={team.short} colour={team.colour} />
-                  <span className="truncate">{team.name}</span>
-                  <HugeiconsIcon icon={open ? ArrowDown01Icon : ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3" />
-                </button>
+                />
                 {open && (
                   <div className="grid gap-px py-px pl-4">
                     {TEAM_PAGES.map((p) => (
@@ -496,7 +455,7 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
               </div>
             )
           })}
-        </Group>
+        </NavGroup>
       </nav>
 
       <div className="flex items-center gap-1 border-t p-2">
@@ -517,25 +476,16 @@ function RailSidebar({ page, onPage }: Nav) {
   const current = [...RAIL, RAIL_SETTINGS].find((m) => m.links.some((l) => l.id === page)) ?? RAIL[1]
 
   function railButton(m: (typeof RAIL)[number]) {
-    const active = m.id === current.id
     return (
-      <Tooltip key={m.id}>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-label={m.label}
-            aria-current={active ? 'page' : undefined}
-            data-active={active}
-            onClick={() => onPage(m.links[0].id)}
-            className="text-muted-foreground hover:bg-sidebar-accent hover:text-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-foreground focus-visible:ring-ring/50 relative grid size-8 place-items-center rounded-md outline-none focus-visible:ring-2"
-          >
-            <HugeiconsIcon icon={m.icon} strokeWidth={2} className="size-4" />
-            {active && <span className="bg-primary absolute top-1.5 -left-2 h-5 w-0.5 rounded-full" />}
-            {!!m.count && <span className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" />}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right">{m.label}</TooltipContent>
-      </Tooltip>
+      <NavItem
+        key={m.id}
+        rail
+        icon={m.icon}
+        label={m.label}
+        count={m.count}
+        active={m.id === current.id}
+        onClick={() => onPage(m.links[0].id)}
+      />
     )
   }
 
@@ -563,7 +513,7 @@ function RailSidebar({ page, onPage }: Nav) {
         </nav>
         {current.id === 'issues' && (
           <div className="px-2">
-            <Group title="Teams">
+            <NavGroup title="Teams">
               {TEAMS.map((t) => (
                 <NavItem
                   key={t.id}
@@ -574,7 +524,7 @@ function RailSidebar({ page, onPage }: Nav) {
                   onClick={() => onPage(`${t.id}:issues`)}
                 />
               ))}
-            </Group>
+            </NavGroup>
           </div>
         )}
       </aside>
@@ -589,23 +539,11 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="p-2">
-        <WorkspaceMenu {...ws}>
-          <button
-            type="button"
-            className="hover:bg-sidebar-accent flex w-full items-center gap-2 rounded-md p-1.5 text-left outline-none focus-visible:ring-2"
-          >
-            <LetterMark size="xs" text={ws.workspace.name.slice(0, 1)} colour={ws.workspace.colour} className="size-7 rounded-md text-xs" />
-            <span className="grid min-w-0 flex-1 leading-tight">
-              <span className="truncate text-[13px] font-medium">{ws.workspace.name}</span>
-              <span className="text-muted-foreground truncate text-[11px]">{ws.workspace.plan}</span>
-            </span>
-            <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-          </button>
-        </WorkspaceMenu>
+        <WorkspaceMenu {...ws} detail={ws.workspace.plan} />
       </div>
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2">
-        <Group title="Platform">
+        <NavGroup title="Platform">
           {items.map((id) => {
             const info = pageInfo(id)
             return (
@@ -619,8 +557,8 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
               />
             )
           })}
-        </Group>
-        <Group title="Teams">
+        </NavGroup>
+        <NavGroup title="Teams">
           {TEAMS.map((t) => (
             <NavItem
               key={t.id}
@@ -631,38 +569,33 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
               onClick={() => onPage(`${t.id}:issues`)}
             />
           ))}
-        </Group>
+        </NavGroup>
       </nav>
 
       <div className="grid gap-2 p-2">
-        <div className="bg-background/60 grid gap-2 rounded-lg border p-2.5">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-medium">Issues used</span>
-            <span className="text-muted-foreground tabular-nums">180 / 250</span>
-          </div>
-          <Progress value={72} className="h-1" />
+        <UsageMeter
+          value={72}
+          label={<span className="text-foreground font-medium">Issues used</span>}
+          count="180 / 250"
+          barLabel="Issues used"
+          className="bg-background/60 gap-2 rounded-lg border p-2.5"
+        >
           <Button size="sm" variant="outline" onClick={() => toast('Upgrade', { description: 'Demo only.' })}>Upgrade plan</Button>
-        </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button type="button" className="hover:bg-sidebar-accent flex items-center gap-2 rounded-md p-1.5 text-left outline-none focus-visible:ring-2">
-              <UserAvatar name={PEOPLE[0]} className="size-7" />
-              <span className="grid min-w-0 flex-1 leading-tight">
-                <span className="truncate text-xs font-medium">{PEOPLE[0]}</span>
-                <span className="text-muted-foreground truncate text-[11px]">ravi@example.com</span>
-              </span>
-              <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" side="top" className="w-52">
-            <DropdownMenuItem onSelect={() => onPage('settings')}>
-              <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => toast('Logged out', { description: 'Demo only.' })}>
-              <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} /> Switch account
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        </UsageMeter>
+        <AccountMenu
+          name={PEOPLE[0]}
+          detail="ravi@example.com"
+          size="md"
+          menuClassName="w-52"
+          className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent"
+        >
+          <DropdownMenuItem onSelect={() => onPage('settings')}>
+            <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => toast('Logged out', { description: 'Demo only.' })}>
+            <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} /> Switch account
+          </DropdownMenuItem>
+        </AccountMenu>
       </div>
     </div>
   )
@@ -728,13 +661,12 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
       <div className="flex h-11 items-center gap-1.5 px-3">
         <LetterMark size="xs" text="A" colour="var(--primary)" className="size-6 text-[10px]" />
         <span className="text-muted-foreground/40 px-0.5 text-base font-light">/</span>
-        <WorkspaceMenu {...ws}>
-          <button type="button" className="hover:bg-accent flex h-7 min-w-0 items-center gap-1.5 rounded-md px-1.5 text-xs font-medium">
-            <span className="truncate">{ws.workspace.name}</span>
-            <span className="text-muted-foreground hidden rounded border px-1 text-[10px] font-normal @md:inline">{ws.workspace.plan.replace(' plan', '')}</span>
-            <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3" />
-          </button>
-        </WorkspaceMenu>
+        <WorkspaceMenu
+          {...ws}
+          variant="compact"
+          detail={ws.workspace.plan.replace(' plan', '')}
+          badgeClassName="hidden @md:inline"
+        />
         <span className="text-muted-foreground/40 hidden px-0.5 text-base font-light @md:inline">/</span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -826,19 +758,6 @@ function NewButton({ label = 'New issue', onClick }: { label?: string; onClick: 
   )
 }
 
-function ViewSwitch({ view, setView }: Pick<HeaderProps, 'view' | 'setView'>) {
-  return (
-    <ToggleGroup type="single" variant="outline" size="sm" spacing={0} value={view} onValueChange={(v) => v && setView(v as Layout)} aria-label="View">
-      <ToggleGroupItem value="list" aria-label="List">
-        <HugeiconsIcon icon={LeftToRightListBulletIcon} strokeWidth={2} />
-      </ToggleGroupItem>
-      <ToggleGroupItem value="board" aria-label="Board">
-        <HugeiconsIcon icon={KanbanIcon} strokeWidth={2} />
-      </ToggleGroupItem>
-    </ToggleGroup>
-  )
-}
-
 function ContentHeader({ variant, ...p }: HeaderProps & { variant: HeaderStyle }) {
   const info = pageInfo(p.page)
   const issues = showsIssues(p.page)
@@ -851,18 +770,22 @@ function ContentHeader({ variant, ...p }: HeaderProps & { variant: HeaderStyle }
         <div className="flex items-center gap-1">
           {p.lead}
           <div className="ml-auto flex items-center gap-1.5">
-            {issues && <ViewSwitch view={p.view} setView={p.setView} />}
+            {issues && <ViewSwitch views={LIST_BOARD_VIEWS} value={p.view} onChange={p.setView} />}
             <NewButton onClick={p.onNew} />
           </div>
         </div>
-        <div className="flex items-center gap-2 pt-1">
-          <HugeiconsIcon icon={info.icon} strokeWidth={2} className="text-muted-foreground size-4" />
-          <h3 className="text-base font-semibold tracking-tight">{info.label}</h3>
-          {info.team && <span className="text-muted-foreground text-xs">· {info.team.name}</span>}
-        </div>
-        <p className="text-muted-foreground pt-0.5 pb-2 text-xs">
-          {issues ? 'Everything the team is working on, newest first.' : `The ${info.label.toLowerCase()} page of this demo workspace.`}
-        </p>
+        <PageHeader
+          as="h3"
+          title={
+            <span className="flex items-center gap-2 text-base">
+              <HugeiconsIcon icon={info.icon} strokeWidth={2} className="text-muted-foreground size-4" />
+              {info.label}
+              {info.team && <span className="text-muted-foreground text-xs font-normal tracking-normal">· {info.team.name}</span>}
+            </span>
+          }
+          description={issues ? 'Everything the team is working on, newest first.' : `The ${info.label.toLowerCase()} page of this demo workspace.`}
+          className="pt-1 pb-2"
+        />
         {issues ? (
           <Tabs value={p.tab} onValueChange={(v) => p.setTab(v as Tab)}>
             <TabsList variant="line" className="-mb-px h-8 px-0">
@@ -880,17 +803,7 @@ function ContentHeader({ variant, ...p }: HeaderProps & { variant: HeaderStyle }
   }
 
   if (variant === 'toolbar') {
-    const active = FIELD_ORDER.filter((f) => p.filters[f]?.length)
-    const setField = (field: FilterField, values: string[]) => {
-      const next = { ...p.filters }
-      if (values.length) next[field] = values
-      else delete next[field]
-      p.setFilters(next)
-    }
-    const toggleValue = (field: FilterField, value: string) => {
-      const current = p.filters[field] ?? []
-      setField(field, current.includes(value) ? current.filter((v) => v !== value) : [...current, value])
-    }
+    const filtered = activeFields(FILTER_FIELDS, p.filters).length > 0
     const { shown, total } = p.counts
     return (
       <div className="shrink-0 border-b">
@@ -922,21 +835,20 @@ function ContentHeader({ variant, ...p }: HeaderProps & { variant: HeaderStyle }
           </div>
         </div>
         {issues && (
-          <div className="flex min-h-9 flex-wrap items-center gap-1.5 px-2 py-1.5 @lg:px-3">
-            <FilterMenu filters={p.filters} onToggle={toggleValue} />
-            {active.map((field) => (
-              <FilterChip key={field} field={field} values={p.filters[field]!} onChange={(v) => setField(field, v)} />
-            ))}
-            {active.length > 0 && (
-              <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => p.setFilters({})}>
-                Clear
-              </Button>
-            )}
-            <div className="ml-auto flex items-center gap-1.5">
-              <span className="text-muted-foreground hidden text-[11px] whitespace-nowrap tabular-nums @xl:inline" aria-live="polite">
-                {active.length ? `${shown} of ${total}` : `${shown} ${shown === 1 ? 'issue' : 'issues'}`}
-              </span>
-              <ViewSwitch view={p.view} setView={p.setView} />
+          <div className="flex min-h-9 items-start gap-1.5 px-2 py-1.5 @lg:px-3">
+            {/* The filter bar block's filter row: Filter menu, chips, Clear and the count. Unfiltered, the
+                count is what the list shows (the Display menu can hide completed issues). */}
+            <FilterBarBlock
+              fields={FILTER_FIELDS}
+              filters={p.filters}
+              onFiltersChange={(next) => p.setFilters(next as Filters)}
+              shown={shown}
+              total={filtered ? total : shown}
+              noun={['issue', 'issues']}
+              className="min-w-0 flex-1"
+            />
+            <div className="flex shrink-0 items-center gap-1.5">
+              <ViewSwitch views={LIST_BOARD_VIEWS} value={p.view} onChange={p.setView} />
               <DisplayMenu display={p.display} onChange={p.setDisplay} layout={p.view} onLayout={p.setView} />
             </div>
           </div>
@@ -1059,14 +971,12 @@ function Crumbs({ info, more, long, onPage }: {
   return (
     <>
       <FoldingBreadcrumb trail={trail} current={info.label} />
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button variant="ghost" size="icon-sm" className="text-muted-foreground shrink-0" aria-label="Add to favourites" onClick={() => toast('Added to favourites', { description: 'Demo only.' })}>
-            <HugeiconsIcon icon={StarIcon} strokeWidth={2} />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>Add to favourites</TooltipContent>
-      </Tooltip>
+      <IconAction
+        label="Add to favourites"
+        icon={StarIcon}
+        onClick={() => toast('Added to favourites', { description: 'Demo only.' })}
+        className="shrink-0"
+      />
       {more && (
         <Button variant="ghost" size="icon-sm" className="text-muted-foreground hidden shrink-0 @md:inline-flex" aria-label="More" onClick={() => toast('More actions', { description: 'Demo only.' })}>
           <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
@@ -1076,6 +986,7 @@ function Crumbs({ info, more, long, onPage }: {
   )
 }
 
+// The kit's SearchField, set up for the shell's headers: the ⌘K hint shows while it is empty.
 function SearchBox({ query, setQuery, issues, autoFocus, className }: {
   query: string
   setQuery: (q: string) => void
@@ -1084,24 +995,15 @@ function SearchBox({ query, setQuery, issues, autoFocus, className }: {
   className?: string
 }) {
   return (
-    <label className={cn('bg-muted/50 focus-within:ring-ring/50 flex min-w-0 items-center gap-2 rounded-md border px-2.5 focus-within:ring-2', className)}>
-      <HugeiconsIcon icon={Search01Icon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
-      <input
-        autoFocus={autoFocus}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={issues ? 'Search issues…' : 'Search…'}
-        aria-label="Search issues"
-        className="placeholder:text-muted-foreground min-w-0 flex-1 bg-transparent text-xs outline-none"
-      />
-      {query ? (
-        <button type="button" aria-label="Clear search" onClick={() => setQuery('')} className="text-muted-foreground hover:text-foreground">
-          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-        </button>
-      ) : (
-        <Shortcut keys={['mod', 'K']} className="hidden @md:inline-flex" />
-      )}
-    </label>
+    <SearchField
+      value={query}
+      onChange={setQuery}
+      placeholder={issues ? 'Search issues…' : 'Search…'}
+      label="Search issues"
+      end={<Shortcut keys={['mod', 'K']} className="hidden @md:inline-flex" />}
+      autoFocus={autoFocus}
+      className={className}
+    />
   )
 }
 

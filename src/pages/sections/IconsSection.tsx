@@ -3,18 +3,19 @@ import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Sun03Icon, Moon02Icon, ViewIcon, ViewOffSlashIcon, SquareLock02Icon, SquareUnlock02Icon,
   Notification03Icon, NotificationOff01Icon, VolumeHighIcon, VolumeOffIcon, GridViewIcon,
-  LeftToRightListBulletIcon, Search01Icon, Cancel01Icon, RefreshIcon, Location01Icon,
+  LeftToRightListBulletIcon, RefreshIcon, Location01Icon,
   Delete02Icon, DashboardSquare01Icon, Home01Icon, ArrowDown01Icon,
   // Lucide-style names (aliases shipped in the free package)
   Trash2, LayoutDashboard, House, ChevronDown,
 } from '@hugeicons/core-free-icons'
-import { toast } from 'sonner'
+import { PageHeader } from '@/components/page-header'
+import { SearchField } from '@/components/search-field'
 import { Button } from '@/components/ui/button'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { copyText } from '@/lib/clipboard'
 import { ICON_GROUPS } from '../data'
 import { Panel, Section } from './shared'
 
@@ -69,14 +70,11 @@ function buildCatalog(mod: Record<string, unknown>): CatalogEntry[] {
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-async function copyImport(name: string) {
+// Copies the import line. When the clipboard is blocked the toast still shows
+// the line, so it can be copied by hand.
+function copyImport(name: string) {
   const line = `import { ${name} } from '@hugeicons/core-free-icons'`
-  try {
-    await navigator.clipboard.writeText(line)
-    toast.success('Import copied', { description: line })
-  } catch {
-    toast(line)
-  }
+  return copyText(line, { success: 'Import copied', description: line, errorDescription: line })
 }
 
 // One component, three pages: the grouped icons, the icon props, and the
@@ -195,27 +193,21 @@ export default function IconsSection({ part = 'icons' }: { part?: 'icons' | 'pro
       )}
 
       {part === 'all-icons' && (
-        <section id="all-icons" className="scroll-mt-16">
-          <div className="mb-6 grid gap-1">
-            <h1 className="text-xl font-semibold tracking-tight">All free icons</h1>
-            <p className="text-muted-foreground text-sm">
-              {catalog ? `${matches.length.toLocaleString()} of ${catalog.length.toLocaleString()} · click to copy the import` : 'Loading…'}
-            </p>
-          </div>
-          <InputGroup className="max-w-md">
-            <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            </InputGroupAddon>
-            <InputGroupInput value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search, including Lucide names like trash or house…" />
-            {query && (
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => setQuery('')}>
-                  <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-                </InputGroupButton>
-              </InputGroupAddon>
-            )}
-          </InputGroup>
+        <section id="all-icons" aria-labelledby="all-icons-title" className="scroll-mt-16">
+          <PageHeader
+            id="all-icons-title"
+            size="lg"
+            title="All free icons"
+            description={catalog ? `${matches.length.toLocaleString()} of ${catalog.length.toLocaleString()} · click to copy the import` : 'Loading…'}
+            className="mb-6"
+          />
+          <SearchField
+            value={query}
+            onChange={setQuery}
+            placeholder="Search, including Lucide names like trash or house…"
+            label="Search all free icons"
+            className="max-w-md"
+          />
 
           {catalog && (
             <>

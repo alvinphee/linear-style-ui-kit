@@ -7,7 +7,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import type { Status } from '../data'
 import { Section } from './shared'
 import { UserAvatar } from '@/components/person'
-import { StatusIcon } from './StatusSection'
+import { StatusIcon } from '@/components/status-icon'
+import { formatShortDate } from '@/lib/format'
 
 // All dates are UTC midnights so day maths never trips over a DST change.
 const DAY = 86_400_000
@@ -17,16 +18,6 @@ const END = date(12, 31)
 const TODAY = date(9, 30)
 const TOTAL_DAYS = Math.round((END - START) / DAY) + 1
 const dayIndex = (t: number) => Math.round((t - START) / DAY)
-
-// Built by hand: en-GB's short month is "Sept" on newer ICU data, and the
-// rest of the page writes "Sep".
-const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const shortDate = {
-  format: (value: Date | number) => {
-    const d = new Date(value)
-    return `${d.getUTCDate()} ${SHORT_MONTHS[d.getUTCMonth()]}`
-  },
-}
 const monthName = new Intl.DateTimeFormat('en-GB', { month: 'long', timeZone: 'UTC' })
 
 type Milestone = { name: string; date: number }
@@ -250,7 +241,7 @@ function ProjectRow({ project: p, px, onJump }: { project: Project; px: number; 
   const left = dayIndex(p.start) * px
   const width = days * px
   const inside = width >= LABEL_INSIDE_PX
-  const range = `${shortDate.format(p.start)} → ${shortDate.format(p.end)}`
+  const range = `${formatShortDate(p.start, { utc: true })} → ${formatShortDate(p.end, { utc: true })}`
 
   return (
     <div className="flex h-10 border-b last:border-b-0">
@@ -313,7 +304,7 @@ function ProjectRow({ project: p, px, onJump }: { project: Project; px: number; 
             <TooltipTrigger asChild>
               <button
                 type="button"
-                aria-label={`Milestone: ${m.name}, ${shortDate.format(m.date)}`}
+                aria-label={`Milestone: ${m.name}, ${formatShortDate(m.date, { utc: true })}`}
                 className="bg-card focus-visible:ring-ring/50 absolute top-1/2 size-2.5 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-[2px] border-2 outline-none after:absolute after:-inset-1.5 focus-visible:ring-2"
                 style={{ left: (dayIndex(m.date) + 0.5) * px, borderColor: p.colour }}
               />
@@ -321,7 +312,7 @@ function ProjectRow({ project: p, px, onJump }: { project: Project; px: number; 
             <TooltipContent side="top">
               <div className="grid gap-0.5">
                 <span className="font-medium">{m.name}</span>
-                <span className="opacity-70">{shortDate.format(m.date)} · {p.name}</span>
+                <span className="opacity-70">{formatShortDate(m.date, { utc: true })} · {p.name}</span>
               </div>
             </TooltipContent>
           </Tooltip>

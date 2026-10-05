@@ -7,7 +7,9 @@ import {
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { AiMotion, Elapsed, PulseDot, StreamCaret, formatDuration } from '@/components/thinking-indicator'
+import { AiMotion, Elapsed, PulseDot, StreamCaret } from '@/components/thinking-indicator'
+import { formatDuration } from '@/lib/format'
+import { plural } from '@/lib/text'
 
 // The thinking trail: what an agent did on the way to its answer, in one
 // quiet line. While it works the line shimmers ("Searching jobs…") with a
@@ -66,8 +68,6 @@ function stepTime(step: TrailStep, clock?: () => number) {
   return step.status !== 'pending' && step.ms ? formatDuration(step.ms) : null
 }
 
-const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
-
 export function ThinkingTrail({ steps, live, activity, startedAt, duration, summary, meta, autoOpen = true, clock, className }: {
   steps: TrailStep[]
   // True while the agent is still adding to this trail.
@@ -106,8 +106,8 @@ export function ThinkingTrail({ steps, live, activity, startedAt, duration, summ
       : stopped ? `Stopped after ${formatDuration(total)}`
       : onlyThinking ? `Thought for ${formatDuration(total)}` : `Worked for ${formatDuration(total)}`)
   const counts = meta ?? [
-    plan.length ? plural(plan.length, 'step', 'steps') : '',
-    tools.length ? plural(tools.length, 'tool', 'tools') : '',
+    plan.length ? plural(plan.length, 'step') : '',
+    tools.length ? plural(tools.length, 'tool') : '',
   ].filter(Boolean).join(' · ')
   const hasDetails = thinking.some((s) => !!s.label) || plan.length > 0 || tools.length > 0
   const timer = startedAt !== undefined

@@ -1,8 +1,9 @@
-import type { Job } from '../../data'
-import { formatSize } from './data'
-import { RANK, dueRank, isOpen, jobDetail, jobRow, mdTable, quote, short, stepsSummary } from './scenario-helpers'
+import { formatFileSize } from '@/lib/format'
+import { plural } from '@/lib/text'
+import { PRIORITY_RANK, dueRank, type Job } from '../../data'
+import { isOpen, jobDetail, jobRow, mdTable, quote, short, stepsSummary } from './scenario-helpers'
 import { emailBody, reportMarkdown } from './scenarios-jobs'
-import { plural, readFile, type AgentContext, type Builder } from './script'
+import { readFile, type AgentContext, type Builder } from './script'
 import type { ArtifactKind, EmailTone, FileRef, Source } from './types'
 
 // Scenarios for writing and research: code, web research, translate, plan,
@@ -206,7 +207,7 @@ function searchKnowledge(b: Builder, ctx: AgentContext) {
   if (!files.length) return
   const hits = files.slice(0, 2)
   b.tool('search_knowledge', { project: ctx.project!.name, query: short(ctx.prompt, 40) }, {
-    output: hits.map((f) => ({ name: f.name, size: formatSize(f.size), match: 'partial' })), summary: plural(hits.length, 'file'),
+    output: hits.map((f) => ({ name: f.name, size: formatFileSize(f.size), match: 'partial' })), summary: plural(hits.length, 'file'),
   }, 'Searching project files…')
 }
 
@@ -308,7 +309,7 @@ export function translate(b: Builder, ctx: AgentContext) {
 const SLOTS = ['07:30', '09:00', '10:30', '13:00', '14:30']
 
 export function plan(b: Builder, ctx: AgentContext) {
-  const open = ctx.jobs.filter(isOpen).sort((a, b) => dueRank(a.due) - dueRank(b.due) || RANK[a.priority] - RANK[b.priority])
+  const open = ctx.jobs.filter(isOpen).sort((a, b) => dueRank(a.due) - dueRank(b.due) || PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
   const next = open.filter((j) => j.due !== 'Today').slice(0, 4)
   const list = next.length ? next : open.slice(0, 4)
   b.think([
@@ -425,7 +426,7 @@ export function files(b: Builder, ctx: AgentContext) {
   ])
   b.say([
     `Here is what I found in ${list.length === 1 ? 'the file' : `the ${list.length} files`}:`, '',
-    mdTable(['File', 'Type', 'Size', 'Contents'], list.map((f) => [f.name, FILE_KIND_LABEL[f.kind], formatSize(f.size), readFile(f).summary])),
+    mdTable(['File', 'Type', 'Size', 'Contents'], list.map((f) => [f.name, FILE_KIND_LABEL[f.kind], formatFileSize(f.size), readFile(f).summary])),
     '', 'This demo does not open the files, so the contents above are made up. Ask me to compare them with the job list, or to draft a reply about them.',
   ].join('\n'), false)
   b.followUps(['Compare them with the urgent jobs', 'Draft an email about them'])

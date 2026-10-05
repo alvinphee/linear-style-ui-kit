@@ -1,20 +1,21 @@
 import { now, uid } from './data'
 import { code, files, general, plan, research, revise, translate } from './scenarios-assist'
-import { compare, email, summary, update } from './scenarios-jobs'
-import { Builder, type AgentContext, type ArtifactDraft, type ScriptEvent } from './script'
-import type { Model, Part, PartOf, PlanStep } from './types'
+import { continueReminders, reminders } from './scenarios-invoices'
+import { compare, continueUpdate, email, summary, update } from './scenarios-jobs'
+import { Builder, type AgentContext, type ArtifactDraft, type BuilderContext, type ScriptEvent } from './script'
+import type { ApprovalRequest, Model, Part, PartOf, PlanStep } from './types'
 
 // The scripted agent. Nothing here calls a model: a prompt is matched to a
 // scenario by keywords, the scenario writes a script of events (script.ts),
 // and play() runs the script with timers that can be cancelled.
 
 export type { AgentContext, ArtifactDraft, ScriptEvent } from './script'
-export { continueAfterApproval } from './scenarios-jobs'
 
 export type Intent =
-  | 'summary' | 'email' | 'update' | 'compare' | 'code' | 'research' | 'translate' | 'plan' | 'revise' | 'files' | 'general'
+  | 'summary' | 'email' | 'update' | 'reminders' | 'compare' | 'code' | 'research' | 'translate' | 'plan' | 'revise' | 'files'
+  | 'general'
 
-export function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastArtifact' | 'attachments'>): Intent {
+function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastArtifact' | 'attachments'>): Intent {
   const p = ctx.prompt.toLowerCase()
   const command = p.match(/^\/(\w+)/)?.[1]
   if (ctx.attachments.length && !command && /\b(attach\w*|files?|documents?|look at|read (this|these|it))\b/.test(p)) return 'files'
@@ -25,6 +26,9 @@ export function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastA
   if (/\btranslat|\bin (french|spanish)\b|^now in\b/.test(p)) return 'translate'
   if (ctx.lastArtifact && /\b(shorter|shorten|condense|tighten|trim|longer|expand|more detail|formal|polite|warmer|friendlier|revise|rewrite|add a|add an)\b/.test(p)) {
     return 'revise'
+  }
+  if (/\b(invoices?|unpaid|payment reminders?|late payments?)\b|\boverdue\b(?! (jobs?|deliver))|\bremind\w*\b.*\bpay/.test(p)) {
+    return 'reminders'
   }
   if (/\b(email|e-mail|draft|write to|reply to|letter)\b/.test(p)) return 'email'
   if (/\b(assign|reassign|unassign|mark|set|move|change|close|reopen)\b|\bupdate (the |all |my )?(jobs?|do-)/.test(p)) return 'update'
@@ -39,7 +43,7 @@ export function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastA
 }
 
 const SCENARIOS: Record<Intent, (b: Builder, ctx: AgentContext) => void> = {
-  summary, email, update, compare, code, research, translate, plan, revise, files, general,
+  summary, email, update, reminders, compare, code, research, translate, plan, revise, files, general,
 }
 
 export function buildScript(ctx: AgentContext) {
@@ -47,6 +51,11 @@ export function buildScript(ctx: AgentContext) {
   const intent = detectIntent(ctx)
   SCENARIOS[intent](b, ctx)
   return b.events
+}
+
+// The rest of the script once the person approves or denies.
+export function continueAfterApproval(request: ApprovalRequest, decision: 'approved' | 'denied', ctx: BuilderContext) {
+  return request.kind === 'reminders' ? continueReminders(request, decision, ctx) : continueUpdate(request, decision, ctx)
 }
 
 export function titleFor(prompt: string) {

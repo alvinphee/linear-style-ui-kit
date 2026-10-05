@@ -1,54 +1,32 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
+import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  AiBrain01Icon, AiBrain02Icon, BalanceScaleIcon, Calculator01Icon, Clock01Icon, CodeIcon, Copy01Icon, FileViewIcon,
-  FlashIcon, Globe02Icon, RefreshIcon, Search01Icon, Share08Icon, ThumbsDownIcon, ThumbsUpIcon,
+  AiBrain01Icon, AiBrain02Icon, BalanceScaleIcon, Calculator01Icon, Clock01Icon, FileViewIcon, FlashIcon,
+  Globe02Icon, Search01Icon, SparklesIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { cn } from 'cn'
-import { AiLabel } from '@/components/ai-label'
-import { FileChip } from '@/components/file-chip'
-import { IconAction } from '@/components/icon-action'
-import {
-  ActivityLine, Elapsed, PulseDot, ShimmerText, StreamCaret, Thinking, TypingDots, type ThinkingIndicator,
-} from '@/components/thinking-indicator'
+import { StreamCaret } from '@/components/thinking-indicator'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { AiSummaryCard, SummaryBullets, type SummaryPhase } from '@/blocks/ai/ai-summary-card'
 import {
   AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, UserMessage, type Feedback,
 } from '@/blocks/ai/chat-message'
-import { Markdown, type Citation } from '@/blocks/ai/markdown'
 import { PromptBox, type PromptMode, type PromptModel } from '@/blocks/ai/prompt-box'
 import {
   ApprovalCard, ThinkingTrail, type ApprovalChange, type ApprovalDecision, type TrailStep,
 } from '@/blocks/ai/thinking-trail'
-import { CodeBlock, Demos, Gallery, Playground, Variants, bool, imports, jsx, str } from './Playground'
+import { Markdown, type Citation } from '@/blocks/markdown'
+import { copyText } from '@/lib/clipboard'
+import {
+  Demos, Example, Playground, Surface, bool, component, element, imports, indent, jsx, lit, pick, str,
+} from './Playground'
 
-// The kit's AI building blocks: the small components (label, thinking
-// indicator, icon action, file chip) and the blocks they make up (thinking
-// trail, approval card, chat messages, Markdown, prompt box). All content is
-// made up.
+// The kit's AI blocks: thinking trail, approval card, AI summary card, chat
+// messages, Markdown and prompt box. The small AI components they are made
+// of (AI label, thinking indicator, icon action, file chip) have their own
+// page, ai-components. All content is made up.
 
 /* ---------- Snippet helpers ---------- */
-
-const pick = (...names: (string | false | undefined)[]) => names.filter((n): n is string => Boolean(n))
-// Props equal to their default stay out of the snippet.
-const unless = (value: string, fallback: string) => (value === fallback ? undefined : value)
-// Indents every non-empty line.
-const indent = (text: string, by = '  ') => text.replace(/^(?=.)/gm, by)
-
-// A value as a JavaScript literal, single-quoted: { status: 'overdue' }.
-function lit(value: unknown): string {
-  if (typeof value === 'string') return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
-  if (Array.isArray(value)) return `[${value.map(lit).join(', ')}]`
-  if (value && typeof value === 'object') {
-    const entries = Object.entries(value)
-      .filter(([, v]) => v !== undefined)
-      .map(([k, v]) => `${/^[A-Za-z_$][\w$]*$/.test(k) ? k : lit(k)}: ${lit(v)}`)
-    return entries.length ? `{ ${entries.join(', ')} }` : '{}'
-  }
-  return String(value)
-}
 
 // An object literal whose "key: value," parts are packed into lines of `width`.
 function wrapObject(parts: string[], width = 84) {
@@ -61,18 +39,6 @@ function wrapObject(parts: string[], width = 84) {
   return `{\n${indent(lines.join('\n'))}\n}`
 }
 
-// A JSX element with one prop per line, for props too long for jsx().
-function element(tag: string, attrs: (string | false | undefined)[], children?: string) {
-  const open = `<${tag}\n${pick(...attrs).map((a) => indent(a)).join('\n')}\n`
-  return children ? `${open}>\n${indent(children)}\n</${tag}>` : `${open}/>`
-}
-
-// A snippet that needs state is wrapped in a small component.
-function component(name: string, state: string[], body: string) {
-  if (!state.length) return body
-  return `function ${name}() {\n${indent(state.join('\n'))}\n  return (\n${indent(body, '    ')}\n  )\n}`
-}
-
 /* ---------- Preview helpers ---------- */
 
 // The time a preview mounted, for timers that count from "now".
@@ -80,258 +46,9 @@ const useSince = () => useState(Date.now)[0]
 
 const demo = (label: string) => () => toast(label, { description: 'Demo only.' })
 
-function copyText(text: string) {
-  navigator.clipboard?.writeText(text).catch(() => toast.error('Copy failed', { description: 'Your browser blocked the clipboard.' }))
-}
-
-// A card under text-heavy previews, so they read well over the dot grid.
-// It is an @container, for the blocks' @sm / @md details.
-function Surface({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn('bg-card @container w-full min-w-0 rounded-lg border p-4 shadow-xs', className)}>{children}</div>
-}
-
-// A fixed example (no props pane) with its code one click away.
-function Example({ title, note, code, children }: { title: string; note?: string; code: string; children: ReactNode }) {
-  const [showCode, setShowCode] = useState(false)
-  return (
-    <article aria-label={title} className="bg-card min-w-0 overflow-hidden rounded-lg border">
-      <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b py-1.5 pr-1.5 pl-3.5">
-        <h3 className="text-xs font-medium">{title} <span className="text-muted-foreground font-normal">example</span></h3>
-        <div className="flex min-w-0 items-center gap-2">
-          {note && <span className="text-muted-foreground hidden truncate text-[11px] sm:inline">{note}</span>}
-          <Button variant={showCode ? 'secondary' : 'ghost'} size="sm" aria-pressed={showCode} onClick={() => setShowCode(!showCode)}>
-            <HugeiconsIcon icon={CodeIcon} strokeWidth={2} data-icon="inline-start" />
-            {showCode ? 'Hide code' : 'Show code'}
-          </Button>
-        </div>
-      </header>
-      <div className="@container min-w-0 p-4 sm:p-6">{children}</div>
-      {showCode && <CodeBlock code={code} className="rounded-none border-0 border-t" />}
-    </article>
-  )
-}
-
-/* ---------- AI label ---------- */
-
-function AiLabelDemos() {
-  return (
-    <Gallery
-      title="AI label"
-      note="Put it on anything a model wrote or proposed"
-      items={[
-        { label: 'default', node: <AiLabel /> },
-        { label: 'AI suggests', node: <AiLabel>AI suggests</AiLabel> },
-        { label: 'Understood as', node: <AiLabel>Understood as</AiLabel> },
-        {
-          label: 'beside a heading',
-          node: <span className="flex items-center gap-1.5 text-xs font-medium">Summary <AiLabel /></span>,
-        },
-        {
-          label: 'on a suggestion',
-          node: (
-            <span className="bg-card flex h-7 items-center gap-2 rounded-md border px-2 text-xs">
-              <AiLabel>AI suggests</AiLabel>
-              <span className="text-muted-foreground">Priority</span>
-              <span className="font-medium">High</span>
-            </span>
-          ),
-        },
-      ]}
-    />
-  )
-}
-
-/* ---------- Thinking indicator ---------- */
-
-const INDICATORS = ['sparkle', 'dot', 'spinner', 'dots', 'none'] as const satisfies readonly ThinkingIndicator[]
-
-function ThinkingPreview({ indicator, label, elapsed }: { indicator: ThinkingIndicator; label?: string; elapsed: boolean }) {
-  const since = useSince()
-  return <Thinking indicator={indicator} label={label} since={elapsed ? since : undefined} />
-}
-
-function ActivityPreview() {
-  const since = useSince()
-  return <ActivityLine text="Reading INV-2026-0409" since={since} className="max-w-60" />
-}
-
-function ElapsedPreview() {
-  const since = useSince()
-  return <span className="text-muted-foreground text-xs"><Elapsed since={since} /></span>
-}
-
-function ThinkingDemos() {
-  return (
-    <>
-      <Playground
-        title="Thinking indicator"
-        description="One status line while the AI works"
-        controls={[
-          { kind: 'select', name: 'indicator', label: 'Indicator', options: INDICATORS, initial: 'sparkle' },
-          { kind: 'text', name: 'label', label: 'Label', initial: 'Searching invoices…' },
-          { kind: 'switch', name: 'elapsed', label: 'Show elapsed', initial: true },
-        ]}
-        render={(v) => (
-          <ThinkingPreview
-            // A fresh timer each time Show elapsed is turned on.
-            key={String(bool(v, 'elapsed'))}
-            indicator={str(v, 'indicator') as ThinkingIndicator}
-            label={str(v, 'label') || undefined}
-            elapsed={bool(v, 'elapsed')}
-          />
-        )}
-        code={(v) => {
-          const elapsed = bool(v, 'elapsed')
-          const label = str(v, 'label')
-          const head = imports({
-            react: elapsed ? ['useState'] : [],
-            '@/components/thinking-indicator': ['Thinking'],
-          })
-          const body = jsx('Thinking', {
-            indicator: unless(str(v, 'indicator'), 'sparkle'),
-            label: label === 'Thinking…' ? undefined : label,
-            since: elapsed ? '{startedAt}' : undefined,
-          })
-          return `${head}\n\n${component('WorkingStatus', elapsed ? ['const [startedAt] = useState(Date.now)'] : [], body)}`
-        }}
-      />
-
-      <Gallery
-        title="Working signs"
-        note="The pieces Thinking is made of, from @/components/thinking-indicator"
-        items={[
-          { label: 'ShimmerText', node: <ShimmerText className="text-xs font-medium">Searching customer invoices…</ShimmerText> },
-          { label: 'PulseDot', node: <span className="flex h-5 items-center"><PulseDot /></span> },
-          { label: 'TypingDots', node: <TypingDots /> },
-          { label: 'StreamCaret line', node: <p className="text-[13px]">The overdue total is<StreamCaret /></p> },
-          { label: 'StreamCaret block', node: <p className="text-xs">Suggested reply<StreamCaret variant="block" /></p> },
-          { label: 'ActivityLine', node: <ActivityPreview /> },
-          { label: 'Elapsed', node: <ElapsedPreview /> },
-        ]}
-      />
-    </>
-  )
-}
-
-/* ---------- Icon action ---------- */
-
-const ACTIONS = ['copy', 'regenerate', 'thumbs up', 'thumbs down', 'share'] as const
-type ActionName = (typeof ACTIONS)[number]
-
-const ACTION_ICONS: Record<ActionName, { icon: IconSvgElement; name: string; label: string }> = {
-  copy: { icon: Copy01Icon, name: 'Copy01Icon', label: 'Copy' },
-  regenerate: { icon: RefreshIcon, name: 'RefreshIcon', label: 'Regenerate' },
-  'thumbs up': { icon: ThumbsUpIcon, name: 'ThumbsUpIcon', label: 'Good reply' },
-  'thumbs down': { icon: ThumbsDownIcon, name: 'ThumbsDownIcon', label: 'Bad reply' },
-  share: { icon: Share08Icon, name: 'Share08Icon', label: 'Share' },
-}
-
-function IconActionDemos() {
-  return (
-    <>
-      <Playground
-        title="Icon action"
-        description="Hover for the tooltip, which is also its name"
-        controls={[
-          { kind: 'select', name: 'icon', label: 'Icon', options: ACTIONS, initial: 'copy' },
-          { kind: 'text', name: 'label', label: 'Label (blank: the icon’s)', initial: '' },
-          { kind: 'switch', name: 'pressed', label: 'Pressed', initial: false },
-          { kind: 'switch', name: 'disabled', label: 'Disabled', initial: false },
-        ]}
-        render={(v) => {
-          const action = ACTION_ICONS[str(v, 'icon') as ActionName]
-          const label = str(v, 'label') || action.label
-          return (
-            <IconAction
-              label={label}
-              icon={action.icon}
-              pressed={bool(v, 'pressed') || undefined}
-              disabled={bool(v, 'disabled')}
-              onClick={demo(label)}
-            />
-          )
-        }}
-        code={(v) => {
-          const action = ACTION_ICONS[str(v, 'icon') as ActionName]
-          const head = imports({
-            '@hugeicons/core-free-icons': [action.name],
-            '@/components/icon-action': ['IconAction'],
-          })
-          const body = jsx('IconAction', {
-            label: str(v, 'label') || action.label,
-            icon: `{${action.name}}`,
-            onClick: '{handleClick}',
-            pressed: bool(v, 'pressed'),
-            disabled: bool(v, 'disabled'),
-          })
-          return `${head}\n\n${body}`
-        }}
-      />
-
-      <Gallery
-        title="Icon action states"
-        note="Pass icon, or children for anything else"
-        items={[
-          { label: 'rest', node: <IconAction label="Copy" icon={Copy01Icon} onClick={demo('Copy')} /> },
-          { label: 'pressed', node: <IconAction label="Good reply" icon={ThumbsUpIcon} pressed onClick={demo('Good reply')} /> },
-          { label: 'disabled', node: <IconAction label="Regenerate" icon={RefreshIcon} disabled onClick={demo('Regenerate')} /> },
-          { label: 'children', node: <IconAction label="Working" onClick={demo('Working')}><Spinner /></IconAction> },
-          {
-            label: 'a reply bar',
-            node: (
-              <div className="flex gap-0.5">
-                <IconAction label="Copy" icon={Copy01Icon} onClick={demo('Copy')} />
-                <IconAction label="Regenerate" icon={RefreshIcon} onClick={demo('Regenerate')} />
-                <IconAction label="Good reply" icon={ThumbsUpIcon} onClick={demo('Good reply')} />
-                <IconAction label="Bad reply" icon={ThumbsDownIcon} onClick={demo('Bad reply')} />
-              </div>
-            ),
-          },
-        ]}
-      />
-    </>
-  )
-}
-
-/* ---------- File chip ---------- */
-
-const FILE_NAMES = ['report.pdf', 'sales.xlsx', 'notes.md', 'photo.png', 'app.tsx'] as const
-
-const FILE_SIZES: Record<(typeof FILE_NAMES)[number], number> = {
-  'report.pdf': 2_516_582,
-  'sales.xlsx': 49_152,
-  'notes.md': 820,
-  'photo.png': 1_258_291,
-  'app.tsx': 6_144,
-}
-
-function FileChipDemos() {
-  return (
-    <>
-      <Variants
-        title="File chip"
-        note="name × removable · the icon follows the extension"
-        rows={{ name: 'name', values: FILE_NAMES }}
-        cols={{ name: 'removable', values: ['off', 'on'] as const }}
-        render={(name, removable) => (
-          <FileChip
-            name={name}
-            size={FILE_SIZES[name]}
-            onRemove={removable === 'on' ? demo(`Removed ${name}`) : undefined}
-          />
-        )}
-      />
-
-      <Gallery
-        title="File chip details"
-        items={[
-          { label: 'no size', node: <FileChip name="contract.docx" /> },
-          { label: 'long name truncates', node: <FileChip name="q3-board-meeting-notes-final-v2.md" size={14_336} className="max-w-48" /> },
-          { label: 'unknown type', node: <FileChip name="backup.bin" size={8_912_896} /> },
-        ]}
-      />
-    </>
-  )
+// The chat's Copy buttons show their own tick, so only a failure toasts.
+const copyQuietly = (text: string) => {
+  void copyText(text, { success: false })
 }
 
 /* ---------- Thinking trail and approval card ---------- */
@@ -547,6 +264,209 @@ function TrailDemos() {
   )
 }
 
+/* ---------- AI summary card ---------- */
+
+const SUMMARY_PHASES = ['idle', 'thinking', 'streaming', 'done'] as const satisfies readonly SummaryPhase[]
+const SUMMARY_FEEDBACK = ['none', 'up', 'down'] as const
+type SummaryFeedback = 'up' | 'down' | null
+
+const SUMMARY_LABEL = 'AI summary of INV-2026-0409'
+const SUMMARY_THINKING = 'Reading the invoice and its payments…'
+const SUMMARY_NOTE = 'Written just now from 4 sources'
+const SUMMARY_IDLE = 'Get three quick points on this invoice: what is owed, what happened last and what to do next.'
+const SUMMARY_STALE = ['Out of date', 'A payment was recorded since it was written.'] as const
+
+const SUMMARY_POINTS = [
+  'Northwind Traders owes $6,200.00 on this invoice, now 18 days past its due date.',
+  'A payment reminder went out on 20 September, with no reply so far.',
+  'They paid late twice this year, by 6 days on average, but always in full. The policy says to call after 14 days.',
+]
+
+const SUMMARY_WORDS = SUMMARY_POINTS.reduce((n, point) => n + point.split(' ').length, 0)
+const SUMMARY_TICK_MS = 70
+// About two seconds on the whole summary before it streams again.
+const SUMMARY_PAUSE_TICKS = 28
+
+// The points as far as the first `shown` words, the caret after the last one.
+function streamedPoints(shown: number): ReactNode[] {
+  let left = shown
+  const parts = SUMMARY_POINTS.map((point) => {
+    const words = point.split(' ')
+    const take = Math.max(0, Math.min(words.length, left))
+    left -= words.length
+    return words.slice(0, take).join(' ')
+  }).filter(Boolean)
+  return parts.map((text, i) => (i === parts.length - 1 ? <>{text}<StreamCaret /></> : text))
+}
+
+// Streams the points a word at a time, rests on the whole text, then starts again.
+function StreamingPoints() {
+  const [shown, setShown] = useState(1)
+  useEffect(() => {
+    let tick = 1
+    const timer = window.setInterval(() => {
+      tick = tick >= SUMMARY_WORDS + SUMMARY_PAUSE_TICKS ? 1 : tick + 1
+      setShown(Math.min(tick, SUMMARY_WORDS))
+    }, SUMMARY_TICK_MS)
+    return () => window.clearInterval(timer)
+  }, [])
+  return (
+    <div className="grid min-w-0">
+      {/* The whole text, hidden, holds the height so the card does not jump while it streams. */}
+      <div aria-hidden="true" className="invisible col-start-1 row-start-1 min-w-0">
+        <SummaryBullets items={SUMMARY_POINTS} />
+      </div>
+      <SummaryBullets items={streamedPoints(shown)} className="col-start-1 row-start-1" />
+    </div>
+  )
+}
+
+function SummaryPreview({ phase, stale, footerAction, initialFeedback }: {
+  phase: SummaryPhase
+  stale: boolean
+  footerAction: boolean
+  initialFeedback: SummaryFeedback
+}) {
+  const [feedback, setFeedback] = useState(initialFeedback)
+  return (
+    <div className="w-full max-w-md min-w-0">
+      <AiSummaryCard
+        label={SUMMARY_LABEL}
+        phase={phase}
+        idle={(
+          <div className="grid justify-items-start gap-2.5 py-1">
+            <p className="text-muted-foreground text-xs">{SUMMARY_IDLE}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => toast('Summarise', { description: 'Demo only. Set Phase to thinking or streaming for the next steps.' })}
+            >
+              <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" className="text-brand" />
+              Summarise
+            </Button>
+          </div>
+        )}
+        thinkingLabel={SUMMARY_THINKING}
+        stale={stale && (
+          <>
+            <span className="font-medium">{SUMMARY_STALE[0]}</span>
+            <span className="text-muted-foreground">{SUMMARY_STALE[1]}</span>
+          </>
+        )}
+        note={SUMMARY_NOTE}
+        footerAction={footerAction && <Button variant="outline" size="sm" onClick={demo('Ask a follow-up')}>Ask a follow-up</Button>}
+        feedback={feedback}
+        onFeedback={setFeedback}
+        onStop={demo('Stopped')}
+        onRegenerate={demo('Regenerating the summary')}
+        onCopy={() => {
+          void copyText(SUMMARY_POINTS.map((point) => `- ${point}`).join('\n'), { success: 'Summary copied' })
+        }}
+      >
+        {phase === 'streaming' ? <StreamingPoints /> : <SummaryBullets items={SUMMARY_POINTS} />}
+      </AiSummaryCard>
+    </div>
+  )
+}
+
+// Each phase shows the props it uses; Stale and Footer action add theirs.
+function summaryCode(phase: SummaryPhase, stale: boolean, footerAction: boolean, feedback: SummaryFeedback) {
+  const idle = phase === 'idle'
+  const streaming = phase === 'streaming'
+  const done = phase === 'done'
+  const head = imports({
+    react: done ? ['useState'] : [],
+    '@hugeicons/react': idle ? ['HugeiconsIcon'] : [],
+    '@hugeicons/core-free-icons': idle ? ['SparklesIcon'] : [],
+    '@/components/thinking-indicator': streaming ? ['StreamCaret'] : [],
+    '@/components/ui/button': idle || footerAction ? ['Button'] : [],
+    '@/blocks/ai/ai-summary-card': done || streaming ? ['AiSummaryCard', 'SummaryBullets'] : ['AiSummaryCard'],
+  })
+  const points = done
+    ? `const points = [\n${SUMMARY_POINTS.map((point) => indent(`${lit(point)},`)).join('\n')}\n]\n\n`
+    : streaming ? '// points: the text streamed so far, one string per point.\n\n' : ''
+  const body = element('AiSummaryCard', [
+    `label="${SUMMARY_LABEL}"`,
+    `phase="${phase}"`,
+    idle && [
+      'idle={',
+      '  <div className="grid justify-items-start gap-2.5 py-1">',
+      `    <p className="text-muted-foreground text-xs">${SUMMARY_IDLE}</p>`,
+      '    <Button variant="outline" size="sm" onClick={summarise}>',
+      '      <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" className="text-brand" />',
+      '      Summarise',
+      '    </Button>',
+      '  </div>',
+      '}',
+    ].join('\n'),
+    phase === 'thinking' && `thinkingLabel="${SUMMARY_THINKING}"`,
+    stale && [
+      'stale={',
+      '  <>',
+      `    <span className="font-medium">${SUMMARY_STALE[0]}</span>`,
+      `    <span className="text-muted-foreground">${SUMMARY_STALE[1]}</span>`,
+      '  </>',
+      '}',
+    ].join('\n'),
+    done && `note="${SUMMARY_NOTE}"`,
+    footerAction && 'footerAction={<Button variant="outline" size="sm" onClick={askFollowUp}>Ask a follow-up</Button>}',
+    done && 'feedback={feedback}',
+    done && 'onFeedback={setFeedback}',
+    streaming && 'onStop={stop}',
+    done && 'onRegenerate={regenerate}',
+    done && 'onCopy={copy}',
+  ], done
+    ? '<SummaryBullets items={points} />'
+    : streaming
+      ? [
+        '<SummaryBullets',
+        '  items={points.map((point, i) => (',
+        '    i === points.length - 1 ? <>{point}<StreamCaret /></> : point',
+        '  ))}',
+        '/>',
+      ].join('\n')
+      : undefined)
+  const state = done ? [`const [feedback, setFeedback] = useState<'up' | 'down' | null>(${feedback ? lit(feedback) : 'null'})`] : []
+  return `${head}\n\n${points}${component('InvoiceSummary', state, body)}`
+}
+
+function SummaryCardDemos() {
+  return (
+    <Playground
+      title="AI summary card"
+      description="Idle, thinking, streaming and done: the steps of writing one"
+      controls={[
+        { kind: 'select', name: 'phase', label: 'Phase', options: SUMMARY_PHASES, initial: 'done' },
+        { kind: 'switch', name: 'stale', label: 'Stale', initial: false },
+        { kind: 'switch', name: 'footerAction', label: 'Footer action', initial: false },
+        { kind: 'select', name: 'feedback', label: 'Feedback', options: SUMMARY_FEEDBACK, initial: 'none' },
+      ]}
+      render={(v) => {
+        const feedback = str(v, 'feedback')
+        return (
+          <SummaryPreview
+            // The thumbs start from the Feedback control each time it changes.
+            key={feedback}
+            phase={str(v, 'phase') as SummaryPhase}
+            stale={bool(v, 'stale')}
+            footerAction={bool(v, 'footerAction')}
+            initialFeedback={feedback === 'none' ? null : (feedback as 'up' | 'down')}
+          />
+        )
+      }}
+      code={(v) => {
+        const feedback = str(v, 'feedback')
+        return summaryCode(
+          str(v, 'phase') as SummaryPhase,
+          bool(v, 'stale'),
+          bool(v, 'footerAction'),
+          feedback === 'none' ? null : (feedback as 'up' | 'down'),
+        )
+      }}
+    />
+  )
+}
+
 /* ---------- Chat messages ---------- */
 
 const CHAT_QUESTION = 'Which invoices are overdue this month, and how much is outstanding? The aging report is attached.'
@@ -582,7 +502,7 @@ function ChatPreview() {
       <UserMessage
         text={CHAT_QUESTION}
         attachments={[{ id: 'aging', name: 'aging-report.pdf', size: 248_000 }]}
-        onCopy={copyText}
+        onCopy={copyQuietly}
         onEdit={(text) => toast('Edited and sent again', { description: text })}
       />
       <AssistantMessage
@@ -591,7 +511,7 @@ function ChatPreview() {
         actions={
           <div className="grid gap-3">
             <MessageActions
-              onCopy={() => copyText(CHAT_REPLY)}
+              onCopy={() => copyQuietly(CHAT_REPLY)}
               onRegenerate={demo('Regenerating the reply')}
               feedback={feedback}
               onFeedback={(value) => {
@@ -624,8 +544,8 @@ const CHAT_CODE = `${imports({
   '@/blocks/ai/chat-message': [
     'AssistantMessage', 'FeedbackDialog', 'FollowUps', 'MessageActions', 'SourcesRow', 'UserMessage', 'type Feedback',
   ],
-  '@/blocks/ai/markdown': ['Markdown'],
   '@/blocks/ai/thinking-trail': ['ThinkingTrail'],
+  '@/blocks/markdown': ['Markdown'],
 })}
 
 // steps, reply and sources: see the Thinking trail and Markdown playgrounds.
@@ -788,7 +708,7 @@ function MarkdownDemos() {
       code={(v) => {
         const sample = str(v, 'sample') as SampleName
         const cites = sample === 'citations'
-        const head = imports({ '@/blocks/ai/markdown': cites ? ['Markdown', 'type Citation'] : ['Markdown'] })
+        const head = imports({ '@/blocks/markdown': cites ? ['Markdown', 'type Citation'] : ['Markdown'] })
         const reply = 'const reply = `' + SAMPLES[sample].replace(/[`\\]/g, '\\$&').replace(/\$\{/g, '\\${') + '`'
         const sources = cites ? `\n\nconst sources: Citation[] = [\n${MD_SOURCES.map((s) => indent(`${lit(s)},`)).join('\n')}\n]` : ''
         const body = jsx('Markdown', {
@@ -912,7 +832,8 @@ function PromptBoxDemos() {
           models && 'model={model}',
           models && 'onModelChange={setModel}',
           !bool(v, 'attachments') && 'maxAttachments={0}',
-          "onSubmit={(text) => toast('Sent', { description: text })}",
+          // Braces: toast returns an id, and onSubmit may only return a boolean.
+          "onSubmit={(text) => { toast('Sent', { description: text }) }}",
         ])
         return `${head}\n\n${modelList}${component('Composer', state, body)}`
       }}
@@ -923,11 +844,8 @@ function PromptBoxDemos() {
 export default function AiFeaturesDemos() {
   return (
     <Demos>
-      <AiLabelDemos />
-      <ThinkingDemos />
-      <IconActionDemos />
-      <FileChipDemos />
       <TrailDemos />
+      <SummaryCardDemos />
       <ChatDemos />
       <MarkdownDemos />
       <PromptBoxDemos />

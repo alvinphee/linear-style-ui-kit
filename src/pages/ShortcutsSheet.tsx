@@ -1,5 +1,4 @@
-import { keyLabel } from '@/components/shortcut'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
+import { Shortcut } from '@/components/shortcut'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { GO_KEYS, NAV } from './nav'
 
@@ -27,7 +26,7 @@ export default function ShortcutsSheet({ open, onOpenChange }: { open: boolean; 
       <SheetContent side="right" className="w-80 sm:max-w-80">
         <SheetHeader>
           <SheetTitle>Keyboard shortcuts</SheetTitle>
-          <SheetDescription>Everything here works from the keyboard, like Linear.</SheetDescription>
+          <SheetDescription>Everything here works from the keyboard.</SheetDescription>
         </SheetHeader>
         <div className="grid gap-5 overflow-y-auto px-4 pb-6">
           {GROUPS.map((group) => (
@@ -37,14 +36,7 @@ export default function ShortcutsSheet({ open, onOpenChange }: { open: boolean; 
                 {group.rows.map((row) => (
                   <li key={row.label} className="flex h-7 items-center justify-between gap-3 text-xs">
                     <span>{row.label}</span>
-                    <KbdGroup>
-                      {row.keys.map((k, i) => (
-                        <span key={k} className="flex items-center gap-1">
-                          {row.then && i > 0 && <span className="text-muted-foreground text-[10px]">then</span>}
-                          <Kbd>{keyLabel(k)}</Kbd>
-                        </span>
-                      ))}
-                    </KbdGroup>
+                    <Shortcut keys={row.keys} then={row.then} />
                   </li>
                 ))}
               </ul>

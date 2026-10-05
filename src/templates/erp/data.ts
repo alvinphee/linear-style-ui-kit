@@ -1,3 +1,4 @@
+import { seededRandom } from '@/lib/random'
 import { TODAY, addDays } from './format'
 import type { Data, Role, Row } from './types'
 
@@ -5,18 +6,7 @@ import type { Data, Role, Row } from './types'
 // every visit shows the same records. Names are invented; dates sit around
 // the demo's "today" (1 Oct 2026).
 
-function seeded(seed: number) {
-  let a = seed
-  return () => {
-    a |= 0
-    a = (a + 0x6d2b79f5) | 0
-    let t = Math.imul(a ^ (a >>> 15), 1 | a)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
-
-const rand = seeded(20261001)
+const rand = seededRandom(20261001)
 const int = (min: number, max: number) => Math.floor(rand() * (max - min + 1)) + min
 const pick = <T,>(list: readonly T[]) => list[Math.floor(rand() * list.length)]
 const money = (min: number, max: number, step = 10) => Math.round(int(min, max) / step) * step

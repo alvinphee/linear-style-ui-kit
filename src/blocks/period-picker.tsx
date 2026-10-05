@@ -1,7 +1,7 @@
-import { useCallback, useId, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { useCallback, useId, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Calendar03Icon } from '@hugeicons/core-free-icons'
-import { differenceInCalendarDays, format, isSameDay, startOfMonth } from 'date-fns'
+import { differenceInCalendarDays, isSameDay, startOfMonth } from 'date-fns'
 import { getDefaultClassNames, type DateRange } from 'react-day-picker'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
@@ -10,6 +10,8 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { formatDateRange } from '@/lib/format'
+import { plural } from '@/lib/text'
 
 // Picks the period a dashboard reports on.
 //
@@ -51,20 +53,21 @@ function useMediaQuery(query: string) {
 
 function rangeLabel(range: DateRange | undefined, placeholder = 'Pick a date range') {
   if (!range?.from) return placeholder
-  if (!range.to) return format(range.from, 'd MMM yyyy')
-  return `${format(range.from, 'd MMM')} – ${format(range.to, 'd MMM yyyy')}`
+  return formatDateRange(range.from, range.to, { year: true })
 }
 
 // Both ends count, so a range from the 1st to the 7th is 7 days.
 const rangeDays = (range: DateRange | undefined) =>
   range?.from && range.to ? differenceInCalendarDays(range.to, range.from) + 1 : 0
 
-export function DateRangePicker({ value, onChange, presets, defaultMonth, id, label, placeholder, size, align = 'start', className }: {
+export function DateRangePicker({ value, onChange, presets, defaultMonth, disabled, id, label, placeholder, size, align = 'start', className }: {
   value: DateRange | undefined
   onChange: (range: DateRange | undefined) => void
   presets?: DateRangePreset[]
   // The first month shown. Defaults to the month the range starts in.
   defaultMonth?: Date
+  // Days that can't be picked, as the calendar takes them: { after: today }.
+  disabled?: ComponentProps<typeof Calendar>['disabled']
   id?: string
   // Replaces the dates on the button.
   label?: ReactNode
@@ -104,6 +107,7 @@ export function DateRangePicker({ value, onChange, presets, defaultMonth, id, la
           onMonthChange={setMonth}
           selected={value}
           onSelect={onChange}
+          disabled={disabled}
           classNames={{ months: cn('relative flex flex-col gap-4 sm:flex-row', getDefaultClassNames().months) }}
         />
         {!!presets?.length && (
@@ -117,7 +121,7 @@ export function DateRangePicker({ value, onChange, presets, defaultMonth, id, la
                 </Button>
               )
             })}
-            {days > 0 && <span className="text-muted-foreground ml-auto px-1 text-[11px] tabular-nums">{days} days</span>}
+            {days > 0 && <span className="text-muted-foreground ml-auto px-1 text-[11px] tabular-nums">{plural(days, 'day')}</span>}
           </div>
         )}
       </PopoverContent>

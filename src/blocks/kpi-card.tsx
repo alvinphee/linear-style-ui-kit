@@ -5,9 +5,8 @@ import { DeltaBadge, TONE_TEXT, deltaTone, type KpiDelta, type KpiTone } from '@
 import { Sparkline } from '@/components/sparkline'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
-// The badge and the sparkline are kit components; re-exported for blocks
-// and pages that took them from here.
-export { DeltaBadge, Sparkline, type KpiDelta, type KpiTone }
+// The delta and tone types are part of the card's props.
+export type { KpiDelta, KpiTone }
 
 // A KPI card: a headline number with its label and icon, and optionally the
 // change on the period before (a delta badge), a sparkline of the period,

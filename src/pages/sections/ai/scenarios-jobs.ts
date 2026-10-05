@@ -1,9 +1,10 @@
+import { plural } from '@/lib/text'
 import { CUSTOMERS, LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../../data'
 import {
   DATE_LABEL, byUrgency, csv, findJobIds, isHot, isOpen, jobDetail, jobRow, mdTable, quote, stepsSummary,
 } from './scenario-helpers'
-import { Builder, plural, type AgentContext, type BuilderContext } from './script'
-import type { ApprovalRequest, Change, EmailTone, JobPatch, Source } from './types'
+import { Builder, type AgentContext, type BuilderContext } from './script'
+import type { Change, EmailTone, JobPatch, Source, UpdateRequest } from './types'
 
 // Scenarios that read and change the shared job store: summarise, email,
 // update (with approval) and compare.
@@ -417,6 +418,7 @@ export function update(b: Builder, ctx: AgentContext) {
   const n = ids.length
   b.say(`I found **${plural(n, 'job')}** to update. Please check the ${changes.length === 1 ? 'change' : 'changes'} below.`)
   b.approval({
+    kind: 'jobs',
     title: `Allow the agent to update ${plural(n, 'job')}?`,
     summary: 'The change shows at once in the job list, the board and the issue page.',
     changes,
@@ -424,8 +426,8 @@ export function update(b: Builder, ctx: AgentContext) {
   })
 }
 
-export function continueAfterApproval(
-  request: ApprovalRequest,
+export function continueUpdate(
+  request: UpdateRequest,
   decision: 'approved' | 'denied',
   ctx: BuilderContext,
 ) {

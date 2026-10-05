@@ -1,6 +1,8 @@
 import type { RowData } from '@tanstack/react-table'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { downloadText } from '@/lib/download'
+import { plural } from '@/lib/text'
 import { isTableFiltered, type DataTableInstance } from './features'
 
 export type DataTableCsv<TData extends RowData> = {
@@ -11,25 +13,14 @@ export type DataTableCsv<TData extends RowData> = {
   values?: Partial<Record<string, (row: TData) => string>>
 }
 
-export const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-
 function csvCell(value: string) {
   return /[",\r\n]/.test(value) ? `"${value.replaceAll('"', '""')}"` : value
 }
 
+// Saves rows of cells as a CSV file, quoting cells that need it.
 export function downloadCsv(filename: string, lines: string[][]) {
   // The BOM makes Excel read the file as UTF-8.
-  const blob = new Blob(['﻿' + lines.map((l) => l.map(csvCell).join(',')).join('\r\n')], {
-    type: 'text/csv;charset=utf-8',
-  })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.append(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
+  downloadText(filename, '﻿' + lines.map((l) => l.map(csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8')
 }
 
 // Saves the rows that pass the filters, in the current order and across

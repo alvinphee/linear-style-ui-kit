@@ -2,20 +2,30 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowRight01Icon, StarIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { IconMark } from '@/components/mark'
+import { PageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
 import { SearchTrigger } from '@/components/search-trigger'
 import { Button } from '@/components/ui/button'
-import { formatDate, formatMoney, TODAY } from './format'
+import { Empty, EmptyDescription } from '@/components/ui/empty'
+import { formatMoney } from '@/lib/format'
+import { greeting, plural } from '@/lib/text'
+import { Briefing, LaunchpadAsk } from './assistant/LaunchpadAi'
+import { edition } from './edition'
+import { formatDate, TODAY } from './format'
 import { MODULES, pageFor } from './modules'
 import { go } from './route'
 import { useErp } from './store'
-import type { EntityId, Role, Row } from './types'
-import { Card, ModuleMark, StatusBadge } from './ui'
+import type { EntityId, Role } from './types'
+import { ApproveReject, StatusBadge, Worklist, type WorkItem } from './ui'
 
 // The launchpad: the first screen after sign-in. Your modules as tiles with
 // live numbers, what needs your approval, what you opened last, and quick
-// create. Everything respects the signed-in role.
+// create. Everything respects the signed-in role. The ERP + AI edition puts
+// a prompt box in place of the search box, and the AI briefing under it.
 
-type Approval = { entity: EntityId; row: Row; title: string; detail: string; approve: Record<string, string>; reject?: Record<string, string>; roles: Role[] }
+// A worklist row, and the roles that see it.
+type Attention = WorkItem & { roles: Role[] }
 
 const QUICK: { entity: EntityId; label: string; roles: Role[] }[] = [
   { entity: 'quotations', label: 'Quotation', roles: ['admin', 'sales', 'finance'] },
@@ -27,33 +37,35 @@ const QUICK: { entity: EntityId; label: string; roles: Role[] }[] = [
   { entity: 'leave', label: 'Leave request', roles: ['admin', 'hr'] },
 ]
 
-function greeting() {
-  const hour = new Date().getHours()
-  return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening'
-}
-
 export default function Launchpad() {
-  const { session, company, data, favourites, toggleFavourite, recent, openPeek, update, startCreate, setPaletteOpen } = useErp()
+  const { session, company, data, favourites, toggleFavourite, recent, openPeek, startCreate, setPaletteOpen } = useErp()
   const role = session?.role ?? 'admin'
   const modules = MODULES.filter((m) => m.id !== 'home' && m.roles.includes(role))
   const sorted = [...modules].sort((a, b) => Number(favourites.includes(b.id)) - Number(favourites.includes(a.id)))
 
-  const approvals: Approval[] = [
-    ...data.purchaseOrders.filter((r) => r.status === 'Awaiting approval').map((row) => ({
-      entity: 'purchaseOrders' as EntityId, row, title: `${row.id} · ${row.vendor}`, detail: `${formatMoney(Number(row.amount))} · requested by ${row.buyer}`,
-      approve: { status: 'Approved' }, reject: { status: 'Rejected' }, roles: ['admin', 'finance'] as Role[],
+  // Approvals first (purchase orders, requisitions, leave), then overdue invoices.
+  const approvals: Attention[] = [
+    ...data.purchaseOrders.filter((r) => r.status === 'Awaiting approval').map((row): Attention => ({
+      id: row.id, entity: 'purchaseOrders', title: `${row.id} · ${row.vendor}`, detail: `${formatMoney(Number(row.amount))} · requested by ${row.buyer}`,
+      aside: <StatusBadge status={String(row.status)} />, actions: <ApproveReject entity="purchaseOrders" id={row.id} />, roles: ['admin', 'finance'],
     })),
-    ...data.requisitions.filter((r) => r.status === 'Awaiting approval').map((row) => ({
-      entity: 'requisitions' as EntityId, row, title: `${row.id} · ${row.item}`, detail: `${row.quantity} units · est. ${formatMoney(Number(row.estimate))}`,
-      approve: { status: 'Approved' }, reject: { status: 'Rejected' }, roles: ['admin', 'operations', 'finance'] as Role[],
+    ...data.requisitions.filter((r) => r.status === 'Awaiting approval').map((row): Attention => ({
+      id: row.id, entity: 'requisitions', title: `${row.id} · ${row.item}`, detail: `${row.quantity} units · est. ${formatMoney(Number(row.estimate))}`,
+      aside: <StatusBadge status={String(row.status)} />, actions: <ApproveReject entity="requisitions" id={row.id} />, roles: ['admin', 'operations', 'finance'],
     })),
-    ...data.leave.filter((r) => r.status === 'Pending').map((row) => ({
-      entity: 'leave' as EntityId, row, title: `${row.employee} · ${row.type}`, detail: `${row.days} ${Number(row.days) === 1 ? 'day' : 'days'} from ${formatDate(String(row.from))}`,
-      approve: { status: 'Approved' }, reject: { status: 'Rejected' }, roles: ['admin', 'hr'] as Role[],
+    ...data.leave.filter((r) => r.status === 'Pending').map((row): Attention => ({
+      id: row.id, entity: 'leave', title: `${row.employee} · ${row.type}`, detail: `${plural(Number(row.days), 'day')} from ${formatDate(String(row.from))}`,
+      aside: <StatusBadge status={String(row.status)} />, actions: <ApproveReject entity="leave" id={row.id} />, roles: ['admin', 'hr'],
     })),
-    ...data.invoices.filter((r) => r.status === 'Overdue').map((row) => ({
-      entity: 'invoices' as EntityId, row, title: `${row.id} · ${row.customer}`, detail: `${formatMoney(Number(row.balance))} overdue since ${formatDate(String(row.due))}`,
-      approve: {}, roles: ['admin', 'finance', 'sales'] as Role[],
+    ...data.invoices.filter((r) => r.status === 'Overdue').map((row): Attention => ({
+      id: row.id, entity: 'invoices', title: `${row.id} · ${row.customer}`, detail: `${formatMoney(Number(row.balance))} overdue since ${formatDate(String(row.due))}`,
+      aside: <StatusBadge status={String(row.status)} />,
+      actions: (
+        <Button size="sm" variant="outline" onClick={() => toast.success(`Reminder sent for ${row.id}`, { description: `To ${row.customer}'s accounts team.` })}>
+          Send reminder
+        </Button>
+      ),
+      roles: ['admin', 'finance', 'sales'],
     })),
   ].filter((a) => a.roles.includes(role)).slice(0, 7)
 
@@ -61,13 +73,13 @@ export default function Launchpad() {
 
   return (
     <div className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-6 @2xl:px-6 @2xl:py-8">
-      <header className="grid gap-4">
-        <div className="grid gap-1">
-          <h1 className="text-xl font-semibold tracking-tight">{greeting()}, {session?.name.split(' ')[0]}</h1>
-          <p className="text-muted-foreground text-sm">{today} · {company?.name}</p>
-        </div>
-        <SearchTrigger size="lg" label="Search records, pages and actions" onClick={() => setPaletteOpen(true)} className="max-w-2xl" />
-      </header>
+      <PageHeader size="lg" title={`${greeting()}, ${session?.name.split(' ')[0]}`} description={`${today} · ${company?.name}`} className="gap-4">
+        {edition().assistant
+          ? <LaunchpadAsk />
+          : <SearchTrigger size="lg" label="Search records, pages and actions" onClick={() => setPaletteOpen(true)} className="max-w-2xl" />}
+      </PageHeader>
+
+      {edition().assistant && <Briefing />}
 
       <section aria-labelledby="lp-modules" className="grid gap-3">
         <div className="flex items-baseline justify-between">
@@ -80,7 +92,7 @@ export default function Launchpad() {
             return (
               <article key={m.id} className="bg-card hover:border-foreground/15 group relative grid min-w-0 gap-3 rounded-lg border p-3.5 transition-colors">
                 <div className="flex items-start gap-3">
-                  <ModuleMark icon={m.icon} colour={m.colour} size="lg" />
+                  <IconMark icon={m.icon} colour={m.colour} size="lg" />
                   <div className="grid min-w-0 flex-1 gap-0.5">
                     <h3 className="text-[13px] font-semibold">
                       {/* The whole tile is the link; the star sits above it. */}
@@ -121,55 +133,17 @@ export default function Launchpad() {
       </section>
 
       <div className="grid grid-cols-1 gap-3 @4xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Card
+        <Panel
+          as="section"
           title="Needs your attention"
           action={<span className="text-muted-foreground text-[11px] tabular-nums">{approvals.length}</span>}
           bodyClassName="p-0"
         >
-          {approvals.length ? (
-            <ul className="divide-y">
-              {approvals.map((a) => {
-                const status = String(a.row.status)
-                return (
-                  <li key={a.row.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
-                    <button type="button" onClick={() => openPeek(a.entity, a.row.id)} className="focus-visible:ring-ring/40 grid min-w-0 flex-1 gap-0.5 rounded text-left outline-none focus-visible:ring-2">
-                      <span className="truncate text-xs font-medium">{a.title}</span>
-                      <span className="text-muted-foreground truncate text-[11px]">{a.detail}</span>
-                    </button>
-                    <StatusBadge status={status} />
-                    <div className="flex gap-1">
-                      {a.entity === 'invoices' ? (
-                        <Button size="sm" variant="outline" onClick={() => toast.success(`Reminder sent for ${a.row.id}`, { description: `To ${a.row.customer}'s accounts team.` })}>
-                          Send reminder
-                        </Button>
-                      ) : (
-                        <>
-                          <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => {
-                            update(a.entity, [a.row.id], a.reject ?? {})
-                            toast(`Rejected ${a.row.id}`)
-                          }}>
-                            Reject
-                          </Button>
-                          <Button size="sm" onClick={() => {
-                            update(a.entity, [a.row.id], a.approve)
-                            toast.success(`Approved ${a.row.id}`)
-                          }}>
-                            Approve
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </li>
-                )
-              })}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground px-3.5 py-8 text-center text-xs">You're all caught up.</p>
-          )}
-        </Card>
+          <Worklist items={approvals} empty="You're all caught up." />
+        </Panel>
 
         <div className="grid min-w-0 content-start gap-3">
-          <Card title="Create">
+          <Panel as="section" title="Create">
             <div className="flex flex-wrap gap-1.5">
               {QUICK.filter((q) => q.roles.includes(role)).map((q) => (
                 <Button key={q.entity} variant="outline" size="sm" onClick={() => startCreate(q.entity)}>
@@ -177,9 +151,9 @@ export default function Launchpad() {
                 </Button>
               ))}
             </div>
-          </Card>
+          </Panel>
 
-          <Card title="Recently opened" bodyClassName="p-0">
+          <Panel as="section" title="Recently opened" bodyClassName="p-0">
             {recent.length ? (
               <ul className="py-1">
                 {recent.map((r) => {
@@ -194,7 +168,7 @@ export default function Launchpad() {
                         }}
                         className="hover:bg-accent/60 focus-visible:bg-accent flex w-full min-w-0 items-center gap-2.5 px-3.5 py-1.5 text-left text-xs outline-none"
                       >
-                        {home && <ModuleMark icon={home.module.icon} colour={home.module.colour} size="sm" />}
+                        {home && <IconMark icon={home.module.icon} colour={home.module.colour} size="sm" />}
                         <span className="text-muted-foreground shrink-0 font-mono text-[11px]">{r.id}</span>
                         <span className="min-w-0 flex-1 truncate">{r.label}</span>
                         <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3 shrink-0" />
@@ -204,9 +178,11 @@ export default function Launchpad() {
                 })}
               </ul>
             ) : (
-              <p className="text-muted-foreground px-3.5 py-6 text-center text-xs">Records you open show up here.</p>
+              <Empty className="px-3.5 py-6">
+                <EmptyDescription>Records you open show up here.</EmptyDescription>
+              </Empty>
             )}
-          </Card>
+          </Panel>
         </div>
       </div>
     </div>

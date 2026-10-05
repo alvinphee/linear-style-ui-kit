@@ -2,8 +2,8 @@ import { LABELS, PEOPLE, PRIORITY, type Job, type Priority } from '../../data'
 
 // Scripted triage: keyword and "similar job" rules over the shared store.
 
-export type Confidence = 'High' | 'Medium'
-export type TriageField = 'label' | 'assignee' | 'priority'
+type Confidence = 'High' | 'Medium'
+type TriageField = 'label' | 'assignee' | 'priority'
 
 export type Suggestion = {
   key: string

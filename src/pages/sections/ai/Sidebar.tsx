@@ -2,12 +2,14 @@ import { memo, useMemo, type ReactNode, type RefObject } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { DashboardSquare01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { AccountMenu } from '@/blocks/account-menu'
 import {
-  AccountMenu, ChatHistory, ChatMenuItems as ChatMenu, CreditsMeter, DROPDOWN_MENU_KIT,
-  DeleteChatDialog as DeleteChatConfirm, type ChatMenuKit, type HistoryChat,
+  ChatHistory, ChatMenuItems as ChatMenu, DeleteChatDialog as DeleteChatConfirm, type HistoryChat,
 } from '@/blocks/ai/chat-history'
+import type { MenuKit } from '@/components/menu-kit'
+import { Shortcut } from '@/components/shortcut'
+import { UsageMeter } from '@/components/usage-meter'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
-import { Kbd, KbdGroup } from '@/components/ui/kbd'
 import { useActions } from './context'
 import { USER, now } from './data'
 import type { Chat, Project, View } from './types'
@@ -15,15 +17,11 @@ import type { Chat, Project, View } from './types'
 // The workspace's sidebar: the chat-history block wired to the workspace's
 // actions, with its credits and account menu in the footer.
 
-export { RenameInput } from '@/blocks/ai/chat-history'
-
 export type ChatSummary = Pick<Chat, 'id' | 'title' | 'projectId' | 'pinned' | 'updatedAt'>
-
-export const DROPDOWN_KIT = DROPDOWN_MENU_KIT
 
 // The same actions in the hover menu, the right-click menu and the chat header.
 export function ChatMenuItems({ kit, chat, projects, onRename, onDelete, extra }: {
-  kit: ChatMenuKit
+  kit: MenuKit
   chat: ChatSummary
   projects: Project[]
   onRename: () => void
@@ -73,13 +71,7 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
       activeProjectId={view.kind === 'project' ? view.projectId : null}
       now={now}
       newChatRef={newChatRef}
-      newChatShortcut={(
-        <KbdGroup>
-          <Kbd>Ctrl</Kbd>
-          <Kbd>Shift</Kbd>
-          <Kbd>O</Kbd>
-        </KbdGroup>
-      )}
+      newChatShortcut={<Shortcut keys={['mod', 'shift', 'O']} />}
       onNewChat={() => actions.newChat(null)}
       onOpenChat={actions.openChat}
       onOpenProject={actions.openProject}
@@ -93,7 +85,12 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
       onClose={onClose}
       footer={(
         <>
-          <CreditsMeter value={credits} note="Resets 1 Oct" />
+          <UsageMeter
+            value={credits}
+            label={`${Math.round(credits)}% of monthly credits`}
+            count="Resets 1 Oct"
+            className="px-1.5 pt-1"
+          />
           <AccountMenu name={USER.name} detail={USER.plan} label={USER.email}>
             <DropdownMenuItem onSelect={actions.openSettings}>
               <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings

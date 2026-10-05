@@ -6,21 +6,19 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
-  AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { UserAvatar } from '@/components/person'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { formatNumber } from '@/lib/format'
 import { useTheme } from '@/lib/theme'
-import { UserAvatar } from '@/components/person'
 import { useActions } from './context'
 import { MODELS, USER } from './data'
 import type { ModelId } from './types'
@@ -125,7 +123,8 @@ export function SettingsDialog({ open, onOpenChange, model, onExportAll }: {
 
 type Section = { prefs: Prefs; set: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void }
 
-// One setting: the label and hint on the left, the control on the right.
+// One setting, as a shadcn Field: the label and hint on the left and the
+// control on the right (wrapping under them when narrow), or `stacked`.
 function Row({ label, hint, htmlFor, children, stacked }: {
   label: string
   hint?: string
@@ -134,13 +133,19 @@ function Row({ label, hint, htmlFor, children, stacked }: {
   stacked?: boolean
 }) {
   return (
-    <div className={cn('flex gap-x-4 gap-y-2 border-b py-3 last:border-b-0', stacked ? 'flex-col' : 'flex-wrap items-center justify-between')}>
-      <div className="grid min-w-0 gap-0.5">
-        <Label htmlFor={htmlFor} className="font-normal">{label}</Label>
-        {hint && <p className="text-muted-foreground text-[11px] leading-4">{hint}</p>}
-      </div>
+    <Field
+      orientation={stacked ? 'vertical' : 'horizontal'}
+      className={cn(
+        'gap-x-4 border-b py-3 last:border-b-0',
+        !stacked && 'flex-wrap justify-between has-[>[data-slot=field-content]]:items-center',
+      )}
+    >
+      <FieldContent className="min-w-0 flex-initial">
+        <FieldLabel htmlFor={htmlFor} className="font-normal">{label}</FieldLabel>
+        {hint && <FieldDescription className="text-[11px] leading-4">{hint}</FieldDescription>}
+      </FieldContent>
       {children}
-    </div>
+    </Field>
   )
 }
 
@@ -196,7 +201,7 @@ function Personal({ prefs, set }: Section) {
           aria-describedby={`${id}-ins-count`}
         />
         <span id={`${id}-ins-count`} className={cn('text-muted-foreground justify-self-end text-[11px] tabular-nums', left < 100 && 'text-destructive')}>
-          {left.toLocaleString()} characters left
+          {formatNumber(left)} characters left
         </span>
       </Row>
       <Row label="Memory" hint="Let the assistant remember useful details across chats." htmlFor={`${id}-mem`}>
@@ -253,23 +258,17 @@ function Data({ prefs, set, onExportAll, onReset }: Section & { onExportAll: () 
         </Button>
       </Row>
       <Row label="Reset demo chats" hint="Bring back the sample chats and projects. Your own chats are removed.">
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
-              <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} data-icon="inline-start" /> Reset
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Reset the demo chats?</AlertDialogTitle>
-              <AlertDialogDescription>Chats you started are deleted and the sample chats come back. This can't be undone.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction variant="destructive" onClick={actions.resetDemo}>Reset chats</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirm
+          icon={null}
+          title="Reset the demo chats?"
+          description="Chats you started are deleted and the sample chats come back. This can't be undone."
+          confirmLabel="Reset chats"
+          onConfirm={actions.resetDemo}
+        >
+          <Button variant="destructive" size="sm">
+            <HugeiconsIcon icon={RefreshIcon} strokeWidth={2} data-icon="inline-start" /> Reset
+          </Button>
+        </DeleteConfirm>
       </Row>
       <Row label="Reset settings" hint="Put every setting here back to its default.">
         <Button variant="ghost" size="sm" onClick={() => {

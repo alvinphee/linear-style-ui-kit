@@ -1,11 +1,11 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ComputerIcon, Copy01Icon, Moon02Icon, RefreshIcon, Sun03Icon, Tick02Icon } from '@hugeicons/core-free-icons'
-import { toast } from 'sonner'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Slider } from '@/components/ui/slider'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { copyText } from '@/lib/clipboard'
 import { PRESETS, paletteCss, useTheme, type Palette, type Preset, type Theme } from '@/lib/theme'
 import { Panel, Section } from './shared'
 
@@ -62,16 +62,16 @@ function previewColours({ theme, palette: p }: Preset) {
 export function ThemeControls({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme, palette, setPalette, reset } = useTheme()
 
-  async function copyCss() {
+  function copyCss() {
     const lines = [':root {', ...paletteCss(palette).map((l) => `  ${l}`), '}']
     if (palette.mono) lines.push('/* plus the data-mono attribute on <html> */')
     const css = `/* ${theme} mode */\n${lines.join('\n')}`
-    try {
-      await navigator.clipboard.writeText(css)
-      toast.success('Theme copied as CSS', { description: 'Five variables. Paste them over the ones in styles.css.' })
-    } catch {
-      toast(css)
-    }
+    // When the clipboard is blocked, the toast shows the CSS to copy by hand.
+    return copyText(css, {
+      success: 'Theme copied as CSS',
+      description: 'Five variables. Paste them over the ones in styles.css.',
+      errorDescription: css,
+    })
   }
 
   return (

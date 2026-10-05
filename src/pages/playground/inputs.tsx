@@ -8,6 +8,11 @@ import {
 } from '@hugeicons/core-free-icons'
 import { REGEXP_ONLY_DIGITS, REGEXP_ONLY_DIGITS_AND_CHARS } from 'input-otp'
 import { toast } from 'sonner'
+import { cn } from 'cn'
+import { CommentBox } from '@/components/comment-box'
+import { IconAction } from '@/components/icon-action'
+import { SearchField } from '@/components/search-field'
+import { Shortcut } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup, ButtonGroupSeparator, ButtonGroupText } from '@/components/ui/button-group'
 import { Input } from '@/components/ui/input'
@@ -20,7 +25,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Demos, Gallery, Playground, Variants, bool, imports, jsx, str, type Values } from './Playground'
+import { copyText, useCopied } from '@/lib/clipboard'
+import { Demos, Gallery, Playground, Variants, bool, component, element, imports, jsx, lit, str, type Values } from './Playground'
 
 const orDefault = (value: string) => (value === 'default' ? undefined : value)
 const list = (...names: (string | false)[]) => names.filter((n): n is string => Boolean(n))
@@ -556,16 +562,11 @@ function PasswordGroup() {
 
 function CopyGroup() {
   const link = 'https://example.com/invite/8f2k'
-  const [copied, setCopied] = useState(false)
+  const [copied, flagCopied] = useCopied()
 
+  // The tick says it worked, so only a failure toasts.
   async function copy() {
-    try {
-      await navigator.clipboard.writeText(link)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    } catch {
-      toast.error('Copy failed', { description: 'Your browser blocked the clipboard.' })
-    }
+    if (await copyText(link, { success: false })) flagCopied()
   }
 
   return (
@@ -605,6 +606,77 @@ function CommentComposer() {
       </InputGroupAddon>
     </InputGroup>
   )
+}
+
+/* Search field */
+
+// The hint shown while the field is empty: the key that focuses it.
+const SF_ENDS = {
+  none: undefined,
+  '/': ['/'],
+  'mod K': ['mod', 'K'],
+} satisfies Record<string, string[] | undefined>
+const SF_WIDTHS = ['w-48', 'w-60', 'w-80'] as const
+
+type SearchEnd = keyof typeof SF_ENDS
+
+function SearchFieldDemo({ initial = '', placeholder = 'Search issues…', end, className = 'w-60' }: {
+  initial?: string
+  placeholder?: string
+  end?: string[]
+  className?: string
+}) {
+  const [query, setQuery] = useState(initial)
+  return (
+    <SearchField
+      value={query}
+      onChange={setQuery}
+      placeholder={placeholder}
+      end={end && <Shortcut keys={end} />}
+      className={cn('max-w-full', className)}
+    />
+  )
+}
+
+function searchFieldCode(v: Values) {
+  const end = SF_ENDS[str(v, 'end') as SearchEnd]
+  const head = imports({
+    react: ['useState'],
+    '@/components/search-field': ['SearchField'],
+    '@/components/shortcut': end ? ['Shortcut'] : [],
+  })
+  const body = element('SearchField', [
+    'value={query}',
+    'onChange={setQuery}',
+    `placeholder="${str(v, 'placeholder') || 'Search…'}"`,
+    end && `end={<Shortcut keys={${lit(end)}} />}`,
+    `className="${str(v, 'width')}"`,
+  ])
+  return `${head}\n\n${component('IssueSearch', ["const [query, setQuery] = useState('')"], body)}`
+}
+
+/* Comment box */
+
+const CB_LABELS = ['Comment', 'Reply', 'Send'] as const
+
+const postComment = (text: string) => toast.success('Comment posted', { description: `Demo only. “${text}”` })
+const attachFile = () => toast('Attach a file', { description: 'Demo only. This would open the file picker.' })
+
+function commentBoxCode(v: Values) {
+  const actions = bool(v, 'actions')
+  const placeholder = str(v, 'placeholder')
+  const head = imports({
+    '@hugeicons/core-free-icons': actions ? ['Attachment01Icon'] : [],
+    '@/components/comment-box': ['CommentBox'],
+    '@/components/icon-action': actions ? ['IconAction'] : [],
+  })
+  const body = element('CommentBox', [
+    'onComment={(text) => addComment(text)}',
+    placeholder && placeholder !== 'Leave a comment…' && `placeholder="${placeholder}"`,
+    str(v, 'label') !== 'Comment' && `label="${str(v, 'label')}"`,
+    actions && 'actions={<IconAction label="Attach a file" icon={Attachment01Icon} onClick={attach} />}',
+  ])
+  return `${head}\n\n${body}`
 }
 
 export default function InputsDemos() {
@@ -765,6 +837,64 @@ export default function InputsDemos() {
           },
           { label: 'textarea with toolbar', node: <CommentComposer /> },
         ]}
+      />
+
+      <Playground
+        title="SearchField"
+        description="Type to see the clear button take the hint's place"
+        controls={[
+          { kind: 'text', name: 'placeholder', label: 'Placeholder', initial: 'Search issues…' },
+          { kind: 'select', name: 'end', label: 'Hint (end)', options: Object.keys(SF_ENDS), initial: '/' },
+          { kind: 'select', name: 'width', label: 'Width (className)', options: SF_WIDTHS, initial: 'w-60' },
+        ]}
+        render={(v) => (
+          <SearchFieldDemo
+            placeholder={str(v, 'placeholder') || 'Search…'}
+            end={SF_ENDS[str(v, 'end') as SearchEnd]}
+            className={str(v, 'width')}
+          />
+        )}
+        code={searchFieldCode}
+      />
+
+      <Gallery
+        title="SearchField in use"
+        note="From @/components/search-field"
+        items={[
+          { label: 'empty, with a hint', node: <SearchFieldDemo end={['/']} /> },
+          { label: 'filled: clear button', node: <SearchFieldDemo initial="billing" end={['/']} /> },
+          {
+            label: 'h-8, in a toolbar',
+            node: (
+              <div className="flex items-center gap-1.5">
+                <SearchFieldDemo placeholder="Search customers…" className="h-8 w-52" />
+                <Button variant="outline" size="sm">Filter</Button>
+              </div>
+            ),
+          },
+          { label: 'narrow', node: <SearchFieldDemo placeholder="Search members by name or email…" className="w-44" /> },
+        ]}
+      />
+
+      <Playground
+        title="CommentBox"
+        description="Grows as you type. Ctrl or ⌘ + Enter sends."
+        controls={[
+          { kind: 'text', name: 'placeholder', label: 'Placeholder', initial: 'Leave a comment…' },
+          { kind: 'select', name: 'label', label: 'Label (button and name)', options: CB_LABELS, initial: 'Comment' },
+          { kind: 'switch', name: 'actions', label: 'Attach action', initial: true },
+        ]}
+        render={(v) => (
+          <div className="w-full max-w-md">
+            <CommentBox
+              onComment={postComment}
+              placeholder={str(v, 'placeholder') || undefined}
+              label={str(v, 'label')}
+              actions={bool(v, 'actions') && <IconAction label="Attach a file" icon={Attachment01Icon} onClick={attachFile} />}
+            />
+          </div>
+        )}
+        code={commentBoxCode}
       />
     </Demos>
   )

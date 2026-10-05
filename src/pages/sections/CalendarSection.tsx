@@ -10,6 +10,8 @@ import {
 } from 'date-fns'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { LabelDot } from '@/components/label-dot'
+import { UserAvatar } from '@/components/person'
 import { AvatarGroup } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { ButtonGroup } from '@/components/ui/button-group'
@@ -22,8 +24,9 @@ import { Input } from '@/components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { formatDateRange, formatShortDate } from '@/lib/format'
+import { plural } from '@/lib/text'
 import { Section } from './shared'
-import { UserAvatar } from '@/components/person'
 
 type Colour = 'blue' | 'violet' | 'green' | 'amber' | 'rose'
 
@@ -184,7 +187,7 @@ export default function CalendarSection() {
             <h3 className="text-sm font-semibold tracking-tight">{format(cursor, 'MMMM yyyy')}</h3>
             {view === 'week' && (
               <span className="text-muted-foreground text-xs tabular-nums">
-                {format(weekStart, 'd MMM')} – {format(weekEnd, 'd MMM')}
+                {formatDateRange(weekStart, weekEnd)}
               </span>
             )}
           </div>
@@ -309,10 +312,7 @@ function EventRow({ event, onDelete, compact }: { event: CalEvent; onDelete: (e:
           compact ? 'h-5 text-[11px]' : 'h-7 gap-2 px-1.5 text-xs',
         )}
       >
-        <span
-          className={cn('shrink-0 rounded-full', compact ? 'size-1.5' : 'size-2')}
-          style={{ backgroundColor: COLOURS[event.colour].value }}
-        />
+        <LabelDot colour={COLOURS[event.colour].value} className={compact ? 'size-1.5' : undefined} />
         <span className={cn('text-muted-foreground shrink-0 tabular-nums', compact && 'hidden md:inline')}>
           {compact ? clock(event.start) : timeRange(event)}
         </span>
@@ -356,7 +356,7 @@ function MonthView({ cursor, byDay, selected, onSelect, onOpenWeek, onDelete }: 
           const isSelected = isSameDay(day, selected)
           const lastRow = i >= days.length - 7
           const overflow = dayEvents.length - MAX_CHIPS
-          const count = `${dayEvents.length} ${dayEvents.length === 1 ? 'event' : 'events'}`
+          const count = plural(dayEvents.length, 'event')
 
           return (
             <div
@@ -382,7 +382,7 @@ function MonthView({ cursor, byDay, selected, onSelect, onOpenWeek, onDelete }: 
                 <DayNumber day={day} today={today} inMonth={inMonth} />
                 <span className="flex gap-0.5" aria-hidden>
                   {dayEvents.slice(0, MAX_CHIPS).map((e) => (
-                    <span key={e.id} className="size-1 rounded-full" style={{ backgroundColor: COLOURS[e.colour].value }} />
+                    <LabelDot key={e.id} colour={COLOURS[e.colour].value} className="size-1" />
                   ))}
                 </span>
               </button>
@@ -447,7 +447,7 @@ function DayNumber({ day, today, inMonth, showMonth }: { day: Date; today: boole
         today ? 'bg-brand text-primary-foreground' : !inMonth && 'text-muted-foreground',
       )}
     >
-      {showMonth && first ? format(day, 'd MMM') : day.getDate()}
+      {showMonth && first ? formatShortDate(day) : day.getDate()}
     </span>
   )
 }
@@ -716,7 +716,7 @@ function NewEventForm({ defaultDate, onCreate }: {
                 aria-label={COLOURS[c].label}
                 className="data-[state=on]:ring-foreground/25 data-[state=on]:ring-1"
               >
-                <span className="size-3 rounded-full" style={{ backgroundColor: COLOURS[c].value }} />
+                <LabelDot colour={COLOURS[c].value} className="size-3" />
               </ToggleGroupItem>
             ))}
           </ToggleGroup>

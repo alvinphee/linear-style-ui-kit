@@ -39,48 +39,82 @@ linear-style-ui-kit/
 ├── CLAUDE.md
 ├── components.json            shadcn settings (style, icon library, paths)
 ├── docs/
+│   ├── architecture.md        atomic design: the levels, where each part goes
 │   ├── agent-brief.md         the rules given to each helper
-│   └── findings.md            what we have learned so far
+│   ├── refactor/              notes from the one-home-per-part refactor
+│   ├── findings.md            what we have learned so far
+│   └── glossary.md            the industry terms we use
 └── src/
     ├── main.tsx
     ├── App.tsx                theme, tooltip and toast providers
     ├── styles.css             Tailwind + the Linear-style colour tokens
     ├── blocks/                reusable blocks: props in, no sample data
     │   ├── ai/                prompt box, chat history, artifact panel, thinking
-    │   │                      trail, chat message, markdown (the AI workspace,
-    │   │                      AI in the product and the ERP copilot share them)
+    │   │                      trail, chat message, markdown, chat thread (with
+    │   │                      the welcome screen and prompt starters), AI
+    │   │                      summary card (the AI workspace, AI in the product
+    │   │                      and both ERP templates share them)
+    │   ├── account-menu.tsx   avatar and name at a sidebar's foot, with its menu
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
-    │   ├── filter-bar/        filter menu, filter chips, saved views, search
+    │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
+    │   ├── filter-bar/        filter menu, filter chips, saved views
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
     │   ├── form-dialog.tsx    field-driven dialog, quick create, property pills
-    │   ├── kanban-board.tsx   columns, drag and drop, "Move to…" menu
+    │   ├── grouped-list.tsx   list in folding groups, row shell, selection
+    │   ├── kanban-board.tsx   columns, drag and drop, "Move to…" menu, card shell
     │   ├── kpi-card.tsx       KPI card, delta badge, sparkline, grid
+    │   ├── markdown.tsx       Markdown renderer (chat replies, artifacts, previews)
     │   ├── notifications-menu.tsx  the bell's popover
     │   ├── period-picker.tsx  period switch, compare, date range picker
-    │   └── record-sheet.tsx   side panel (peek) for one record
+    │   ├── record-sheet.tsx   side panel (peek) for one record
+    │   ├── sign-in.tsx        sign-in page parts: form, SSO, aside, footer
+    │   └── workspace-switcher.tsx  workspace or company switcher
     ├── components/
     │   ├── ui/                shadcn components (ours to edit)
-    │   ├── person.tsx         UserAvatar (initials), Person (avatar and name)
+    │   ├── person.tsx         UserAvatar (initials), Person (avatar and name), NoAssignee
     │   ├── status-badge.tsx   status pill with a tone and a dot
+    │   ├── status-icon.tsx    workflow status icon (backlog, todo, in progress, done…)
+    │   ├── priority-icon.tsx  priority icon (no priority, low… urgent)
+    │   ├── label-dot.tsx      a label's colour dot
     │   ├── mark.tsx           LetterMark, IconMark
     │   ├── delta-badge.tsx    the change on the period before
     │   ├── sparkline.tsx      tiny line chart
     │   ├── page-header.tsx    title, description, actions
     │   ├── panel.tsx          the kit's titled card
-    │   ├── nav-item.tsx       sidebar row, NavHeading
+    │   ├── nav-item.tsx       sidebar row (also rail), NavHeading, NavGroup
     │   ├── search-trigger.tsx button that looks like search and opens the palette
     │   ├── shortcut.tsx       keyboard keys, ⌘ or Ctrl by platform
     │   ├── ai-label.tsx       "AI" tag for AI-made content
     │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
-    │   ├── icon-action.tsx    icon button with a tooltip (copy, retry, close…)
-    │   └── file-chip.tsx      attached file: icon, name, size, remove
-    ├── lib/
+    │   ├── icon-action.tsx    icon button with a tooltip and shortcut (copy, retry…)
+    │   ├── file-chip.tsx      attached file: icon, name, size, remove
+    │   ├── label-dot.tsx      LabelDot, LabelChip
+    │   ├── mention.tsx        @mention pill
+    │   ├── progress-ring.tsx  circular progress
+    │   ├── chart-legend.tsx   LegendLine, LegendRow
+    │   ├── bar-list.tsx       ranked bars (top customers, spend)
+    │   ├── view-switch.tsx    list / board toggle
+    │   ├── search-field.tsx   search box with clear and a shortcut hint
+    │   ├── delete-confirm.tsx confirm before deleting
+    │   ├── comment-box.tsx    write a comment, Ctrl/⌘ Enter to send
+    │   ├── usage-meter.tsx    allowance used, with warning colours
+    │   └── menu-kit.tsx       one menu's items as dropdown or context menu
+    ├── lib/                   plain functions and hooks, no UI
     │   ├── router.ts          hash routes: #/buttons, #/templates/erp
     │   ├── theme.tsx          light / dark / system switch
+    │   ├── clipboard.ts       copyText, useCopied
+    │   ├── download.ts        downloadText
+    │   ├── format.ts          numbers, money, dates, times, sizes, durations
+    │   ├── text.ts            plural, slug, greeting
+    │   ├── keyboard.ts        isTyping (when single-key shortcuts must not fire)
+    │   ├── random.ts          seededRandom for sample data
+    │   ├── use-timers.ts, use-svg-id.ts
     │   └── utils.ts
     ├── templates/             whole apps built from the kit (level 5)
     │   ├── ai-chat/AiChatApp.tsx   the AI workspace filling the window
-    │   └── erp/               the ERP app (see "The ERP template")
+    │   ├── erp/               the ERP app (see "The ERP template")
+    │   │   └── assistant/     Ask AI: answers, shared chats, the Assistant page
+    │   └── erp-ai/ErpAiApp.tsx     the ERP + AI edition of the same app
     └── pages/
         ├── KitchenSink.tsx      page shell, one section per page, header, shortcuts, Ctrl+K menu
         ├── playground/          a page's live demos, one file per page id
@@ -89,8 +123,9 @@ linear-style-ui-kit/
         ├── ShowcaseSidebar.tsx  workspace switcher, folding nav groups
         ├── ShortcutsSheet.tsx   the "?" keyboard shortcuts sheet
         ├── nav.ts               nav groups, section ids, G-then shortcuts
-        ├── data.ts              icon groups, statuses, labels, sample jobs
+        ├── data.ts              icon groups, statuses, labels, sample jobs, job constants
         ├── jobs-store.tsx       shared job state (list, board, issue page)
+        ├── job-options.tsx      the jobs' status, priority, assignee and label options
         └── sections/
             ├── shared.tsx            Section and Panel wrappers
             ├── ThemeSection.tsx      presets and the theme mixer
@@ -98,7 +133,7 @@ linear-style-ui-kit/
             ├── FormsSection.tsx
             ├── FormModalsSection.tsx quick create, validated dialogs, wizard
             ├── InputsSection.tsx     button groups, OTP, dates, combobox, tags
-            ├── StatusSection.tsx     also exports StatusIcon, PriorityIcon, Initials
+            ├── StatusSection.tsx
             ├── DisplaySection.tsx    spinners, empty states, alerts, accordion
             ├── ChartsSection.tsx     area, bars, rings, cycle burn-down
             ├── OverlaysSection.tsx
@@ -106,6 +141,7 @@ linear-style-ui-kit/
             ├── NavigationSection.tsx    breadcrumb, pagination, menus, panes
             ├── ContentSection.tsx    file upload, Markdown editor, reorder list
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
+            ├── AiComponentsSection.tsx  AI label, thinking indicator, icon actions, file chips
             ├── AppShellSection.tsx   sidebar and header variations, mixed live
             ├── app-shell/             its grouped list and board, Display and notifications menus
             ├── JobListSection.tsx    grouped list with bulk select
@@ -133,8 +169,9 @@ One page per section, like Storybook. The sidebar follows the kit's five
 levels, smallest first (definitions in `docs/glossary.md`):
 - **Get started:** All components (every component on one long page, the
   quick look) and Theme (the design tokens)
-- **Components:** single building blocks (button, input, badge…), restyled,
-  each with its playground and variants
+- **Components:** single building blocks (button, input, badge…, and the
+  small AI parts), restyled, each with its playground and variants. Every
+  part a block uses has its own demo here.
 - **Blocks:** whole screens built from components, as shadcn calls them
   (list, board, issue detail, inbox, roadmap, settings, onboarding, sign-in,
   the AI workspace, AI in the product…)
@@ -161,6 +198,7 @@ share the same stores, so a chat started in the kit shows up in the AI chat
 template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
 - `#/templates/ai-chat`: the AI workspace filling the window, with Settings.
 - `#/templates/erp`: the ERP app, below.
+- `#/templates/erp-ai`: the same ERP with the AI assistant built in, below.
 
 ## The ERP template
 A multi-module ERP front end with made-up data, in `src/templates/erp/`.
@@ -188,6 +226,26 @@ session, company and starred modules are kept in the browser.
   sidebar.
 - Routes: `#/templates/erp/<module>/<page>`, for example
   `#/templates/erp/accounting/invoices`.
+- Ask AI (`Copilot.tsx`, with its answers, chats and views in `assistant/`)
+  answers from the live records: about 25 kinds of question, scripted, no
+  model. Record numbers in answers open the record's side panel.
+
+### Two editions, one codebase
+The ERP + AI template (`#/templates/erp-ai`, `src/templates/erp-ai/`) is
+the same app with `edition: WITH_AI` (`edition.ts`). Do not copy ERP code
+into it: switch features on with `edition().assistant` instead. It adds:
+- Launchpad: a prompt box (in place of the search box) with suggested
+  questions, and the AI briefing (an AI summary card of what needs you
+  today, marked stale when records change).
+- Home › Assistant: the full-page chat. Its chat history fills the app
+  sidebar under the Home pages (a page's `sidebar`), so there is still one
+  sidebar. The breadcrumb ends with the chat's title.
+- One set of chats (`assistant/store.tsx`) for the Assistant, the Ask AI
+  side panel ("Open full page" moves the chat across) and the launchpad.
+  A new session starts with a few chats asked of today's data.
+- Ctrl+K: type a question and pick "Ask AI". Ctrl+J on the Assistant goes
+  to its prompt box.
+- Account menu › Start page: land on the launchpad or the Assistant.
 
 Shortcuts: `Ctrl+K` command menu, `?` shortcut list, `C` new job, and
 `G` then a letter to jump (`G B` board, `G I` inbox, `G S` settings…).
@@ -236,6 +294,8 @@ Linear name, logo or assets in the app.
   ```
 
 ## Rules
+- Read `docs/architecture.md` before adding or moving a part: it says which
+  level and folder each part belongs to, and the one-home-per-part rule.
 - Build each level only from the level below (atomic design, see the
   glossary). A small part used in more than one place is a component in
   `src/components/` (shown on its kit page with a playground); a bigger

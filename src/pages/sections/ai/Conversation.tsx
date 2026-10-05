@@ -1,26 +1,25 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { memo, useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  ArrowDown01Icon, ArrowDown02Icon, Download01Icon, Folder01Icon, MoreHorizontalIcon, PanelRightOpenIcon,
-  Share08Icon, SparklesIcon,
-} from '@hugeicons/core-free-icons'
-import { toast } from 'sonner'
+import { Download01Icon, Folder01Icon, MoreHorizontalIcon, PanelRightOpenIcon, Share08Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
-import { Badge } from '@/components/ui/badge'
+import { RenameInput } from '@/blocks/ai/chat-history'
+import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat-thread'
+import { ModelPicker, type PromptModel } from '@/blocks/ai/prompt-box'
+import { IconAction } from '@/components/icon-action'
+import { DROPDOWN_MENU_KIT } from '@/components/menu-kit'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { copyText } from '@/lib/clipboard'
+import { greeting } from '@/lib/text'
 import { useActions } from './context'
-import { DEFAULT_MODEL, MODELS, STARTERS, USER, greeting, modelById } from './data'
-import { copyToClipboard } from './helpers'
-import { AssistantMessageView, IconAction, UserMessageView } from './Message'
+import { DEFAULT_MODEL, MODELS, STARTERS, USER } from './data'
+import { AssistantMessageView, UserMessageView } from './Message'
 import { PromptBox } from './PromptBox'
-import { ChatMenuItems, DROPDOWN_KIT, DeleteChatDialog, RenameInput } from './Sidebar'
+import { ChatMenuItems, DeleteChatDialog } from './Sidebar'
 import type { Chat, ModelId, Modes, Project } from './types'
 
+// Speed or quality as three short bars, in the model picker's details line.
 function Meter({ label, value }: { label: string; value: number }) {
   return (
     <span className="flex items-center gap-1">
@@ -35,50 +34,23 @@ function Meter({ label, value }: { label: string; value: number }) {
   )
 }
 
-export function ModelPicker({ value, onChange }: { value: ModelId; onChange: (model: ModelId) => void }) {
-  const model = modelById(value)
-  return (
-    <DropdownMenu>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" aria-label={`Model: ${model.name}`} className="max-w-40 gap-1 px-1.5">
-              <HugeiconsIcon icon={model.icon} strokeWidth={2} data-icon="inline-start" />
-              <span className="hidden truncate @md:inline">{model.name}</span>
-              <HugeiconsIcon icon={ArrowDown01Icon} strokeWidth={2} data-icon="inline-end" className="text-muted-foreground" />
-            </Button>
-          </DropdownMenuTrigger>
-        </TooltipTrigger>
-        <TooltipContent>Choose a model</TooltipContent>
-      </Tooltip>
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuLabel>Model · made up for this demo</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={value} onValueChange={(v) => onChange(v as ModelId)}>
-          {MODELS.map((m) => (
-            <DropdownMenuRadioItem key={m.id} value={m.id} className="items-start py-2">
-              <HugeiconsIcon icon={m.icon} strokeWidth={2} className="mt-0.5" />
-              <span className="grid min-w-0 gap-1">
-                <span className="flex items-center gap-1.5 font-medium">
-                  {m.name}
-                  {m.badge && <Badge className="h-4 px-1.5">{m.badge}</Badge>}
-                  {m.id === DEFAULT_MODEL && <span className="text-muted-foreground text-[10px] font-normal">Default</span>}
-                </span>
-                <span className="text-muted-foreground text-[11px] leading-4">{m.description}</span>
-                <span className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5 text-[10px]">
-                  <Meter label="Speed" value={m.speed} />
-                  <Meter label="Quality" value={m.quality} />
-                  <span>~{Math.round(m.thinkMs / 1000)}s thinking</span>
-                </span>
-              </span>
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-}
+// The made-up models in the prompt-box block's model picker.
+const MODEL_OPTIONS: PromptModel[] = MODELS.map((m) => ({
+  id: m.id,
+  name: m.name,
+  description: m.description,
+  icon: m.icon,
+  badge: m.badge,
+  details: (
+    <>
+      <Meter label="Speed" value={m.speed} />
+      <Meter label="Quality" value={m.quality} />
+      <span>~{Math.round(m.thinkMs / 1000)}s thinking</span>
+    </>
+  ),
+}))
 
-export function ProjectChip({ project }: { project: Project }) {
+function ProjectChip({ project }: { project: Project }) {
   const actions = useActions()
   return (
     <button
@@ -111,8 +83,10 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
 
   function share() {
     if (!chat) return
-    copyToClipboard(`https://share.example.com/c/${chat.id}`)
-    toast('Share link copied', { description: `share.example.com/c/${chat.id} · demo only` })
+    copyText(`https://share.example.com/c/${chat.id}`, {
+      success: 'Share link copied',
+      description: `share.example.com/c/${chat.id} · demo only`,
+    })
   }
 
   return (
@@ -149,7 +123,13 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
         )}
         {project && <ProjectChip project={project} />}
       </div>
-      <ModelPicker value={model} onChange={actions.setModel} />
+      <ModelPicker
+        models={MODEL_OPTIONS}
+        value={model}
+        onChange={(id) => actions.setModel(id as ModelId)}
+        label="Model · made up for this demo"
+        defaultId={DEFAULT_MODEL}
+      />
       {hasArtifacts && <IconAction label="Artifacts" icon={PanelRightOpenIcon} onClick={onOpenArtifacts} />}
       {chat && <IconAction label="Share" icon={Share08Icon} onClick={share} className="hidden @sm:inline-flex" />}
       {chat && (
@@ -169,7 +149,7 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
             }}
           >
             <ChatMenuItems
-              kit={DROPDOWN_KIT}
+              kit={DROPDOWN_MENU_KIT}
               chat={chat}
               projects={projects}
               onRename={() => {
@@ -197,119 +177,44 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
 }
 
 function MessageList({ chat, openArtifactId, mentions }: { chat: Chat; openArtifactId: string | null; mentions: RegExp | null }) {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const stick = useRef(true)
-  const [atBottom, setAtBottom] = useState(true)
-  const count = chat.messages.length
-
-  const toBottom = () => {
-    const el = scrollRef.current
-    if (el) el.scrollTop = el.scrollHeight
-  }
-
-  // A new chat, or a new message: go to the end.
-  useLayoutEffect(() => {
-    stick.current = true
-    setAtBottom(true)
-    toBottom()
-  }, [chat.id, count])
-
-  // Streaming: follow the text only while the reader is at the end.
-  useLayoutEffect(() => {
-    if (stick.current) toBottom()
-  }, [chat.messages])
-
-  useEffect(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const observer = new ResizeObserver(() => {
-      if (stick.current) toBottom()
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
-  function onScroll() {
-    const el = scrollRef.current
-    if (!el) return
-    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 48
-    stick.current = near
-    setAtBottom(near)
-  }
-
   const last = chat.messages.length - 1
   return (
-    <div className="relative min-h-0 flex-1">
-      <div ref={scrollRef} onScroll={onScroll} className="h-full overflow-y-auto [overflow-anchor:none]">
-        <div className="mx-auto grid max-w-3xl min-w-0 gap-6 px-4 pt-5 pb-8">
-          {chat.messages.map((message, i) => (message.role === 'user'
-            ? <UserMessageView key={message.id} chatId={chat.id} message={message} mentions={mentions} />
-            : (
-              <AssistantMessageView
-                key={message.id}
-                chatId={chat.id}
-                message={message}
-                isLast={i === last}
-                openArtifactId={openArtifactId}
-              />
-            )))}
-        </div>
-      </div>
-      {!atBottom && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            stick.current = true
-            scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' })
-          }}
-          className="bg-card hover:bg-accent animate-in fade-in-0 slide-in-from-bottom-1 absolute bottom-3 left-1/2 -translate-x-1/2 rounded-full shadow-md"
-        >
-          <HugeiconsIcon icon={ArrowDown02Icon} strokeWidth={2} data-icon="inline-start" />
-          Jump to latest
-        </Button>
-      )}
-    </div>
+    <ChatThread resetKey={chat.id} count={chat.messages.length} follow={chat.messages}>
+      {chat.messages.map((message, i) => (message.role === 'user'
+        ? <UserMessageView key={message.id} chatId={chat.id} message={message} mentions={mentions} />
+        : (
+          <AssistantMessageView
+            key={message.id}
+            chatId={chat.id}
+            message={message}
+            isLast={i === last}
+            openArtifactId={openArtifactId}
+          />
+        )))}
+    </ChatThread>
   )
 }
 
 function Greeting({ project, projects, modes, focusKey }: { project: Project | null; projects: Project[]; modes: Modes; focusKey: number }) {
   const actions = useActions()
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <div className="m-auto grid w-full max-w-2xl min-w-0 gap-5 px-4 py-8">
-        <div className="grid justify-items-center gap-2 text-center">
-          <span className="bg-brand/10 text-brand grid size-10 place-items-center rounded-xl">
-            <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="size-5" />
-          </span>
-          <h3 className="text-xl font-semibold tracking-tight">{greeting()}, {USER.first}</h3>
-          <p className="text-muted-foreground max-w-md text-[13px]">
-            {project
-              ? <>New chat in <span className="text-foreground font-medium">{project.name}</span>. Replies follow its instructions and files.</>
-              : 'Ask about jobs, drivers and customers. Every reply is scripted in your browser, so start with a card below.'}
-          </p>
-        </div>
-        <PromptBox running={false} modes={modes} projects={projects} focusKey={focusKey} />
-        <div className="grid grid-cols-1 gap-2 @xl:grid-cols-2">
-          {STARTERS.map((starter) => (
-            <button
-              key={starter.title}
-              type="button"
-              onClick={() => actions.send(starter.prompt, [])}
-              className="hover:bg-accent/60 focus-visible:ring-ring/30 flex min-w-0 items-start gap-3 rounded-lg border p-3 text-left transition-colors outline-none focus-visible:ring-2"
-            >
-              <span className="bg-muted grid size-7 shrink-0 place-items-center rounded-md">
-                <HugeiconsIcon icon={starter.icon} strokeWidth={2} className="size-3.5" />
-              </span>
-              <span className="grid min-w-0 gap-0.5">
-                <span className="text-xs font-medium">{starter.title}</span>
-                <span className="text-muted-foreground text-[11px]">{starter.hint}</span>
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+    <ChatWelcome
+      title={<>{greeting()}, {USER.first}</>}
+      headingAs="h3"
+      description={project
+        ? <>New chat in <span className="text-foreground font-medium">{project.name}</span>. Replies follow its instructions and files.</>
+        : 'Ask about jobs, drivers and customers. Every reply is scripted in your browser, so start with a card below.'}
+      starters={(
+        <PromptStarters
+          items={STARTERS.map((starter) => ({
+            id: starter.title, icon: starter.icon, title: starter.title, hint: starter.hint,
+            onSelect: () => actions.send(starter.prompt, []),
+          }))}
+        />
+      )}
+    >
+      <PromptBox running={false} modes={modes} projects={projects} focusKey={focusKey} />
+    </ChatWelcome>
   )
 }
 

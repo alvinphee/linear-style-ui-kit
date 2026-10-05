@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Search01Icon, TruckIcon, Location01Icon, Alert02Icon } from '@hugeicons/core-free-icons'
+import { TruckIcon, Location01Icon, Alert02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { SearchField } from '@/components/search-field'
+import { Shortcut } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
-import { Kbd } from '@/components/ui/kbd'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -16,8 +17,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { PRIORITY, type Priority } from '../data'
 import { Panel, Section } from './shared'
 
+// Key caps tinted to sit on a primary button.
+const ON_PRIMARY = 'ml-1 *:data-[slot=kbd]:bg-primary-foreground/15 *:data-[slot=kbd]:text-primary-foreground'
+
 export default function FormsSection() {
   const [pallets, setPallets] = useState([12])
+  const [search, setSearch] = useState('')
 
   return (
     <Section id="forms" title="Forms" description="Inputs, selects, toggles and a full example">
@@ -105,23 +110,21 @@ export default function FormsSection() {
           <div className="flex justify-end gap-2 border-t pt-3.5">
             <Button type="button" variant="ghost">Cancel</Button>
             <Button type="submit">
-              Create job <Kbd className="bg-primary-foreground/15 text-primary-foreground ml-1">Ctrl ↵</Kbd>
+              Create job
+              <Shortcut keys={['mod', 'enter']} className={ON_PRIMARY} />
             </Button>
           </div>
         </form>
       </Panel>
 
       <div className="grid content-start gap-3">
-        <Panel title="Search field" note="InputGroup with icon and hint">
-          <InputGroup>
-            <InputGroupAddon>
-              <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-            </InputGroupAddon>
-            <InputGroupInput placeholder="Search jobs, DO numbers, customers…" />
-            <InputGroupAddon align="inline-end">
-              <Kbd>/</Kbd>
-            </InputGroupAddon>
-          </InputGroup>
+        <Panel title="Search field" note="SearchField with a shortcut hint">
+          <SearchField
+            value={search}
+            onChange={setSearch}
+            placeholder="Search jobs, DO numbers, customers…"
+            end={<Shortcut keys={['/']} />}
+          />
         </Panel>
 
         <Panel title="States" note="disabled, invalid, with suffix">

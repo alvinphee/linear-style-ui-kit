@@ -3,17 +3,20 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, Calendar03Icon, KanbanIcon, ListViewIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { KanbanBoard, KanbanCardMenu, type KanbanCardState, type KanbanColumn } from '@/blocks/kanban-board'
+import { KanbanBoard, KanbanCard, KanbanCardMenu, type KanbanCardState, type KanbanColumn } from '@/blocks/kanban-board'
+import { PageHeader } from '@/components/page-header'
 import { UserAvatar } from '@/components/person'
+import { TONE_DOT } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { ViewSwitch, type ViewOption } from '@/components/view-switch'
+import { formatMoney } from '@/lib/format'
 import { ListPage } from '../ListPage'
 import { LISTS } from '../modules'
 import { useErp } from '../store'
-import { TODAY, TONE_DOT, formatDate, formatMoney, formatMoneyShort, toneOf } from '../format'
+import { TODAY, formatDate, formatMoneyShort, toneOf } from '../format'
 import type { ListSpec, Row } from '../types'
-import { PageHeader } from '../ui'
+import { PAGE_HEADER } from '../ui'
 
 // CRM › Opportunities: the pipeline as a board, one column per stage (the
 // shared Kanban block), or the shared list. Moving an opportunity sets its
@@ -22,6 +25,11 @@ import { PageHeader } from '../ui'
 const STAGES = ['Discovery', 'Proposal', 'Negotiation', 'Won', 'Lost'] as const
 type Stage = (typeof STAGES)[number]
 type View = 'board' | 'list'
+
+const VIEWS: ViewOption<View>[] = [
+  { value: 'board', label: 'Board', icon: KanbanIcon },
+  { value: 'list', label: 'List', icon: ListViewIcon },
+]
 
 const PROBABILITY: Record<Stage, number> = { Discovery: 20, Proposal: 45, Negotiation: 70, Won: 100, Lost: 0 }
 
@@ -76,26 +84,12 @@ export function OpportunityPipeline() {
   return (
     <div className="flex min-h-full flex-col">
       <PageHeader
+        className={PAGE_HEADER}
         title="Opportunities"
         description={summary}
         actions={
           <>
-            <ToggleGroup
-              type="single"
-              variant="outline"
-              size="sm"
-              spacing={0}
-              value={view}
-              onValueChange={(v) => v && setView(v as View)}
-              aria-label="Layout"
-            >
-              <ToggleGroupItem value="board" className="text-xs">
-                <HugeiconsIcon icon={KanbanIcon} strokeWidth={2} data-icon="inline-start" /> Board
-              </ToggleGroupItem>
-              <ToggleGroupItem value="list" className="text-xs">
-                <HugeiconsIcon icon={ListViewIcon} strokeWidth={2} data-icon="inline-start" /> List
-              </ToggleGroupItem>
-            </ToggleGroup>
+            <ViewSwitch views={VIEWS} value={view} onChange={setView} showLabels label="Layout" />
             <Button size="sm" onClick={() => startCreate('opportunities')}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> New opportunity
             </Button>
@@ -142,56 +136,39 @@ function OpportunityCard({ row, card, selected, onOpen }: {
   const late = isOpen(stage) && close !== '' && close < TODAY
 
   return (
-    <div className="group/card relative">
-      {/* The menu button sits beside this element, not inside it, so no button is nested in a button. */}
-      <div
-        role="button"
-        tabIndex={0}
-        {...card.cardProps}
-        data-selected={selected}
-        onClick={onOpen}
-        onKeyDown={(e) => {
-          if (e.target !== e.currentTarget) return
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault()
-            onOpen()
-          }
-        }}
-        className="bg-card hover:ring-foreground/10 focus-visible:ring-ring/40 data-[selected=true]:border-brand/40 grid cursor-grab gap-1 rounded-md border p-2.5 shadow-xs transition-[box-shadow,opacity] outline-none hover:ring-1 focus-visible:ring-2 active:cursor-grabbing data-[dragging=true]:opacity-40"
-      >
-        <span className="text-muted-foreground h-4 pr-6 font-mono text-[11px]">{row.id}</span>
-        <p className="line-clamp-2 leading-snug font-medium">{String(row.name)}</p>
-        <p className="text-muted-foreground truncate text-xs">{String(row.account)}</p>
-        <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px]">
-          <span className="text-[13px] font-medium tabular-nums">{formatMoney(Number(row.amount), false)}</span>
-          <span className="text-muted-foreground tabular-nums">
-            {Number(row.probability)}%<span className="sr-only"> probability</span>
+    <KanbanCard
+      card={card}
+      onOpen={onOpen}
+      selected={selected}
+      className="gap-1"
+      menu={
+        <KanbanCardMenu label={`Move ${row.id} to another stage`} columns={STAGE_COLUMNS} value={stage} onMove={card.moveTo} className="bg-card">
+          <DropdownMenuItem onSelect={onOpen}>Open</DropdownMenuItem>
+        </KanbanCardMenu>
+      }
+    >
+      <span className="text-muted-foreground h-4 pr-6 font-mono text-[11px]">{row.id}</span>
+      <p className="line-clamp-2 leading-snug font-medium">{String(row.name)}</p>
+      <p className="text-muted-foreground truncate text-xs">{String(row.account)}</p>
+      <div className="mt-1 flex min-w-0 items-center gap-2 text-[11px]">
+        <span className="text-[13px] font-medium tabular-nums">{formatMoney(Number(row.amount), false)}</span>
+        <span className="text-muted-foreground tabular-nums">
+          {Number(row.probability)}%<span className="sr-only"> probability</span>
+        </span>
+        {close && (
+          <span className={cn('ml-auto inline-flex items-center gap-1 whitespace-nowrap', late ? 'text-destructive' : 'text-muted-foreground')}>
+            <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
+            <span className="sr-only">{late ? 'Close date passed:' : 'Closes'}</span>
+            {formatDate(close)}
           </span>
-          {close && (
-            <span className={cn('ml-auto inline-flex items-center gap-1 whitespace-nowrap', late ? 'text-destructive' : 'text-muted-foreground')}>
-              <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" />
-              <span className="sr-only">{late ? 'Close date passed:' : 'Closes'}</span>
-              {formatDate(close)}
-            </span>
-          )}
-          {owner && (
-            <span title={owner} className={cn(!close && 'ml-auto')}>
-              <UserAvatar name={owner} className="size-5" />
-              <span className="sr-only">Owner: {owner}</span>
-            </span>
-          )}
-        </div>
+        )}
+        {owner && (
+          <span title={owner} className={cn(!close && 'ml-auto')}>
+            <UserAvatar name={owner} className="size-5" />
+            <span className="sr-only">Owner: {owner}</span>
+          </span>
+        )}
       </div>
-
-      <KanbanCardMenu
-        label={`Move ${row.id} to another stage`}
-        columns={STAGE_COLUMNS}
-        value={stage}
-        onMove={card.moveTo}
-        className="bg-card absolute top-2 right-2"
-      >
-        <DropdownMenuItem onSelect={onOpen}>Open</DropdownMenuItem>
-      </KanbanCardMenu>
-    </div>
+    </KanbanCard>
   )
 }

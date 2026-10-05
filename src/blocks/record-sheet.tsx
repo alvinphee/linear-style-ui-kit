@@ -2,15 +2,11 @@ import { createContext, useContext, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowDown01Icon, ArrowUp01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { CommentBox } from '@/components/comment-box'
+import { DeleteConfirm } from '@/components/delete-confirm'
 import { UserAvatar } from '@/components/person'
-import { MOD } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
-import { Textarea } from '@/components/ui/textarea'
 
 // The side panel ("peek"): one record opened beside a list or board, without
 // leaving it. A header with the record's number, a status badge, previous /
@@ -235,67 +231,18 @@ export function RecordSheetContent({
       )}
 
       {onDelete && (
-        <AlertDialog open={confirming} onOpenChange={setConfirming}>
-          <AlertDialogContent size="sm">
-            <AlertDialogHeader>
-              <AlertDialogTitle>{deleteTitle ?? `Delete this ${noun}?`}</AlertDialogTitle>
-              <AlertDialogDescription>{deleteDescription ?? 'This cannot be undone.'}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                variant="destructive"
-                onClick={() => {
-                  if (onDelete() !== false) close()
-                }}
-              >
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        <DeleteConfirm
+          open={confirming}
+          onOpenChange={setConfirming}
+          size="sm"
+          icon={null}
+          title={deleteTitle ?? `Delete this ${noun}?`}
+          description={deleteDescription ?? 'This cannot be undone.'}
+          onConfirm={() => {
+            if (onDelete() !== false) close()
+          }}
+        />
       )}
     </>
-  )
-}
-
-function CommentBox({ onComment, placeholder, label }: {
-  onComment: (text: string) => void
-  placeholder: string
-  label: string
-}) {
-  const [text, setText] = useState('')
-  const empty = !text.trim()
-
-  function submit() {
-    if (empty) return
-    onComment(text.trim())
-    setText('')
-  }
-
-  return (
-    <div className="bg-input/20 dark:bg-input/30 focus-within:border-ring focus-within:ring-ring/30 rounded-lg border transition-colors focus-within:ring-2">
-      <Textarea
-        aria-label={label}
-        placeholder={placeholder}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault()
-            submit()
-          }
-        }}
-        className="min-h-14 border-0 bg-transparent px-3 py-2.5 focus-visible:ring-0 dark:bg-transparent"
-      />
-      <div className="flex items-center justify-end gap-1 px-2 pb-2">
-        <span className="text-muted-foreground mr-auto hidden pl-1 text-[11px] sm:inline">
-          {MOD} + Enter to send
-        </span>
-        <Button variant={empty ? 'secondary' : 'default'} disabled={empty} onClick={submit}>
-          {label}
-        </Button>
-      </div>
-    </div>
   )
 }

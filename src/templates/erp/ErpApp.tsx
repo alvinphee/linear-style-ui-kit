@@ -3,15 +3,18 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { LockIcon } from '@hugeicons/core-free-icons'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { isTyping } from '@/lib/keyboard'
 import { usePath } from '@/lib/router'
 import { CommandPalette } from './CommandPalette'
+import { AssistantProvider, useAssistant } from './assistant/store'
 import { CopilotPanel } from './Copilot'
 import { ROLE_LABEL } from './data'
 import { ListPage } from './ListPage'
 import { Login, Companies } from './Login'
-import { MODULES, moduleById, pageFor } from './modules'
+import { MODULES, moduleById, pageFor, pagesOf } from './modules'
 import { CreateDialog, RecordPeek } from './Overlays'
-import { BASE, go, parseRoute } from './route'
+import { CLASSIC, landingPage, setEdition, type Edition } from './edition'
+import { base, go, parseRoute } from './route'
 import { Shell } from './Shell'
 import { ErpProvider, useErp } from './store'
 
@@ -19,39 +22,42 @@ import { ErpProvider, useErp } from './store'
 // the kit: sign-in, company picker, launchpad, module pages, command
 // palette, side panels and an AI copilot. All data is made up.
 
-export default function ErpApp() {
+export default function ErpApp({ edition = CLASSIC }: { edition?: Edition }) {
+  setEdition(edition)
   return (
     <ErpProvider>
-      <ErpRoutes />
+      <AssistantProvider>
+        <ErpRoutes />
+      </AssistantProvider>
     </ErpProvider>
   )
 }
 
-const isTyping = (t: EventTarget | null) =>
-  t instanceof HTMLElement && !!t.closest('input, textarea, select, [contenteditable="true"], [role="dialog"], [role="menu"], [role="listbox"]')
-
 function ErpRoutes() {
   const path = usePath()
   const route = parseRoute(path)
-  const { session, company, setPaletteOpen, setCopilotOpen, startCreate, peek, closePeek } = useErp()
+  const { session, company, setPaletteOpen, setCopilotOpen, startCreate, peek, closePeek, startPage, pageTitle } = useErp()
+  const { focusComposer } = useAssistant()
 
   // Guards: sign in first, then choose a company. Replace, so Back skips them.
   const target = !session ? 'login' : !company && route.screen !== 'companies' ? 'companies' : session && route.screen === 'login' ? 'home' : null
   useEffect(() => {
-    if (target === 'home') window.location.replace(`#${BASE}/home/launchpad`)
-    else if (target) window.location.replace(`#${BASE}/${target}`)
+    if (target === 'home') window.location.replace(`#${base()}/home/${landingPage(startPage)}`)
+    else if (target) window.location.replace(`#${base()}/${target}`)
+    // startPage is read once, as the guard sends you in.
   }, [target])
 
   const module = route.screen === 'app' ? moduleById(route.module) ?? MODULES[0] : MODULES[0]
-  const page = route.screen === 'app' ? module.pages.find((p) => p.id === route.page) ?? module.pages[0] : module.pages[0]
+  const pages = pagesOf(module)
+  const page = route.screen === 'app' ? pages.find((p) => p.id === route.page) ?? pages[0] : pages[0]
   const allowed = !!session && module.roles.includes(session.role)
 
   const inApp = route.screen === 'app' && !!session && !!company
   useEffect(() => {
     if (!inApp) return
-    document.title = `${page.label} · ${module.name} · Acme ERP`
+    document.title = `${pageTitle ?? page.label} · ${module.name} · Acme ERP`
     document.getElementById('erp-main')?.scrollTo({ top: 0 })
-  }, [inApp, module, page])
+  }, [inApp, module, page, pageTitle])
 
   // Leaving a page closes its side panel. A record opened for the page you
   // land on (from the palette) stays open.
@@ -65,8 +71,8 @@ function ErpRoutes() {
   // Ctrl+K / ⌘K palette, Ctrl+J / ⌘J copilot, G then a letter to jump to a
   // module, C to create on a list page.
   const pressedG = useRef(0)
-  const state = useRef({ module, page, session })
-  state.current = { module, page, session }
+  const state = useRef({ module, page, session, focusComposer })
+  state.current = { module, page, session, focusComposer }
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey
@@ -77,7 +83,9 @@ function ErpRoutes() {
       }
       if (mod && e.key.toLowerCase() === 'j') {
         e.preventDefault()
-        setCopilotOpen(true)
+        // On the Assistant page the chat is already open: go to its prompt box.
+        if (state.current.module.id === 'home' && state.current.page.id === 'assistant') state.current.focusComposer()
+        else setCopilotOpen(true)
         return
       }
       if (mod || e.altKey || isTyping(e.target) || !state.current.session) return

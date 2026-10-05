@@ -15,11 +15,14 @@ export type Recent = { entity: EntityId; id: string; label: string }
 // breadcrumb alone (search then lives in the sidebar).
 export type HeaderStyle = 'crumbs-search' | 'crumbs'
 
-type Saved = { session: Session | null; companyId: string | null; favourites: string[]; headerStyle: HeaderStyle }
+// Where you land after signing in (the ERP + AI edition lets you choose).
+export type StartPage = 'launchpad' | 'assistant'
+
+type Saved = { session: Session | null; companyId: string | null; favourites: string[]; headerStyle: HeaderStyle; startPage: StartPage }
 
 const KEY = 'linear-kit:erp:v1'
 
-const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], headerStyle: 'crumbs-search' }
+const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], headerStyle: 'crumbs-search', startPage: 'launchpad' }
 
 function load(): Saved {
   try {
@@ -35,6 +38,9 @@ type ErpState = {
   data: Data
   favourites: string[]
   headerStyle: HeaderStyle
+  startPage: StartPage
+  // A page's own title for the end of the breadcrumb, such as a chat's.
+  pageTitle: string | null
   recent: Recent[]
   peek: { entity: EntityId; id: string } | null
   creating: { entity: EntityId; values?: Record<string, Value> } | null
@@ -49,6 +55,8 @@ type ErpState = {
   remove: (entity: EntityId, ids: string[]) => void
   toggleFavourite: (moduleId: string) => void
   setHeaderStyle: (style: HeaderStyle) => void
+  setStartPage: (page: StartPage) => void
+  setPageTitle: (title: string | null) => void
   openPeek: (entity: EntityId, id: string) => void
   closePeek: () => void
   startCreate: (entity: EntityId, values?: Record<string, Value>) => void
@@ -69,6 +77,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
   const [creating, setCreating] = useState<ErpState['creating']>(null)
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
+  const [pageTitle, setPageTitle] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -96,6 +105,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     data,
     favourites: saved.favourites,
     headerStyle: saved.headerStyle,
+    startPage: saved.startPage,
+    pageTitle,
     recent,
     peek,
     creating,
@@ -128,6 +139,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       favourites: s.favourites.includes(moduleId) ? s.favourites.filter((m) => m !== moduleId) : [...s.favourites, moduleId],
     })),
     setHeaderStyle: (headerStyle) => setSaved((s) => ({ ...s, headerStyle })),
+    setStartPage: (startPage) => setSaved((s) => ({ ...s, startPage })),
+    setPageTitle,
     openPeek: (entity, id) => {
       setPeek({ entity, id })
       const row = data[entity].find((r) => r.id === id)
@@ -140,7 +153,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     endCreate: () => setCreating(null),
     setPaletteOpen,
     setCopilotOpen,
-  }), [saved, company, data, recent, peek, creating, paletteOpen, copilotOpen])
+  }), [saved, company, data, recent, peek, creating, paletteOpen, copilotOpen, pageTitle])
 
   return <ErpContext.Provider value={value}>{children}</ErpContext.Provider>
 }

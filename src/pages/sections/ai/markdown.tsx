@@ -1,12 +1,9 @@
-import { Markdown as MarkdownView, MdTable as MdTableView, type Align } from '@/blocks/ai/markdown'
+import { Markdown as MarkdownView, MdTable as MdTableView, type Align } from '@/blocks/markdown'
 import { goTo } from '../../nav'
 import type { Source } from './types'
 
-// The workspace's side of the Markdown block (src/blocks/ai/markdown.tsx):
+// The workspace's side of the Markdown block (src/blocks/markdown.tsx):
 // links to "#board" in a reply open that kit page.
-
-export { CodeBlock, Cite, parseBlocks } from '@/blocks/ai/markdown'
-export { StreamCaret as Caret } from '@/components/thinking-indicator'
 
 const openKitPage = (href: string) => goTo(href.slice(1))
 

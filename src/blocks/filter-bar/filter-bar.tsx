@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { BookmarkAdd01Icon, Cancel01Icon, Search01Icon } from '@hugeicons/core-free-icons'
+import { BookmarkAdd01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { SearchField } from '@/components/search-field'
 import { Button } from '@/components/ui/button'
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
+import { plural } from '@/lib/text'
 import { FilterChip, FilterMenu } from './filter-menu'
 import {
   activeFields, sameFilters, setFieldValues, toggleFieldValue, type FilterFieldConfig, type FilterValues,
@@ -14,8 +15,8 @@ import {
 // count. Controlled: the page keeps the filters and search, and does the
 // matching. Place it in a list's header, above the rows.
 //
-// The pieces are exported too (SavedViews, SearchField, FilterMenu,
-// FilterChip) for toolbars laid out another way.
+// The pieces are exported too (SavedViews, FilterMenu, FilterChip) for
+// toolbars laid out another way. The search box is the SearchField component.
 
 export type SavedViewItem = {
   id: string
@@ -63,37 +64,6 @@ export function SavedViews({ views, value, onChange, wrap = true, label = 'Saved
         </button>
       ))}
     </div>
-  )
-}
-
-// A search input with a magnifier and a clear button once something is typed.
-export function SearchField({ value, onChange, placeholder, label, className }: {
-  value: string
-  onChange: (value: string) => void
-  placeholder: string
-  // The accessible name, when the placeholder alone is too short.
-  label?: string
-  className?: string
-}) {
-  return (
-    <InputGroup className={className}>
-      <InputGroupAddon>
-        <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-      </InputGroupAddon>
-      <InputGroupInput
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        aria-label={label ?? placeholder}
-      />
-      {value && (
-        <InputGroupAddon align="inline-end">
-          <InputGroupButton size="icon-xs" aria-label="Clear search" onClick={() => onChange('')}>
-            <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-          </InputGroupButton>
-        </InputGroupAddon>
-      )}
-    </InputGroup>
   )
 }
 
@@ -178,7 +148,7 @@ export function FilterBar({
         )}
         {total !== undefined && (
           <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums" aria-live="polite">
-            {narrowed ? `${shown ?? total} of ${total} ${noun[1]}` : `${total} ${total === 1 ? noun[0] : noun[1]}`}
+            {narrowed ? `${shown ?? total} of ${total} ${noun[1]}` : plural(total, noun[0], noun[1])}
           </span>
         )}
       </div>

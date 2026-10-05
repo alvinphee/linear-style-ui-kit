@@ -16,6 +16,8 @@ export type State = {
   credits: number
   // The artifact open in the side panel.
   artifact: { id: string; version: number } | null
+  // Invoices that already got a payment reminder.
+  reminded: string[]
 }
 
 type ReplyAddress = { chatId: string; messageId: string; replyId: string }
@@ -43,6 +45,7 @@ export type Action =
   | { type: 'project/patch'; id: string; patch: Partial<Omit<Project, 'id'>> }
   | { type: 'project/delete'; id: string }
   | { type: 'credits'; amount: number }
+  | { type: 'invoices/remind'; ids: string[] }
   | { type: 'reset'; state: State }
 
 function patchChat(state: State, id: string, change: (chat: Chat) => Chat): State {
@@ -149,6 +152,8 @@ export function reducer(state: State, action: Action): State {
     }
     case 'credits':
       return { ...state, credits: Math.min(100, Math.round((state.credits + action.amount) * 10) / 10) }
+    case 'invoices/remind':
+      return { ...state, reminded: [...new Set([...state.reminded, ...action.ids])] }
     case 'reset':
       return action.state
   }
@@ -169,6 +174,7 @@ export function initialState(): State {
     model: DEFAULT_MODEL,
     credits: 68,
     artifact: null,
+    reminded: [],
   }
 }
 
@@ -215,6 +221,7 @@ export function loadState(at: number): State {
       model: MODEL_IDS.includes(saved.model as ModelId) ? saved.model as ModelId : DEFAULT_MODEL,
       credits: typeof saved.credits === 'number' ? saved.credits : 68,
       artifact: null,
+      reminded: Array.isArray(saved.reminded) ? saved.reminded.filter((id): id is string => typeof id === 'string') : [],
     }
   } catch {
     return fallback
@@ -223,8 +230,8 @@ export function loadState(at: number): State {
 
 export function saveState(state: State) {
   try {
-    const { projects, chats, artifacts, view, model, credits } = state
-    window.localStorage.setItem(KEY, JSON.stringify({ projects, chats, artifacts, view, model, credits }))
+    const { projects, chats, artifacts, view, model, credits, reminded } = state
+    window.localStorage.setItem(KEY, JSON.stringify({ projects, chats, artifacts, view, model, credits, reminded }))
   } catch {
     // Storage full or blocked: the demo keeps working in memory.
   }

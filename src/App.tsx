@@ -6,11 +6,13 @@ import { JobsProvider } from '@/pages/jobs-store'
 import KitchenSink from '@/pages/KitchenSink'
 import AiChatApp from '@/templates/ai-chat/AiChatApp'
 import ErpApp from '@/templates/erp/ErpApp'
+import ErpAiApp from '@/templates/erp-ai/ErpAiApp'
 
 // "#/templates/…" are full-page apps; everything else is the kit.
 // "#/mockups/ai-chat" is the AI chat template's old address.
 function Routes() {
   const path = usePath()
+  if (path.startsWith('/templates/erp-ai')) return <ErpAiApp />
   if (path.startsWith('/templates/erp')) return <ErpApp />
   if (path.startsWith('/templates/ai-chat') || path.startsWith('/mockups/ai-chat')) return <AiChatApp />
   return <KitchenSink />

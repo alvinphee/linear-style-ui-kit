@@ -4,32 +4,38 @@ import {
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
+import { formatFileSize } from '@/lib/format'
 
 // An attached file: its type icon, name and size, with a remove button
 // while it can still be taken off (in a prompt box, before sending).
 
-const EXTENSION_ICONS: [string[], IconSvgElement][] = [
-  [['pdf'], Pdf01Icon],
-  [['xls', 'xlsx', 'numbers', 'ods'], Xls01Icon],
-  [['doc', 'docx', 'pages', 'odt', 'rtf'], Doc01Icon],
-  [['csv', 'tsv'], Csv01Icon],
-  [['txt', 'md', 'log'], Txt01Icon],
-  [['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'heic'], Image01Icon],
-  [['ts', 'tsx', 'js', 'jsx', 'json', 'sql', 'py', 'css', 'html'], SourceCodeIcon],
+// What a file holds, by its extension.
+export type FileKind = 'pdf' | 'sheet' | 'doc' | 'csv' | 'text' | 'image' | 'code' | 'other'
+
+const EXTENSIONS: [string[], Exclude<FileKind, 'other'>][] = [
+  [['pdf'], 'pdf'],
+  [['xls', 'xlsx', 'numbers', 'ods'], 'sheet'],
+  [['doc', 'docx', 'pages', 'odt', 'rtf'], 'doc'],
+  [['csv', 'tsv'], 'csv'],
+  [['txt', 'md', 'log'], 'text'],
+  [['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'heic'], 'image'],
+  [['ts', 'tsx', 'js', 'jsx', 'json', 'sql', 'py', 'css', 'html'], 'code'],
 ]
 
-// The icon for a file name, by its extension: a PDF, a sheet, an image…
-export function fileIcon(name: string): IconSvgElement {
-  const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  return EXTENSION_ICONS.find(([list]) => list.includes(ext))?.[1] ?? File01Icon
+export const FILE_KIND_ICONS: Record<FileKind, IconSvgElement> = {
+  pdf: Pdf01Icon, sheet: Xls01Icon, doc: Doc01Icon, csv: Csv01Icon, text: Txt01Icon, image: Image01Icon,
+  code: SourceCodeIcon, other: File01Icon,
 }
 
-// "820 B", "48 KB", "2.4 MB".
-export function formatFileSize(bytes: number) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`
+// A file's kind from its name: report.pdf → 'pdf', sales.xlsx → 'sheet'.
+export function fileKind(name: string): FileKind {
+  const ext = name.split('.').pop()?.toLowerCase() ?? ''
+  return EXTENSIONS.find(([list]) => list.includes(ext))?.[1] ?? 'other'
 }
+
+// The icon for a file name, by its extension: a PDF, a sheet, an image…
+export const fileIcon = (name: string): IconSvgElement => FILE_KIND_ICONS[fileKind(name)]
+
 
 export function FileChip({ name, size, icon, onRemove, className }: {
   name: string

@@ -1,15 +1,11 @@
-import { format } from 'date-fns'
 import type { IconSvgElement } from '@hugeicons/react'
 import {
-  AiBrain02Icon, Atom01Icon, BalanceScaleIcon, CheckListIcon, ChartColumnIcon, Csv01Icon, Doc01Icon,
-  File01Icon, FlashIcon, Image01Icon, Mail01Icon, Pdf01Icon, QuillWrite01Icon, SourceCodeIcon,
-  TaskDone01Icon, TextAlignLeftIcon, TranslateIcon, Txt01Icon, Xls01Icon, Alert02Icon,
+  AiBrain02Icon, Atom01Icon, BalanceScaleIcon, CheckListIcon, ChartColumnIcon, FlashIcon, Mail01Icon,
+  QuillWrite01Icon, TaskDone01Icon, TextAlignLeftIcon, TranslateIcon, Alert02Icon,
 } from '@hugeicons/core-free-icons'
-import type { FileKind, FileRef, Model, ModelId } from './types'
-
-// The kit's formatters (components/file-chip, components/thinking-indicator).
-export { formatFileSize as formatSize } from '@/components/file-chip'
-export { formatDuration } from '@/components/thinking-indicator'
+import { formatRelativeDate } from '@/lib/format'
+import { fileKind } from '@/components/file-chip'
+import type { FileRef, Model, ModelId } from './types'
 
 // Made-up models. The choice changes the scripted thinking time and how long
 // the replies are; there is no real model behind any of them.
@@ -71,48 +67,9 @@ export const at = (daysAgo: number, hour: number, minute = 0) => {
 let counter = 0
 export const uid = (prefix = 'x') => `${prefix}${Date.now().toString(36)}${(++counter).toString(36)}`
 
-export function fileKind(name: string): FileKind {
-  const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (ext === 'pdf') return 'pdf'
-  if (['xls', 'xlsx', 'numbers', 'ods'].includes(ext)) return 'sheet'
-  if (['doc', 'docx', 'pages', 'odt', 'rtf'].includes(ext)) return 'doc'
-  if (ext === 'csv' || ext === 'tsv') return 'csv'
-  if (['txt', 'md', 'log'].includes(ext)) return 'text'
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'heic'].includes(ext)) return 'image'
-  if (['ts', 'tsx', 'js', 'jsx', 'json', 'sql', 'py', 'css', 'html'].includes(ext)) return 'code'
-  return 'other'
-}
-
-export const FILE_ICONS: Record<FileKind, IconSvgElement> = {
-  pdf: Pdf01Icon,
-  sheet: Xls01Icon,
-  doc: Doc01Icon,
-  csv: Csv01Icon,
-  text: Txt01Icon,
-  image: Image01Icon,
-  code: SourceCodeIcon,
-  other: File01Icon,
-}
-
 export function toFileRef(file: { name: string; size: number }): FileRef {
   return { id: uid('f'), name: file.name, size: file.size, kind: fileKind(file.name) }
 }
 
-export function greeting(date = new Date()) {
-  const h = date.getHours()
-  if (h < 5) return 'Good evening'
-  if (h < 12) return 'Good morning'
-  if (h < 18) return 'Good afternoon'
-  return 'Good evening'
-}
-
-const TIME = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit' })
-// date-fns, not Intl: newer en-GB data writes "Sept", while the rest of the page writes "Sep".
-const DATE = { format: (time: number) => format(time, 'd MMM') }
-
-export function formatWhen(time: number) {
-  const startToday = new Date(now()).setHours(0, 0, 0, 0)
-  if (time >= startToday) return `Today, ${TIME.format(time)}`
-  if (time >= startToday - DAY) return `Yesterday, ${TIME.format(time)}`
-  return DATE.format(time)
-}
+// "Today, 18:40", "Yesterday, 09:05" or "28 Sep", on the demo clock.
+export const formatWhen = (time: number) => formatRelativeDate(time, { now: now(), time: true })

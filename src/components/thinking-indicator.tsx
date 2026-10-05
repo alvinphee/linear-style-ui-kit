@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { SparklesIcon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Spinner } from '@/components/ui/spinner'
+import { formatDuration } from '@/lib/format'
 
 // The small signs that an AI is working: a shimmering status line
 // ("Thinking…", "Searching jobs…"), typing dots, a pulsing dot, a live
@@ -39,13 +40,6 @@ export function AiMotion() {
   )
 }
 
-// "0.4s", "8s", "1m 5s".
-export function formatDuration(ms: number) {
-  if (ms < 1000) return `${(ms / 1000).toFixed(1)}s`
-  const s = Math.round(ms / 1000)
-  if (s < 60) return `${s}s`
-  return `${Math.floor(s / 60)}m ${s % 60}s`
-}
 
 // The time, refreshed every `interval` ms while `active`. `clock` lets an app
 // with its own clock (a demo that starts on a fixed date) keep timers in step;

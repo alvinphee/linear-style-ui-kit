@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import type { IconSvgElement } from '@hugeicons/react'
 
 // The ERP template's model. Terms follow docs/glossary.md.
@@ -68,6 +68,11 @@ export type ErpPage = {
   render?: () => ReactNode
   // A number shown next to the page in the sidebar (open items, overdue…).
   badge?: (data: Data) => number
+  // Only in the ERP + AI edition (see edition.ts).
+  assistant?: boolean
+  // The page's own part of the sidebar, under its module's pages, in place
+  // of Recent (the Assistant's chat history).
+  sidebar?: ComponentType<{ onNavigate?: () => void }>
 }
 
 export type ErpModule = {

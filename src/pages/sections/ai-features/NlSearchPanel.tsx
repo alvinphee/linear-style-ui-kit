@@ -1,24 +1,33 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useRef, useState } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Building03Icon, Calendar03Icon, Camera01Icon, Cancel01Icon, FilterHorizontalIcon, FullSignalIcon,
-  SearchRemoveIcon, SparklesIcon, Tag01Icon, TextIcon, TimeHalfPassIcon, UserCircleIcon,
+  Search01Icon, SearchRemoveIcon, SparklesIcon, Tag01Icon, TextIcon, TimeHalfPassIcon, UserCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { FollowUps } from '@/blocks/ai/chat-message'
+import { FilterChip, FilterPill, FilterPillValue, type FilterFieldConfig } from '@/blocks/filter-bar'
+import { GroupedList, GroupedListRow, type GroupedListRowState } from '@/blocks/grouped-list'
+import { AiLabel } from '@/components/ai-label'
+import { LabelChip, LabelDot } from '@/components/label-dot'
+import { NoAssignee, UserAvatar } from '@/components/person'
+import { PriorityIcon } from '@/components/priority-icon'
+import { Shortcut } from '@/components/shortcut'
+import { StatusIcon } from '@/components/status-icon'
+import { Thinking } from '@/components/thinking-indicator'
 import { Button } from '@/components/ui/button'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group'
-import { Kbd } from '@/components/ui/kbd'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Spinner } from '@/components/ui/spinner'
-import { LABELS, type Job, type Priority, type Status } from '../../data'
+import { plural } from '@/lib/text'
+import { useTimers } from '@/lib/use-timers'
+import { LABELS, LABEL_BY_ID, UNASSIGNED, type Job, type Priority, type Status } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
-import { LabelDot, NoAssignee, sortJobs } from '../FilterBar'
+import { sortJobs } from '../FilterBar'
 import { Panel } from '../shared'
-import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from '../StatusSection'
-import { UNASSIGNED, matchesFilter, parseQuery, valueLabel, type NlField, type NlFilter } from './nl-search'
-import { AiLabel, Thinking, useTimers } from './shared'
+import { matchesFilter, parseQuery, valueLabel, type NlField, type NlFilter } from './nl-search'
 
 const EXAMPLES = ['urgent jobs for Ravi', 'export jobs due this week', 'done last week', 'open jobs without photos']
 const FIRST_RESULTS = 6
@@ -34,10 +43,12 @@ const FIELD_META: Record<NlField, { label: string; icon: IconSvgElement }> = {
   text: { label: 'Title', icon: TextIcon },
 }
 
+// `parsed` is what the words were understood as; `filters` is what is left
+// after the chips were edited.
 type Search =
   | { phase: 'idle' }
   | { phase: 'understanding'; query: string }
-  | { phase: 'done'; query: string; filters: NlFilter[] }
+  | { phase: 'done'; query: string; parsed: NlFilter[]; filters: NlFilter[] }
 
 export function NlSearchPanel() {
   const { jobs, select } = useJobs()
@@ -54,7 +65,10 @@ export function NlSearchPanel() {
     setQuery(q)
     setShowAll(false)
     setSearch({ phase: 'understanding', query: q })
-    later(() => setSearch({ phase: 'done', query: q, filters: parseQuery(q) }), 750)
+    later(() => {
+      const parsed = parseQuery(q)
+      setSearch({ phase: 'done', query: q, parsed, filters: parsed })
+    }, 750)
   }
 
   function clear() {
@@ -64,9 +78,20 @@ export function NlSearchPanel() {
     inputRef.current?.focus()
   }
 
-  function removeFilter(id: string) {
+  // No values left takes the filter away.
+  function setValues(id: string, values: string[]) {
     if (search.phase !== 'done') return
-    setSearch({ ...search, filters: search.filters.filter((f) => f.id !== id) })
+    setSearch({
+      ...search,
+      filters: values.length
+        ? search.filters.map((f) => (f.id === id ? { ...f, values } : f))
+        : search.filters.filter((f) => f.id !== id),
+    })
+  }
+
+  function open(job: Job) {
+    select(job.id)
+    goTo('issue')
   }
 
   const filters = search.phase === 'done' ? search.filters : []
@@ -112,24 +137,15 @@ export function NlSearchPanel() {
               <InputGroupButton type="submit" variant="secondary" disabled={!query.trim() || search.phase === 'understanding'}>
                 {search.phase === 'understanding' ? <Spinner className="size-3" /> : null}
                 Search
-                <Kbd className="hidden sm:inline-flex">↵</Kbd>
+                <Shortcut keys={['enter']} className="hidden sm:inline-flex" />
               </InputGroupButton>
             </InputGroupAddon>
           </InputGroup>
         </form>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-          <span className="text-muted-foreground text-[11px]">Try</span>
-          {EXAMPLES.map((example) => (
-            <button
-              key={example}
-              type="button"
-              onClick={() => submit(example)}
-              className="text-muted-foreground hover:bg-accent/60 hover:text-foreground focus-visible:ring-ring/30 inline-flex h-6 max-w-full items-center truncate rounded-full border px-2.5 text-xs transition-colors outline-none focus-visible:ring-2"
-            >
-              {example}
-            </button>
-          ))}
+        <div className="flex min-w-0 items-start gap-1.5">
+          <span className="text-muted-foreground mt-1 shrink-0 text-[11px]">Try</span>
+          <FollowUps items={EXAMPLES} onPick={submit} label="Example searches" icon={Search01Icon} className="min-w-0 flex-1" />
         </div>
 
         {search.phase === 'understanding' && (
@@ -156,12 +172,19 @@ export function NlSearchPanel() {
           <div className="grid min-w-0 gap-2.5 border-t pt-3">
             <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               <AiLabel>Understood as</AiLabel>
-              {filters.map((f) => (
-                <ParsedChip key={f.id} filter={f} onRemove={() => removeFilter(f.id)} />
-              ))}
+              {filters.map((f) => (f.field === 'text' ? (
+                <TextChip key={f.id} words={f.values} onRemove={() => setValues(f.id, [])} />
+              ) : (
+                <FilterChip
+                  key={f.id}
+                  field={chipField(search.parsed.find((p) => p.id === f.id) ?? f)}
+                  values={f.values}
+                  onChange={(values) => setValues(f.id, values)}
+                />
+              )))}
               {!filters.length && <span className="text-muted-foreground text-xs">No filters left</span>}
               <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums" aria-live="polite">
-                {results.length} {results.length === 1 ? 'job' : 'jobs'}
+                {plural(results.length, 'job')}
               </span>
               <Button
                 variant="outline"
@@ -169,7 +192,7 @@ export function NlSearchPanel() {
                 disabled={!filters.length}
                 onClick={() =>
                   toast.success('Opened as filters', {
-                    description: `Demo only. ${filters.length} ${filters.length === 1 ? 'filter' : 'filters'} would open in the filter bar.`,
+                    description: `Demo only. ${plural(filters.length, 'filter')} would open in the filter bar.`,
                   })
                 }
               >
@@ -186,18 +209,16 @@ export function NlSearchPanel() {
 
             {results.length ? (
               <div className="grid gap-1.5">
-                <ul aria-label="Matching jobs" className="overflow-hidden rounded-lg border">
-                  {visible.map((job) => (
-                    <ResultRow
-                      key={job.id}
-                      job={job}
-                      onOpen={() => {
-                        select(job.id)
-                        goTo('issue')
-                      }}
-                    />
-                  ))}
-                </ul>
+                <div className="overflow-hidden rounded-lg border">
+                  <GroupedList
+                    aria-label="Matching jobs"
+                    groups={[{ id: 'results', title: 'Matching jobs', items: visible }]}
+                    headers={false}
+                    framed
+                    itemName={{ one: 'job', other: 'jobs' }}
+                    renderRow={(job, row) => <ResultRow job={job} row={row} onOpen={() => open(job)} />}
+                  />
+                </div>
                 {results.length > FIRST_RESULTS && (
                   <Button variant="ghost" size="sm" className="text-muted-foreground justify-self-start" onClick={() => setShowAll((v) => !v)}>
                     {showAll ? 'Show fewer' : `Show all ${results.length}`}
@@ -205,13 +226,17 @@ export function NlSearchPanel() {
                 )}
               </div>
             ) : (
-              <div className="grid justify-items-center gap-1.5 rounded-lg border border-dashed px-4 py-7 text-center">
-                <HugeiconsIcon icon={SearchRemoveIcon} strokeWidth={2} className="text-muted-foreground size-5" />
-                <p className="text-xs font-medium">No jobs match “{search.query}”</p>
-                <p className="text-muted-foreground max-w-72 text-[11px]">
-                  Remove a filter above, or ask in other words: a status, a person, a label or a date.
-                </p>
-              </div>
+              <Empty className="rounded-lg border px-4 py-7">
+                <EmptyHeader className="max-w-72">
+                  <EmptyMedia className="mb-1">
+                    <HugeiconsIcon icon={SearchRemoveIcon} strokeWidth={2} className="text-muted-foreground size-5" />
+                  </EmptyMedia>
+                  <EmptyTitle className="text-xs">No jobs match “{search.query}”</EmptyTitle>
+                  <EmptyDescription className="text-[11px]">
+                    Remove a filter above, or ask in other words: a status, a person, a label or a date.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
           </div>
         )}
@@ -225,79 +250,52 @@ function ChipVisual({ field, value }: { field: NlField; value: string }) {
   if (field === 'priority') return <PriorityIcon priority={value as Priority} />
   if (field === 'assignee') return value === UNASSIGNED ? <NoAssignee /> : <UserAvatar name={value} className="size-4" />
   if (field === 'label') {
-    const label = LABELS.find((l) => l.id === value)
+    const label = LABEL_BY_ID[value]
     return label ? <LabelDot colour={label.colour} /> : null
   }
   return null
 }
 
-function ParsedChip({ filter, onRemove }: { filter: NlFilter; onRemove: () => void }) {
-  const meta = FIELD_META[filter.field]
-  const op = filter.field === 'text' ? 'contains' : filter.field === 'photos' ? 'are' : filter.values.length > 1 ? 'is any of' : 'is'
-  const value = filter.field === 'text'
-    ? `“${filter.values.join(' ')}”`
-    : filter.values.length > 2
-      ? `${valueLabel(filter.field, filter.values[0])} +${filter.values.length - 1}`
-      : filter.values.map((v) => valueLabel(filter.field, v)).join(', ')
+// A parsed filter in the filter bar's chip. Its menu offers the values the
+// words were understood as, so unticking one narrows the search; the full
+// lists are in the filter bar, behind "Edit as filters".
+function chipField(parsed: NlFilter): FilterFieldConfig {
+  return {
+    id: parsed.id,
+    ...FIELD_META[parsed.field],
+    options: parsed.values.map((value) => ({
+      value,
+      label: valueLabel(parsed.field, value),
+      visual: <ChipVisual field={parsed.field} value={value} />,
+    })),
+  }
+}
 
+// The words left over, matched against titles: "Title contains “…”".
+function TextChip({ words, onRemove }: { words: string[]; onRemove: () => void }) {
+  const meta = FIELD_META.text
   return (
-    <span className="bg-card flex h-6 max-w-full min-w-0 items-stretch overflow-hidden rounded-md border text-xs">
-      <span className="flex shrink-0 items-center gap-1 px-1.5">
-        <HugeiconsIcon icon={meta.icon} strokeWidth={2} className="text-muted-foreground size-3.5" />
-        {meta.label}
-      </span>
-      <span className="text-muted-foreground flex shrink-0 items-center border-l px-1.5">{op}</span>
-      <span className="flex min-w-0 items-center gap-1.5 border-l px-1.5">
-        <span className="flex shrink-0 items-center gap-0.5">
-          {filter.field !== 'text' && filter.values.slice(0, 3).map((v) => (
-            <ChipVisual key={v} field={filter.field} value={v} />
-          ))}
-        </span>
-        <span className="truncate">{value}</span>
-      </span>
-      <button
-        type="button"
-        aria-label={`Remove ${meta.label.toLowerCase()} filter`}
-        onClick={onRemove}
-        className="text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:ring-ring/40 flex items-center border-l px-1 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-inset"
-      >
-        <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} className="size-3" />
-      </button>
-    </span>
+    <FilterPill icon={meta.icon} label={meta.label} operator="contains" removeLabel={`Remove ${meta.label.toLowerCase()} filter`} onRemove={onRemove}>
+      <FilterPillValue>“{words.join(' ')}”</FilterPillValue>
+    </FilterPill>
   )
 }
 
-function ResultRow({ job, onOpen }: { job: Job; onOpen: () => void }) {
+function ResultRow({ job, row, onOpen }: { job: Job; row: GroupedListRowState; onOpen: () => void }) {
   const labels = LABELS.filter((l) => job.labels.includes(l.id))
   return (
-    <li className="border-b last:border-b-0">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="hover:bg-accent/60 focus-visible:bg-accent flex h-9 w-full min-w-0 items-center gap-2.5 px-3 text-left text-xs outline-none"
-      >
-        <PriorityIcon priority={job.priority} />
-        <span className="text-muted-foreground hidden w-[4.75rem] shrink-0 tabular-nums sm:inline">{job.id}</span>
-        <StatusIcon status={job.status} />
-        <span className="min-w-0 flex-1 truncate font-medium">{job.title || 'Untitled job'}</span>
-        <Labels labels={labels} />
-        <span className="text-muted-foreground hidden w-16 shrink-0 text-right sm:inline">{job.due}</span>
-        {job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
-      </button>
-    </li>
-  )
-}
-
-function Labels({ labels }: { labels: typeof LABELS }): ReactNode {
-  if (!labels.length) return null
-  return (
-    <span className="hidden shrink-0 items-center gap-1 md:flex">
-      {labels.map((l) => (
-        <span key={l.id} className="text-muted-foreground inline-flex h-5 items-center gap-1.5 rounded-full border px-2 text-[11px]">
-          <LabelDot colour={l.colour} />
-          {l.name}
+    <GroupedListRow row={row} onOpen={onOpen}>
+      <PriorityIcon priority={job.priority} />
+      <span className="text-muted-foreground hidden w-[4.75rem] shrink-0 tabular-nums sm:inline">{job.id}</span>
+      <StatusIcon status={job.status} />
+      <span className="min-w-0 flex-1 truncate font-medium">{job.title || 'Untitled job'}</span>
+      {labels.length > 0 && (
+        <span className="hidden shrink-0 items-center gap-1 md:flex">
+          {labels.map((l) => <LabelChip key={l.id} name={l.name} colour={l.colour} />)}
         </span>
-      ))}
-    </span>
+      )}
+      <span className="text-muted-foreground hidden w-16 shrink-0 text-right sm:inline">{job.due}</span>
+      {job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />}
+    </GroupedListRow>
   )
 }

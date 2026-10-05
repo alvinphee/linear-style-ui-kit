@@ -1,9 +1,13 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Download01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { KpiCard } from '@/blocks/kpi-card'
+import { DeltaBadge, type KpiDelta } from '@/components/delta-badge'
+import { PageHeader } from '@/components/page-header'
+import { Panel } from '@/components/panel'
 import { StatusBadge as KitStatusBadge } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -11,11 +15,14 @@ import {
 } from '@/components/ui/chart'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Empty, EmptyDescription } from '@/components/ui/empty'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { formatMoney, formatNumber } from '@/lib/format'
+import { plural } from '@/lib/text'
 import { useErp } from '../store'
-import { TODAY, formatDate, formatMoney, formatMoneyShort, formatNumber } from '../format'
+import { TODAY, formatDate, formatMoneyShort } from '../format'
 import type { Row } from '../types'
-import { Card, PageHeader, StatusBadge } from '../ui'
+import { PAGE_HEADER, StatusBadge } from '../ui'
 
 // Accounting › Financial reports: profit and loss, balance sheet and a cash
 // flow summary, all worked out from the chart of accounts and payments in the
@@ -156,7 +163,7 @@ function cashFlow(ledger: Row[], payments: Row[]) {
     return methods.map((method) => {
       const list = rows.filter((r) => r.method === method)
       const total = list.reduce((t, r) => t + Number(r.amount), 0)
-      return { kind: 'line', label: method, note: `${list.length} ${list.length === 1 ? 'payment' : 'payments'}`, current: sign * total, depth: 1 }
+      return { kind: 'line', label: method, note: plural(list.length, 'payment'), current: sign * total, depth: 1 }
     })
   }
   const incoming = payments.filter((r) => r.direction === 'Received')
@@ -227,6 +234,7 @@ export function FinancialReports() {
   return (
     <Tabs value={tab} onValueChange={setTab} className="min-h-full gap-0">
       <PageHeader
+        className={PAGE_HEADER}
         title="Financial reports"
         description={[company?.name, context, 'amounts in USD'].filter(Boolean).join(' · ')}
         actions={
@@ -263,11 +271,11 @@ export function FinancialReports() {
           <Kpi label="Net income" value={pnl.net} priorLabel={p.prior} better={1} hint={margin(pnl.net.current)} />
         </div>
         <div className="grid grid-cols-1 items-start gap-4 @4xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <StatementCard title="Profit and loss" caption={`${p.current} · USD`}>
+          <Panel as="section" title="Profit and loss" note={`${p.current} · USD`} className="overflow-hidden" bodyClassName="p-0">
             <Statement lines={pnl.lines} columns={[p.current, p.prior]} onOpen={(code) => openPeek('ledgerAccounts', code)} />
-          </StatementCard>
+          </Panel>
           <div className="grid min-w-0 gap-4">
-            <Card title="Revenue and expenses">
+            <Panel as="section" title="Revenue and expenses">
               <ChartContainer config={chartConfig} className="aspect-auto h-48 w-full">
                 <BarChart data={chartData} margin={{ top: 8, right: 4, bottom: 0, left: 0 }} barGap={2} accessibilityLayer>
                   <CartesianGrid vertical={false} />
@@ -282,8 +290,8 @@ export function FinancialReports() {
               <p className="text-muted-foreground mt-2 text-[11px]">
                 Expenses are cost of goods sold plus operating expenses.
               </p>
-            </Card>
-            <Card title="Operating expenses by account">
+            </Panel>
+            <Panel as="section" title="Operating expenses by account">
               <ul className="grid gap-2.5">
                 {opexRanked.map((l) => {
                   const share = ((l.current ?? 0) / opexTotal) * 100
@@ -308,7 +316,7 @@ export function FinancialReports() {
                   )
                 })}
               </ul>
-            </Card>
+            </Panel>
           </div>
         </div>
       </TabsContent>
@@ -318,21 +326,19 @@ export function FinancialReports() {
           <Kpi label="Total assets" value={bs.assets} priorLabel={priorYearEnd} />
           <Kpi label="Total liabilities" value={bs.liabilities} priorLabel={priorYearEnd} />
           <Kpi label="Total equity" value={bs.equity} priorLabel={priorYearEnd} />
-          <div className="bg-card grid min-w-0 content-start gap-1 rounded-lg border p-3.5">
-            <span className="text-muted-foreground truncate text-xs">Balance check</span>
-            <span className="flex h-7 items-center">
-              {bs.balanced ? <BalancedBadge /> : <StatusBadge status="Out of balance" />}
-            </span>
-            <span className="text-muted-foreground truncate text-[11px]">Assets = liabilities + equity</span>
-          </div>
+          <KpiCard
+            label="Balance check"
+            value={bs.balanced ? <BalancedBadge /> : <StatusBadge status="Out of balance" />}
+            footnote="Assets = liabilities + equity"
+          />
         </div>
         <div className="grid grid-cols-1 items-start gap-4 @5xl:grid-cols-2">
-          <StatementCard title="Assets" caption={`As of ${asOf} · USD`}>
+          <Panel as="section" title="Assets" note={`As of ${asOf} · USD`} className="overflow-hidden" bodyClassName="p-0">
             <Statement lines={bs.assetLines} columns={[asOf, priorYearEnd]} onOpen={(code) => openPeek('ledgerAccounts', code)} />
-          </StatementCard>
-          <StatementCard title="Liabilities and equity" caption={`As of ${asOf} · USD`}>
+          </Panel>
+          <Panel as="section" title="Liabilities and equity" note={`As of ${asOf} · USD`} className="overflow-hidden" bodyClassName="p-0">
             <Statement lines={bs.claimLines} columns={[asOf, priorYearEnd]} onOpen={(code) => openPeek('ledgerAccounts', code)} />
-          </StatementCard>
+          </Panel>
         </div>
       </TabsContent>
 
@@ -344,10 +350,10 @@ export function FinancialReports() {
           <Kpi label="Closing cash balance" value={{ current: cash.closing, prior: 0 }} hint={`Net ${cash.net < 0 ? 'outflow' : 'inflow'} ${short(Math.abs(cash.net))}`} />
         </div>
         <div className="grid grid-cols-1 items-start gap-4 @4xl:grid-cols-[minmax(0,1fr)_20rem]">
-          <StatementCard title="Cash flow summary" caption={`${formatDate(cash.from)} – ${formatDate(TODAY)} · USD`}>
+          <Panel as="section" title="Cash flow summary" note={`${formatDate(cash.from)} – ${formatDate(TODAY)} · USD`} className="overflow-hidden" bodyClassName="p-0">
             <Statement lines={cash.lines} head="Description" columns={['Amount']} compare={false} onOpen={(code) => openPeek('ledgerAccounts', code)} />
-          </StatementCard>
-          <Card title="Not yet reconciled" action={<span className="text-muted-foreground text-[11px] tabular-nums">{cash.pending.length}</span>}>
+          </Panel>
+          <Panel as="section" title="Not yet reconciled" action={<span className="text-muted-foreground text-[11px] tabular-nums">{cash.pending.length}</span>}>
             {cash.pending.length ? (
               <ul className="-my-1 grid">
                 {cash.pending.map((r) => (
@@ -368,9 +374,11 @@ export function FinancialReports() {
                 ))}
               </ul>
             ) : (
-              <p className="text-muted-foreground text-xs">Every payment is reconciled.</p>
+              <Empty className="p-2">
+                <EmptyDescription>Every payment is reconciled.</EmptyDescription>
+              </Empty>
             )}
-          </Card>
+          </Panel>
         </div>
       </TabsContent>
     </Tabs>
@@ -386,6 +394,21 @@ function BalancedBadge() {
   )
 }
 
+// The change on the period before as a delta badge: green when it moved the
+// good way (`better`: up 1, down -1), red when not, grey when neither or flat.
+function changeOf(current: number, prior: number, better?: 1 | -1): KpiDelta | undefined {
+  if (!prior) return undefined
+  const pct = ((current - prior) / Math.abs(prior)) * 100
+  if (Math.abs(pct) < 0.05) return { direction: 'up', tone: 'neutral', text: '0.0%' }
+  const direction = pct > 0 ? 'up' : 'down'
+  return {
+    direction,
+    text: `${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%`,
+    tone: !better ? 'neutral' : Math.sign(pct) === better ? 'positive' : 'negative',
+  }
+}
+
+// A report KPI: the kit's KPI card, with the change on `priorLabel` and a hint.
 function Kpi({ label, value, priorLabel, better, hint }: {
   label: string
   value: Pair
@@ -393,38 +416,15 @@ function Kpi({ label, value, priorLabel, better, hint }: {
   better?: 1 | -1
   hint?: string
 }) {
-  return (
-    <div className="bg-card grid min-w-0 content-start gap-1 rounded-lg border p-3.5">
-      <span className="text-muted-foreground truncate text-xs">{label}</span>
-      <span className="text-lg font-semibold tracking-tight tabular-nums">{short(value.current)}</span>
-      <span className="text-muted-foreground truncate text-[11px]">
-        {priorLabel && (
-          <>
-            <Change current={value.current} prior={value.prior} better={better} /> vs {priorLabel}
-          </>
-        )}
-        {priorLabel && hint && ' · '}
-        {hint}
-      </span>
-    </div>
-  )
+  const delta = priorLabel ? changeOf(value.current, value.prior, better) : undefined
+  const vs = priorLabel && `${delta ? '' : '— '}vs ${priorLabel}`
+  return <KpiCard label={label} value={short(value.current)} delta={delta} footnote={[vs, hint].filter(Boolean).join(' · ')} />
 }
 
+// A statement's Change column: the delta badge, or a dash with nothing to compare.
 function Change({ current, prior, better }: { current: number; prior: number; better?: 1 | -1 }) {
-  if (!prior) return <span className="text-muted-foreground">—</span>
-  const pct = ((current - prior) / Math.abs(prior)) * 100
-  const flat = Math.abs(pct) < 0.05
-  const tone = flat || !better ? 'text-muted-foreground' : Math.sign(pct) === better ? 'text-status-done' : 'text-destructive'
-  return (
-    <span className={cn('tabular-nums', tone)}>
-      {flat ? '0.0%' : `${pct > 0 ? '+' : '−'}${Math.abs(pct).toFixed(1)}%`}
-    </span>
-  )
-}
-
-// A Card whose statement table runs to its edges.
-function StatementCard({ title, caption, children }: { title: string; caption: string; children: ReactNode }) {
-  return <Card title={title} note={caption} className="overflow-hidden" bodyClassName="p-0">{children}</Card>
+  const delta = changeOf(current, prior, better)
+  return delta ? <DeltaBadge {...delta} /> : <span className="text-muted-foreground">—</span>
 }
 
 const INDENT = ['pl-3.5', 'pl-6', 'pl-9'] as const

@@ -3,16 +3,17 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { AiBrain01Icon, Cancel01Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
-  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { AiLabel } from '@/components/ai-label'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { IconAction } from '@/components/icon-action'
 import { Button } from '@/components/ui/button'
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { formatNumber } from '@/lib/format'
+import { plural } from '@/lib/text'
 import { Panel } from '../shared'
-import { AiLabel, IconAction } from './shared'
 
 type Memory = { id: string; text: string; source: string }
 
@@ -59,7 +60,7 @@ export function MemoryPanel() {
     const before = memories
     setMemories([])
     toast.success('Memory cleared', {
-      description: `The assistant forgot ${before.length} ${before.length === 1 ? 'thing' : 'things'}.`,
+      description: `The assistant forgot ${plural(before.length, 'thing')}.`,
       action: { label: 'Undo', onClick: () => setMemories(before) },
     })
   }
@@ -126,13 +127,17 @@ export function MemoryPanel() {
               ))}
             </ul>
           ) : (
-            <div className="grid justify-items-center gap-1.5 rounded-lg border border-dashed px-4 py-6 text-center">
-              <HugeiconsIcon icon={AiBrain01Icon} strokeWidth={2} className="text-muted-foreground size-5" />
-              <p className="text-xs font-medium">Nothing remembered yet</p>
-              <p className="text-muted-foreground max-w-64 text-[11px]">
-                {enabled ? 'Useful details from your chats will show up here.' : 'Turn memory on to let the assistant save details.'}
-              </p>
-            </div>
+            <Empty className="rounded-lg border px-4 py-6">
+              <EmptyHeader className="max-w-64">
+                <EmptyMedia className="mb-1">
+                  <HugeiconsIcon icon={AiBrain01Icon} strokeWidth={2} className="text-muted-foreground size-5" />
+                </EmptyMedia>
+                <EmptyTitle className="text-xs">Nothing remembered yet</EmptyTitle>
+                <EmptyDescription className="text-[11px]">
+                  {enabled ? 'Useful details from your chats will show up here.' : 'Turn memory on to let the assistant save details.'}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
         </div>
 
@@ -165,7 +170,7 @@ export function MemoryPanel() {
                 count >= MAX && 'text-destructive',
               )}
             >
-              {count.toLocaleString('en-US')} / {MAX.toLocaleString('en-US')}
+              {formatNumber(count)} / {formatNumber(MAX)}
             </span>
             {dirty && (
               <Button variant="ghost" size="sm" onClick={() => setDraft(saved)}>Discard</Button>
@@ -175,20 +180,15 @@ export function MemoryPanel() {
         </div>
       </div>
 
-      <AlertDialog open={confirmClear} onOpenChange={setConfirmClear}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Clear everything the assistant remembers?</AlertDialogTitle>
-            <AlertDialogDescription>
-              It forgets all {memories.length} saved {memories.length === 1 ? 'detail' : 'details'}. Your custom instructions stay.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={clearAll}>Clear all</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirm
+        open={confirmClear}
+        onOpenChange={setConfirmClear}
+        icon={null}
+        title="Clear everything the assistant remembers?"
+        description={`It forgets all ${memories.length} saved ${memories.length === 1 ? 'detail' : 'details'}. Your custom instructions stay.`}
+        confirmLabel="Clear all"
+        onConfirm={clearAll}
+      />
     </Panel>
   )
 }

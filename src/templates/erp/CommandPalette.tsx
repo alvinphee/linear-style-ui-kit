@@ -5,14 +5,17 @@ import { toast } from 'sonner'
 import {
   Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut,
 } from '@/components/ui/command'
+import { IconMark } from '@/components/mark'
 import { useTheme } from '@/lib/theme'
 import { DEMO_USERS, ROLE_LABEL } from './data'
-import { pageFor, specFor } from './modules'
+import { useAssistant } from './assistant/store'
+import { edition } from './edition'
+import { pageFor, pagesOf, specFor } from './modules'
 import { go, goScreen } from './route'
 import { allowedModules } from './Shell'
 import { useErp } from './store'
 import type { EntityId, ErpModule } from './types'
-import { ModuleMark, StatusBadge } from './ui'
+import { StatusBadge } from './ui'
 
 // Records the palette can find by number or name, in the order they're listed.
 const SEARCHABLE: { entity: EntityId; fields: string[] }[] = [
@@ -32,10 +35,12 @@ const CREATE: { entity: EntityId; label: string }[] = [
 ]
 
 // Ctrl+K / ⌘K. Jump to any module or page, find a record by number or name,
-// create something, or change a setting, without leaving the keyboard.
+// create something, change a setting, or ask AI what you typed, without
+// leaving the keyboard.
 export function CommandPalette({ module }: { module: ErpModule }) {
   const { paletteOpen, setPaletteOpen, session, data, openPeek, startCreate, setRole, signOut, setCopilotOpen } = useErp()
   const { setTheme } = useTheme()
+  const { send } = useAssistant()
   const [query, setQuery] = useState('')
   const modules = allowedModules(session?.role)
   const allowed = new Set(modules.map((m) => m.id))
@@ -61,6 +66,16 @@ export function CommandPalette({ module }: { module: ErpModule }) {
     setPaletteOpen(false)
     setQuery('')
     action()
+  }
+
+  // What you typed, as a question: in the Assistant (ERP + AI) or the side panel.
+  function ask(question: string) {
+    if (!send(question, { newChat: true })) {
+      toast('Ask AI is still answering', { description: 'Try again when the reply has finished, or stop it.' })
+      return
+    }
+    if (edition().assistant) go('home', 'assistant')
+    else setCopilotOpen(true)
   }
 
   const creates = CREATE.filter((c) => {
@@ -97,7 +112,7 @@ export function CommandPalette({ module }: { module: ErpModule }) {
 
           {module.id !== 'home' && (
             <CommandGroup heading={`${module.name} pages`}>
-              {module.pages.map((p) => (
+              {pagesOf(module).map((p) => (
                 <CommandItem key={p.id} value={`${module.name} ${p.label}`} onSelect={() => run(() => go(module.id, p.id))}>
                   <HugeiconsIcon icon={p.icon} strokeWidth={2} /> {p.label}
                 </CommandItem>
@@ -108,7 +123,7 @@ export function CommandPalette({ module }: { module: ErpModule }) {
           <CommandGroup heading="Go to module">
             {modules.map((m) => (
               <CommandItem key={m.id} value={`module ${m.name}`} onSelect={() => run(() => go(m.id, m.pages[0].id))}>
-                <ModuleMark icon={m.icon} colour={m.colour} size="sm" /> {m.name}
+                <IconMark icon={m.icon} colour={m.colour} size="sm" /> {m.name}
                 <CommandShortcut>G {m.key}</CommandShortcut>
               </CommandItem>
             ))}
@@ -117,13 +132,28 @@ export function CommandPalette({ module }: { module: ErpModule }) {
           {/* Every page in every module, found by typing ("bills", "payroll"…). */}
           {query.trim() && (
             <CommandGroup heading="All pages">
-              {modules.flatMap((m) => m.pages.map((p) => (
+              {modules.flatMap((m) => pagesOf(m).map((p) => (
                 <CommandItem key={`${m.id}/${p.id}`} value={`page ${m.name} ${p.label}`} onSelect={() => run(() => go(m.id, p.id))}>
                   <HugeiconsIcon icon={p.icon} strokeWidth={2} />
                   <span className="text-muted-foreground">{m.name}</span>
                   <span className="text-muted-foreground/60">›</span> {p.label}
                 </CommandItem>
               )))}
+            </CommandGroup>
+          )}
+
+          {/* Anything typed can be asked as a question. Its value holds the
+              query, so it always matches. */}
+          {query.trim().length >= 3 && (
+            <CommandGroup heading="Ask AI">
+              <CommandItem value={`ask ai ${query}`} onSelect={() => {
+                const question = query.trim()
+                run(() => ask(question))
+              }}>
+                <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-brand" />
+                <span className="shrink-0">Ask AI:</span>
+                <span className="text-muted-foreground min-w-0 truncate">“{query.trim()}”</span>
+              </CommandItem>
             </CommandGroup>
           )}
 

@@ -1,16 +1,23 @@
-import { useId, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import { DollarCircleIcon, Download01Icon, Target02Icon, UserAdd01Icon, UserGroupIcon } from '@hugeicons/core-free-icons'
 import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { DeltaBadge, KpiCard, KpiGrid, type KpiDelta } from '@/blocks/kpi-card'
+import { KpiCard, KpiGrid } from '@/blocks/kpi-card'
 import { PeriodBar } from '@/blocks/period-picker'
+import { BarList } from '@/components/bar-list'
+import { LegendLine, LegendRow } from '@/components/chart-legend'
+import { DeltaBadge, type KpiDelta } from '@/components/delta-badge'
+import { LetterMark } from '@/components/mark'
+import { UserAvatar } from '@/components/person'
 import { Button } from '@/components/ui/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { formatDateRange, formatMoney, formatNumber, formatShortDate } from '@/lib/format'
+import { seededRandom } from '@/lib/random'
+import { useSvgId } from '@/lib/use-svg-id'
 import { Panel, Section } from './shared'
-import { UserAvatar } from '@/components/person'
 
 type Range = '7d' | '30d' | '90d'
 const RANGES: { value: Range; label: string; short: string; days: number }[] = [
@@ -27,23 +34,8 @@ const END = Date.UTC(2026, 8, 30)
 const SMOOTH = 7
 const HISTORY_DAYS = 180 + SMOOTH - 1
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-// Not Intl: newer en-GB data writes "Sept", which reads oddly next to "Aug".
-const shortDate = {
-  format: (t: number) => `${new Date(t).getUTCDate()} ${MONTHS[new Date(t).getUTCMonth()]}`,
-}
-const int = new Intl.NumberFormat('en-US')
-const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
-
-function seeded(seed: number) {
-  let s = seed
-  return () => {
-    s = (s + 0x6d2b79f5) | 0
-    let t = Math.imul(s ^ (s >>> 15), 1 | s)
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
-  }
-}
+const shortDate = (t: number) => formatShortDate(t, { utc: true })
+const usd = (v: number) => formatMoney(v, false)
 
 // A product launch mid-September: the extra signups make the last 7 days look down.
 const LAUNCH: Record<number, number> = {
@@ -56,7 +48,7 @@ type DayStats = { t: number } & Record<Metric, number>
 
 // Made-up numbers from a fixed seed: steady growth, quieter weekends, some noise.
 const HISTORY: DayStats[] = (() => {
-  const rand = seeded(1)
+  const rand = seededRandom(1)
   return Array.from({ length: HISTORY_DAYS }, (_, i) => {
     const t = END - (HISTORY_DAYS - 1 - i) * DAY
     const weekday = new Date(t).getUTCDay()
@@ -77,8 +69,7 @@ function periods(range: Range) {
   return { current: HISTORY.slice(end - n), previous: HISTORY.slice(end - 2 * n, end - n), start: end - n }
 }
 
-const spanLabel = (days: DayStats[]) =>
-  `${shortDate.format(days[0]?.t ?? END)} – ${shortDate.format(days.at(-1)?.t ?? END)}`
+const spanLabel = (days: DayStats[]) => formatDateRange(days[0]?.t ?? END, days.at(-1)?.t ?? END, { utc: true })
 
 type Kpi = {
   key: Metric
@@ -91,12 +82,12 @@ type Kpi = {
   format: (v: number) => string
 }
 
-const compactUsd = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : usd.format(v))
+const compactUsd = (v: number) => (v >= 1000 ? `$${(v / 1000).toFixed(1)}k` : usd(v))
 
 const KPIS: Kpi[] = [
   { key: 'revenue', label: 'Revenue', hint: 'total', icon: DollarCircleIcon, total: 'sum', change: 'pct', format: compactUsd },
-  { key: 'users', label: 'Active users', hint: 'avg / day', icon: UserGroupIcon, total: 'avg', change: 'pct', format: (v) => int.format(Math.round(v)) },
-  { key: 'signups', label: 'New signups', hint: 'total', icon: UserAdd01Icon, total: 'sum', change: 'pct', format: (v) => int.format(Math.round(v)) },
+  { key: 'users', label: 'Active users', hint: 'avg / day', icon: UserGroupIcon, total: 'avg', change: 'pct', format: (v) => formatNumber(Math.round(v)) },
+  { key: 'signups', label: 'New signups', hint: 'total', icon: UserAdd01Icon, total: 'sum', change: 'pct', format: (v) => formatNumber(Math.round(v)) },
   { key: 'conversion', label: 'Conversion', hint: 'avg', icon: Target02Icon, total: 'avg', change: 'pts', format: (v) => `${v.toFixed(2)}%` },
 ]
 
@@ -137,9 +128,6 @@ function sparkSeries(range: Range, key: Metric) {
   return { current: smoothed(start, n, key), previous: smoothed(start - n, n, key) }
 }
 
-// SVG ids end up in url(#…), which does not accept the colons useId can produce.
-const useSvgId = () => useId().replace(/[^a-zA-Z0-9_-]/g, '')
-
 function DashboardKpi({ kpi, range, compare }: { kpi: Kpi; range: Range; compare: boolean }) {
   const { current, previous } = periods(range)
   const value = totalOf(current, kpi)
@@ -166,8 +154,8 @@ function DashboardKpi({ kpi, range, compare }: { kpi: Kpi; range: Range; compare
 
 type ChartMetric = 'revenue' | 'users'
 const CHART_METRICS: { value: ChartMetric; label: string; format: (v: number) => string; axis: (v: number) => string }[] = [
-  { value: 'revenue', label: 'Revenue', format: (v) => usd.format(v), axis: (v) => `$${Math.round(v / 1000)}k` },
-  { value: 'users', label: 'Active users', format: (v) => int.format(v), axis: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`) },
+  { value: 'revenue', label: 'Revenue', format: usd, axis: (v) => `$${Math.round(v / 1000)}k` },
+  { value: 'users', label: 'Active users', format: formatNumber, axis: (v) => (v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`) },
 ]
 
 const mainConfig = {
@@ -177,23 +165,12 @@ const mainConfig = {
 
 type Point = { day: string; prevDay: string; current: number; previous: number | undefined }
 
-function LegendLine({ dashed, color, label }: { dashed?: boolean; color: string; label: string }) {
-  return (
-    <span className="flex items-center gap-1.5">
-      <svg width="16" height="6" aria-hidden>
-        <line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2" strokeDasharray={dashed ? '3 3' : undefined} />
-      </svg>
-      {label}
-    </span>
-  )
-}
-
 function MetricChart({ metric, range, compare }: { metric: (typeof CHART_METRICS)[number]; range: Range; compare: boolean }) {
   const gradientId = `dash-${useSvgId()}`
   const { current, previous } = periods(range)
   const data: Point[] = current.map((d, i) => ({
-    day: shortDate.format(d.t),
-    prevDay: previous[i] ? shortDate.format(previous[i].t) : '',
+    day: shortDate(d.t),
+    prevDay: previous[i] ? shortDate(previous[i].t) : '',
     current: d[metric.value],
     previous: previous[i]?.[metric.value],
   }))
@@ -275,10 +252,10 @@ function PerformancePanel({ range, compare }: { range: Range; compare: boolean }
               <TabsTrigger key={m.value} value={m.value}>{m.label}</TabsTrigger>
             ))}
           </TabsList>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-[11px]">
-            <LegendLine color="var(--chart-1)" label="This period" />
-            {compare && <LegendLine color="var(--muted-foreground)" label="Previous period" dashed />}
-          </div>
+          <LegendRow>
+            <LegendLine colour="var(--chart-1)" label="This period" />
+            {compare && <LegendLine colour="var(--muted-foreground)" label="Previous period" dashed />}
+          </LegendRow>
         </div>
         {CHART_METRICS.map((m) => {
           const kpi = KPI_BY_KEY[m.value]
@@ -288,7 +265,7 @@ function PerformancePanel({ range, compare }: { range: Range; compare: boolean }
             <TabsContent key={m.value} value={m.value} className="grid gap-3">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <span className="text-xl font-semibold tracking-tight tabular-nums">
-                  {m.value === 'revenue' ? usd.format(value) : int.format(Math.round(value))}
+                  {m.value === 'revenue' ? usd(value) : formatNumber(Math.round(value))}
                 </span>
                 <DeltaBadge {...changeOf(value, before, kpi)} />
                 <span className="text-muted-foreground text-xs">
@@ -317,45 +294,32 @@ const CUSTOMERS: { name: string; plan: string; share: Record<Range, number> }[] 
 function TopCustomersPanel({ range }: { range: Range }) {
   const revenue = totalOf(periods(range).current, KPI_BY_KEY.revenue)
   const ranked = [...CUSTOMERS].sort((a, b) => b.share[range] - a.share[range])
-  const top = ranked[0]?.share[range] ?? 1
   const combined = ranked.reduce((s, c) => s + c.share[range], 0)
 
   return (
     <Panel title="Top customers" note={`By revenue, ${rangeOf(range).label.toLowerCase()}`}>
-      <ol className="grid gap-3">
-        {ranked.map((c, i) => {
+      <BarList
+        ranked
+        colour="color-mix(in oklab, var(--muted-foreground) 45%, transparent)"
+        items={ranked.map((c, i) => {
           const share = c.share[range]
-          return (
-            <li key={c.name} className="grid gap-1.5">
-              <div className="flex min-w-0 items-center gap-2.5 text-xs">
-                <span className="text-muted-foreground w-3 shrink-0 text-right text-[11px] tabular-nums">{i + 1}</span>
-                <span
-                  aria-hidden
-                  className="bg-muted text-muted-foreground flex size-5 shrink-0 items-center justify-center rounded-md text-[10px] font-medium"
-                >
-                  {c.name[0]}
-                </span>
-                <span className="min-w-0 truncate font-medium">{c.name}</span>
-                <span className="text-muted-foreground hidden shrink-0 text-[11px] sm:inline">{c.plan}</span>
-                <span className="ml-auto shrink-0 tabular-nums">{usd.format(Math.round(revenue * share))}</span>
-                <span className="text-muted-foreground w-10 shrink-0 text-right text-[11px] tabular-nums">
-                  {(share * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div
-                role="img"
-                aria-label={`${c.name}: ${(share * 100).toFixed(1)}% of revenue`}
-                className="bg-muted ml-[1.375rem] h-1 overflow-hidden rounded-full"
-              >
-                <span
-                  className={cn('block h-full rounded-full transition-[width] duration-500', i === 0 ? 'bg-brand' : 'bg-muted-foreground/45')}
-                  style={{ width: `${(share / top) * 100}%` }}
-                />
-              </div>
-            </li>
-          )
+          return {
+            id: c.name,
+            label: <span className="font-medium">{c.name}</span>,
+            // The plan only fits beside the name from the sm breakpoint up.
+            hint: <span className="hidden sm:inline">{c.plan}</span>,
+            value: share,
+            display: usd(Math.round(revenue * share)),
+            secondary: `${(share * 100).toFixed(1)}%`,
+            start: (
+              <span aria-hidden className="shrink-0">
+                <LetterMark text={c.name[0]} colour="var(--muted)" className="text-muted-foreground rounded-md text-[10px] font-medium" />
+              </span>
+            ),
+            colour: i === 0 ? 'var(--brand)' : undefined,
+          }
         })}
-      </ol>
+      />
       <p className="text-muted-foreground mt-3 border-t pt-3 text-[11px] tabular-nums">
         These {ranked.length} customers bring in {(combined * 100).toFixed(0)}% of revenue.
       </p>

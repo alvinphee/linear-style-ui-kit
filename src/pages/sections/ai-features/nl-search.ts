@@ -1,4 +1,4 @@
-import { CUSTOMERS, LABELS, PRIORITY, STATUS, type Job, type Priority, type Status } from '../../data'
+import { CUSTOMERS, LABELS, PRIORITY, STATUS, UNASSIGNED, type Job, type Priority, type Status } from '../../data'
 
 // A small keyword parser that turns "urgent jobs for Ravi" into filters.
 // No model: each matcher eats the words it understands, and what is left
@@ -7,9 +7,9 @@ import { CUSTOMERS, LABELS, PRIORITY, STATUS, type Job, type Priority, type Stat
 export type NlField = 'status' | 'priority' | 'assignee' | 'label' | 'customer' | 'due' | 'photos' | 'text'
 export type NlFilter = { id: string; field: NlField; values: string[] }
 
-export type DueWindow = 'today' | 'tomorrow' | 'yesterday' | 'this-week' | 'next-week' | 'last-week' | 'overdue'
+type DueWindow = 'today' | 'tomorrow' | 'yesterday' | 'this-week' | 'next-week' | 'last-week' | 'overdue'
 
-export const DUE_LABELS: Record<DueWindow, string> = {
+const DUE_LABELS: Record<DueWindow, string> = {
   today: 'Today',
   tomorrow: 'Tomorrow',
   yesterday: 'Yesterday',
@@ -19,7 +19,6 @@ export const DUE_LABELS: Record<DueWindow, string> = {
   overdue: 'Overdue',
 }
 
-export const UNASSIGNED = 'unassigned'
 const OPEN: Status[] = ['backlog', 'todo', 'progress']
 
 const ALIASES: Record<string, string[]> = {
@@ -104,7 +103,7 @@ export function parseQuery(query: string): NlFilter[] {
 const TODAY = new Date(2026, 8, 30)
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
 
-export function dueOffset(due: string): number | null {
+function dueOffset(due: string): number | null {
   if (!due) return null
   if (due === 'Today') return 0
   if (due === 'Tomorrow') return 1

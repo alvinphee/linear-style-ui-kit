@@ -1,26 +1,23 @@
 import { Fragment, memo, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  AssistantMessage, FeedbackDialog, FileChip as FileChipView, FollowUps, MessageActions, UserMessage,
+  AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, StoppedNote, UserMessage,
 } from '@/blocks/ai/chat-message'
+import { copyText } from '@/lib/clipboard'
+import { formatDuration } from '@/lib/format'
 import { useActions } from './context'
-import { FILE_ICONS, formatDuration, modelById } from './data'
-import { copyToClipboard, currentReply, replyText } from './helpers'
+import { modelById } from './data'
+import { currentReply, replyText } from './helpers'
 import { Markdown } from './markdown'
-import {
-  ApprovalCard, ArtifactCard, ErrorCard, ProcessTrail, SourcesRow, StoppedNote, type ProcessPart,
-} from './parts'
-import type { AssistantMessage as AssistantMessageData, FileRef, Part, PartOf, UserMessage as UserMessageData } from './types'
+import { ApprovalCard, ArtifactCard, ErrorCard, ProcessTrail, type ProcessPart } from './parts'
+import type { AssistantMessage as AssistantMessageData, Part, PartOf, UserMessage as UserMessageData } from './types'
 
 // The workspace's side of the chat message blocks: it reads the store's
 // messages, maps them to the blocks' props and wires their callbacks to the
 // workspace's actions.
 
-export { IconAction } from '@/components/icon-action'
-
-export function FileChip({ file, onRemove }: { file: FileRef; onRemove?: () => void }) {
-  return <FileChipView name={file.name} size={file.size} icon={FILE_ICONS[file.kind]} onRemove={onRemove} />
-}
+// The Copy buttons show their own tick, so no toast.
+const copy = (text: string) => copyText(text, { success: false, error: false })
 
 export const UserMessageView = memo(function UserMessageView({ chatId, message, mentions }: {
   chatId: string
@@ -31,9 +28,9 @@ export const UserMessageView = memo(function UserMessageView({ chatId, message, 
   return (
     <UserMessage
       text={message.text}
-      attachments={message.attachments.map((file) => ({ id: file.id, name: file.name, size: file.size, icon: FILE_ICONS[file.kind] }))}
+      attachments={message.attachments.map(({ id, name, size }) => ({ id, name, size }))}
       mentions={mentions}
-      onCopy={copyToClipboard}
+      onCopy={copy}
       onEdit={(text) => actions.editMessage(chatId, message.id, text)}
     />
   )
@@ -112,7 +109,7 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
           {settled && (
             <MessageActions
               className="-mt-1 -ml-1"
-              onCopy={() => copyToClipboard(replyText(reply))}
+              onCopy={() => copy(replyText(reply))}
               onRegenerate={() => actions.regenerate(chatId, message.id)}
               feedback={reply.feedback}
               onFeedback={(next) => {

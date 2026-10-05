@@ -6,18 +6,24 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { AiLabel } from '@/components/ai-label'
+import { Shortcut, ariaKeyShortcuts } from '@/components/shortcut'
+import { Thinking } from '@/components/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Kbd } from '@/components/ui/kbd'
 import { Separator } from '@/components/ui/separator'
+import { useTimers } from '@/lib/use-timers'
 import { Panel } from '../shared'
 import {
   ACTION_LABELS, LANGS, SAMPLE, actionFromPrompt, prepareRange, rewrite, type Lang, type RewriteAction,
   type RewriteRequest,
 } from './rewrite'
-import { AiLabel, DiffText, Thinking, diffWords, useTimers } from './shared'
+import { DiffText, diffWords } from './shared'
+
+// Ctrl+J (⌘J on a Mac) asks AI about the selection.
+const ASK_KEYS = ['mod', 'J']
 
 type Phase =
   | { kind: 'idle' }
@@ -265,7 +271,7 @@ export function InlineRewritePanel() {
             ref={areaRef}
             aria-label="Message draft"
             aria-describedby="ai-inline-hint"
-            aria-keyshortcuts="Control+J"
+            aria-keyshortcuts={ariaKeyShortcuts(ASK_KEYS)}
             value={value}
             spellCheck={false}
             onChange={(e) => setValue(e.target.value)}
@@ -396,7 +402,9 @@ export function InlineRewritePanel() {
             <>
               <p id="ai-inline-hint" className="text-muted-foreground mr-auto text-[11px]">
                 Select text for AI actions.
-                <span className="hidden sm:inline"> Tab reaches the toolbar, <Kbd>Ctrl</Kbd> <Kbd>J</Kbd> asks, <Kbd>Esc</Kbd> closes.</span>
+                <span className="hidden sm:inline">
+                  {' '}Tab reaches the toolbar, <Shortcut keys={ASK_KEYS} /> asks, <Shortcut keys={['esc']} /> closes.
+                </span>
               </p>
               {value !== SAMPLE && (
                 <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={reset}>
@@ -411,7 +419,7 @@ export function InlineRewritePanel() {
             <>
               <Thinking label={`${phase.req.label}…`} className="mr-auto min-w-0" />
               <Button variant="ghost" size="sm" onClick={reject}>
-                Stop <Kbd className="ml-1 hidden sm:inline-flex">Esc</Kbd>
+                Stop <Shortcut keys={['esc']} className="ml-1 hidden sm:inline-flex" />
               </Button>
             </>
           )}
@@ -434,12 +442,15 @@ export function InlineRewritePanel() {
                     <Button ref={primaryRef} size="sm" onClick={accept}>
                       <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} data-icon="inline-start" />
                       Accept
-                      <Kbd className="bg-primary-foreground/15 text-primary-foreground ml-1 hidden sm:inline-flex">↵</Kbd>
+                      <Shortcut
+                        keys={['enter']}
+                        className="*:bg-primary-foreground/15 *:text-primary-foreground ml-1 hidden sm:inline-flex"
+                      />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={reject}>
                       <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} data-icon="inline-start" />
                       Reject
-                      <Kbd className="ml-1 hidden sm:inline-flex">Esc</Kbd>
+                      <Shortcut keys={['esc']} className="ml-1 hidden sm:inline-flex" />
                     </Button>
                   </>
                 )}

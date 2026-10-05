@@ -1,5 +1,5 @@
 import {
-  Agreement01Icon, Audit01Icon, BankIcon, Building03Icon, CallIcon, ChartLineData01Icon, ContactBookIcon,
+  AiChat02Icon, Agreement01Icon, Audit01Icon, BankIcon, Building03Icon, CallIcon, ChartLineData01Icon, ContactBookIcon,
   Coins01Icon, DashboardSquare01Icon, DeliveryTruck01Icon, Exchange01Icon, FunnelIcon, Invoice01Icon, Invoice03Icon,
   Calendar03Icon, Note01Icon, PackageIcon, PackageReceiveIcon, Plug01Icon, QuoteDownIcon, ReceiptTextIcon,
   Settings01Icon, Shield01Icon, ShoppingCart01Icon, Store01Icon, Tag01Icon, Target02Icon, UserGroupIcon,
@@ -8,6 +8,8 @@ import {
 } from '@hugeicons/core-free-icons'
 import { CUSTOMERS, PEOPLE, VENDORS, WAREHOUSES } from './data'
 import { TODAY, addDays } from './format'
+import { AssistantPage, AssistantSidebar } from './assistant/AssistantPage'
+import { edition } from './edition'
 import Launchpad from './Launchpad'
 import { ModuleOverview } from './pages/Overview'
 import { OpportunityPipeline } from './pages/Pipeline'
@@ -477,7 +479,10 @@ export const MODULES: ErpModule[] = [
   {
     id: 'home', name: 'Home', icon: Home01Icon, colour: 'var(--primary)', key: 'L', description: 'Your launchpad',
     roles: ['admin', 'sales', 'operations', 'finance', 'hr'],
-    pages: [{ id: 'launchpad', label: 'Launchpad', icon: DashboardSquare01Icon, render: () => <Launchpad /> }],
+    pages: [
+      { id: 'launchpad', label: 'Launchpad', icon: DashboardSquare01Icon, render: () => <Launchpad /> },
+      { id: 'assistant', label: 'Assistant', icon: AiChat02Icon, render: () => <AssistantPage />, sidebar: AssistantSidebar, assistant: true },
+    ],
   },
   {
     id: 'crm', name: 'CRM', icon: Target02Icon, colour: 'oklch(0.6 0.17 265)', key: 'C',
@@ -572,6 +577,9 @@ export const MODULES: ErpModule[] = [
 ]
 
 export const moduleById = (id: string) => MODULES.find((m) => m.id === id)
+
+// A module's pages in this edition: the Assistant only in ERP + AI.
+export const pagesOf = (module: ErpModule) => module.pages.filter((p) => !p.assistant || edition().assistant)
 
 // The list that shows records of an entity, for the side panel and the
 // create dialog, wherever they are opened from.

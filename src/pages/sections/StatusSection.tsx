@@ -3,25 +3,14 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Camera01Icon, Tag01Icon } from '@hugeicons/core-free-icons'
 import { Avatar, AvatarFallback, AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
 import { UserAvatar } from '@/components/person'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusBadge } from '@/components/status-badge'
+import { StatusIcon } from '@/components/status-icon'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { PRIORITY, STATUS, type Priority, type Status } from '../data'
 import { Panel, Row, Section } from './shared'
-
-export function StatusIcon({ status, className = '' }: { status: Status; className?: string }) {
-  const s = STATUS[status]
-  return <HugeiconsIcon icon={s.icon} strokeWidth={2} className={`size-3.5 shrink-0 ${s.className} ${className}`} />
-}
-
-export function PriorityIcon({ priority }: { priority: Priority }) {
-  const p = PRIORITY[priority]
-  return <HugeiconsIcon icon={p.icon} strokeWidth={2} className={`size-3.5 shrink-0 ${p.className}`} />
-}
-
-// The initials avatar is the kit's UserAvatar component; Initials is its
-// old name here, kept for the code outside the kit pages that imports it.
-export { UserAvatar as Initials }
 
 export default function StatusSection() {
   const [progress, setProgress] = useState(20)
@@ -43,12 +32,8 @@ export default function StatusSection() {
             <Badge variant="ghost">Ghost</Badge>
           </Row>
           <Row>
-            <Badge variant="outline">
-              <span className="bg-status-progress size-1.5 rounded-full" /> In transit
-            </Badge>
-            <Badge variant="outline">
-              <span className="bg-status-done size-1.5 rounded-full" /> Delivered
-            </Badge>
+            <StatusBadge tone="progress" variant="outline" className="rounded-full">In transit</StatusBadge>
+            <StatusBadge tone="success" variant="outline" className="rounded-full">Delivered</StatusBadge>
             <Badge variant="outline">
               <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} /> 3 photos
             </Badge>

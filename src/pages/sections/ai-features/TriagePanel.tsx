@@ -3,16 +3,21 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Cancel01Icon, CheckmarkCircle02Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { AiLabel } from '@/components/ai-label'
+import { IconAction } from '@/components/icon-action'
+import { LabelDot } from '@/components/label-dot'
+import { UserAvatar } from '@/components/person'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusIcon } from '@/components/status-icon'
 import { Button } from '@/components/ui/button'
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { LABELS, PRIORITY, type Job, type Priority } from '../../data'
+import { plural } from '@/lib/text'
+import { useTimers } from '@/lib/use-timers'
+import { LABEL_BY_ID, PRIORITY, type Job, type Priority } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { goTo } from '../../nav'
-import { LabelDot } from '../FilterBar'
 import { Panel } from '../shared'
-import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from '../StatusSection'
-import { AiLabel, IconAction, useTimers } from './shared'
 import { describe, patchFor, suggestFor, type Suggestion } from './triage'
 
 type Row = { job: Job; items: Suggestion[] }
@@ -83,7 +88,7 @@ export function TriagePanel() {
       updateJob(row.job.id, patch)
       return { id: row.job.id, undo }
     })
-    toast.success(`Updated ${undos.length} ${undos.length === 1 ? 'job' : 'jobs'}`, {
+    toast.success(`Updated ${plural(undos.length, 'job')}`, {
       description: `${suggestionCount} AI suggestions applied.`,
       action: { label: 'Undo', onClick: () => undos.forEach(({ id, undo }) => latestUpdate.current(id, undo)) },
     })
@@ -112,7 +117,7 @@ export function TriagePanel() {
         {shown.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-muted-foreground text-xs" aria-live="polite">
-              {suggestionCount} {suggestionCount === 1 ? 'suggestion' : 'suggestions'} for {shown.length} {shown.length === 1 ? 'job' : 'jobs'}
+              {plural(suggestionCount, 'suggestion')} for {plural(shown.length, 'job')}
             </span>
             <Button size="sm" variant="outline" className="ml-auto" onClick={acceptAll}>
               <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} data-icon="inline-start" />
@@ -162,23 +167,29 @@ export function TriagePanel() {
 
         {waiting > 0 && (
           <p className="text-muted-foreground text-[11px]">
-            {waiting} more {waiting === 1 ? 'job' : 'jobs'} waiting. They appear as you work through these.
+            {plural(waiting, 'more job')} waiting. They appear as you work through these.
           </p>
         )}
 
         {rows.length === 0 && (
-          <div className="grid justify-items-center gap-1.5 rounded-lg border border-dashed px-4 py-8 text-center">
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="text-status-done size-5" />
-            <p className="text-xs font-medium">All caught up</p>
-            <p className="text-muted-foreground max-w-64 text-[11px]">
-              New jobs without an assignee, a label or a priority show up here with suggestions.
-            </p>
+          <Empty className="gap-2 rounded-lg border px-4 py-8">
+            <EmptyHeader className="max-w-64">
+              <EmptyMedia className="mb-1">
+                <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="text-status-done size-5" />
+              </EmptyMedia>
+              <EmptyTitle className="text-xs">All caught up</EmptyTitle>
+              <EmptyDescription className="text-[11px]">
+                New jobs without an assignee, a label or a priority show up here with suggestions.
+              </EmptyDescription>
+            </EmptyHeader>
             {dismissed.size > 0 && (
-              <Button variant="ghost" size="sm" className="mt-1" onClick={() => setDismissed(new Set())}>
-                Show dismissed
-              </Button>
+              <EmptyContent>
+                <Button variant="ghost" size="sm" onClick={() => setDismissed(new Set())}>
+                  Show dismissed
+                </Button>
+              </EmptyContent>
             )}
-          </div>
+          </Empty>
         )}
       </div>
     </Panel>
@@ -186,7 +197,7 @@ export function TriagePanel() {
 }
 
 function SuggestionPill({ item, onApply }: { item: Suggestion; onApply: () => void }) {
-  const label = LABELS.find((l) => l.id === item.value)
+  const label = item.field === 'label' ? LABEL_BY_ID[item.value] : undefined
   const field = item.field === 'label' ? 'Label' : item.field === 'assignee' ? 'Assignee' : 'Priority'
   const value = item.field === 'label'
     ? label?.name ?? item.value

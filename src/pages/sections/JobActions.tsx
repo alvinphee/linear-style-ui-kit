@@ -1,51 +1,35 @@
-import { useRef, type ComponentType, type ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Calendar03Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, SquareArrowExpand01Icon, UserIcon, ViewIcon,
+  Calendar03Icon, Camera01Icon, Copy01Icon, Delete02Icon, MoreHorizontalIcon, SquareArrowExpand01Icon, UserIcon,
+  ViewIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { GroupedListRow, type GroupedListRowState } from '@/blocks/grouped-list'
 import { RecordSheet, RecordSheetContent } from '@/blocks/record-sheet'
+import { LabelChip } from '@/components/label-dot'
+import { CONTEXT_MENU_KIT, DROPDOWN_MENU_KIT, type MenuKit } from '@/components/menu-kit'
+import { NoAssignee, UserAvatar } from '@/components/person'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusIcon } from '@/components/status-icon'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { ContextMenu, ContextMenuContent, ContextMenuLabel, ContextMenuTrigger } from '@/components/ui/context-menu'
 import {
-  ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuLabel, ContextMenuRadioGroup, ContextMenuRadioItem,
-  ContextMenuSeparator, ContextMenuShortcut, ContextMenuSub, ContextMenuSubContent, ContextMenuSubTrigger,
-  ContextMenuTrigger,
-} from '@/components/ui/context-menu'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubContent,
-  DropdownMenuSubTrigger, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { LABELS, PEOPLE, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
+import { copyText } from '@/lib/clipboard'
+import { LABEL_BY_ID, PRIORITY, STATUS, type Job, type Priority, type Status } from '../data'
+import {
+  ASSIGNEE_OPTIONS, PRIORITY_OPTIONS, STATUS_OPTIONS, assigneeValue, driverOf, type JobOption, type JobProperty,
+} from '../job-options'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
-import { UserAvatar } from '@/components/person'
-import { PriorityIcon, StatusIcon } from './StatusSection'
 
-// One set of job actions and one side panel, shared by the job list and the
-// board: right-click, the … button and the peek all offer the same things.
-
-const STATUS_ORDER: Status[] = ['backlog', 'todo', 'progress', 'done', 'cancelled']
-const PRIORITY_ORDER: Priority[] = ['urgent', 'high', 'medium', 'low', 'none']
-const NO_ASSIGNEE = '__none__'
-
-// The dropdown and context menu kits have identical props, so one list of
-// items renders into either. Typed loosely because the two component sets
-// are structurally the same but nominally different.
-type Kit = Record<'Item' | 'Separator' | 'Shortcut' | 'Sub' | 'SubTrigger' | 'SubContent' | 'RadioGroup' | 'RadioItem', ComponentType<any>>
-
-const DROPDOWN: Kit = {
-  Item: DropdownMenuItem, Separator: DropdownMenuSeparator, Shortcut: DropdownMenuShortcut, Sub: DropdownMenuSub,
-  SubTrigger: DropdownMenuSubTrigger, SubContent: DropdownMenuSubContent, RadioGroup: DropdownMenuRadioGroup,
-  RadioItem: DropdownMenuRadioItem,
-}
-const CONTEXT: Kit = {
-  Item: ContextMenuItem, Separator: ContextMenuSeparator, Shortcut: ContextMenuShortcut, Sub: ContextMenuSub,
-  SubTrigger: ContextMenuSubTrigger, SubContent: ContextMenuSubContent, RadioGroup: ContextMenuRadioGroup,
-  RadioItem: ContextMenuRadioItem,
-}
+// One set of job actions, one side panel and one row, shared by the job
+// list, the board and the app shells: right-click, the … button and the peek
+// all offer the same things.
 
 export type JobOpeners = {
   // Opens the side panel.
@@ -54,16 +38,7 @@ export type JobOpeners = {
   onOpenFull: () => void
 }
 
-function copyId(id: string) {
-  if (!navigator.clipboard) {
-    toast.error('Clipboard not available')
-    return
-  }
-  navigator.clipboard.writeText(id).then(
-    () => toast.success(`Copied ${id}`),
-    () => toast.error('Could not copy the ID'),
-  )
-}
+const copyId = (id: string) => copyText(id, { success: `Copied ${id}` })
 
 function useJobCommands(job: Job) {
   const { jobs, updateJob, removeJobs } = useJobs()
@@ -87,74 +62,64 @@ function useJobCommands(job: Job) {
   }
 }
 
-function JobMenuItems({ job, kit, onOpen, onOpenFull }: { job: Job; kit: Kit } & JobOpeners) {
-  const { Item, Separator, Shortcut, Sub, SubTrigger, SubContent, RadioGroup, RadioItem } = kit
+// A radio item per option, for a status, priority or Assign menu.
+function OptionItems({ kit: K, options }: { kit: MenuKit; options: JobOption[] }) {
+  return options.map((o) => (
+    <K.RadioItem key={o.value} value={o.value}>
+      {o.visual} {o.label}
+    </K.RadioItem>
+  ))
+}
+
+function JobMenuItems({ job, kit: K, onOpen, onOpenFull }: { job: Job; kit: MenuKit } & JobOpeners) {
   const commands = useJobCommands(job)
   return (
     <>
-      <Item onSelect={onOpen}>
+      <K.Item onSelect={onOpen}>
         <HugeiconsIcon icon={ViewIcon} strokeWidth={2} /> Open
-        <Shortcut>↵</Shortcut>
-      </Item>
-      <Item onSelect={onOpenFull}>
+        <K.Shortcut>↵</K.Shortcut>
+      </K.Item>
+      <K.Item onSelect={onOpenFull}>
         <HugeiconsIcon icon={SquareArrowExpand01Icon} strokeWidth={2} /> Open full page
-      </Item>
-      <Separator />
-      <Sub>
-        <SubTrigger>
+      </K.Item>
+      <K.Separator />
+      <K.Sub>
+        <K.SubTrigger>
           <StatusIcon status={job.status} /> Status
-        </SubTrigger>
-        <SubContent className="w-44">
-          <RadioGroup value={job.status} onValueChange={(v: string) => commands.setStatus(v as Status)}>
-            {STATUS_ORDER.map((s) => (
-              <RadioItem key={s} value={s}>
-                <StatusIcon status={s} /> {STATUS[s].label}
-              </RadioItem>
-            ))}
-          </RadioGroup>
-        </SubContent>
-      </Sub>
-      <Sub>
-        <SubTrigger>
+        </K.SubTrigger>
+        <K.SubContent className="w-44">
+          <K.RadioGroup value={job.status} onValueChange={(v: string) => commands.setStatus(v as Status)}>
+            <OptionItems kit={K} options={STATUS_OPTIONS} />
+          </K.RadioGroup>
+        </K.SubContent>
+      </K.Sub>
+      <K.Sub>
+        <K.SubTrigger>
           <PriorityIcon priority={job.priority} /> Priority
-        </SubTrigger>
-        <SubContent className="w-44">
-          <RadioGroup value={job.priority} onValueChange={(v: string) => commands.setPriority(v as Priority)}>
-            {PRIORITY_ORDER.map((p) => (
-              <RadioItem key={p} value={p}>
-                <PriorityIcon priority={p} /> {PRIORITY[p].label}
-              </RadioItem>
-            ))}
-          </RadioGroup>
-        </SubContent>
-      </Sub>
-      <Sub>
-        <SubTrigger>
+        </K.SubTrigger>
+        <K.SubContent className="w-44">
+          <K.RadioGroup value={job.priority} onValueChange={(v: string) => commands.setPriority(v as Priority)}>
+            <OptionItems kit={K} options={PRIORITY_OPTIONS} />
+          </K.RadioGroup>
+        </K.SubContent>
+      </K.Sub>
+      <K.Sub>
+        <K.SubTrigger>
           <HugeiconsIcon icon={UserIcon} strokeWidth={2} /> Assign
-        </SubTrigger>
-        <SubContent className="w-44">
-          <RadioGroup
-            value={job.driver || NO_ASSIGNEE}
-            onValueChange={(v: string) => commands.setAssignee(v === NO_ASSIGNEE ? '' : v)}
-          >
-            <RadioItem value={NO_ASSIGNEE}>
-              <HugeiconsIcon icon={UserIcon} strokeWidth={2} /> No assignee
-            </RadioItem>
-            {PEOPLE.map((name) => (
-              <RadioItem key={name} value={name}>
-                <UserAvatar name={name} className="size-4" /> {name}
-              </RadioItem>
-            ))}
-          </RadioGroup>
-        </SubContent>
-      </Sub>
-      <Separator />
-      <Item onSelect={() => copyId(job.id)}>
+        </K.SubTrigger>
+        <K.SubContent className="w-44">
+          <K.RadioGroup value={assigneeValue(job.driver)} onValueChange={(v: string) => commands.setAssignee(driverOf(v))}>
+            <OptionItems kit={K} options={ASSIGNEE_OPTIONS} />
+          </K.RadioGroup>
+        </K.SubContent>
+      </K.Sub>
+      <K.Separator />
+      <K.Item onSelect={() => copyId(job.id)}>
         <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} /> Copy ID
-      </Item>
-      <Item variant="destructive" onSelect={commands.remove}>
+      </K.Item>
+      <K.Item variant="destructive" onSelect={commands.remove}>
         <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} /> Delete
-      </Item>
+      </K.Item>
     </>
   )
 }
@@ -176,7 +141,7 @@ export function JobContextMenu({ job, children, onOpen, onOpenFull }: { job: Job
         <ContextMenuLabel className="truncate">{job.id} · {job.title}</ContextMenuLabel>
         <JobMenuItems
           job={job}
-          kit={CONTEXT}
+          kit={CONTEXT_MENU_KIT}
           onOpen={onOpen}
           onOpenFull={() => {
             leaving.current = true
@@ -219,7 +184,7 @@ export function JobDropdownMenu({ job, onOpen, onOpenFull, className }: { job: J
         <DropdownMenuLabel className="truncate">{job.id}</DropdownMenuLabel>
         <JobMenuItems
           job={job}
-          kit={DROPDOWN}
+          kit={DROPDOWN_MENU_KIT}
           onOpen={onOpen}
           onOpenFull={() => {
             leaving.current = true
@@ -231,14 +196,58 @@ export function JobDropdownMenu({ job, onOpen, onOpenFull, className }: { job: J
   )
 }
 
+// One job as a row of a GroupedList (pass it the row state from renderRow),
+// with the right-click menu around it and the … button at the end.
+// `properties` picks the cells; the wider ones appear as the list's
+// container grows, so the list needs a @container around it.
+export function JobRow({ job, row, properties, active, onOpen, onOpenFull }: {
+  job: Job
+  row: GroupedListRowState
+  properties: Partial<Record<JobProperty, boolean>>
+  // The job open in the side panel.
+  active?: boolean
+} & JobOpeners) {
+  const p = properties
+  const labels = p.labels ? job.labels.slice(0, 2).map((id) => LABEL_BY_ID[id]).filter(Boolean) : []
+  return (
+    <JobContextMenu job={job} onOpen={onOpen} onOpenFull={onOpenFull}>
+      <GroupedListRow row={row} onOpen={onOpen} active={active} aria-label={`${job.id} ${job.title}`}>
+        {p.priority && <PriorityIcon priority={job.priority} />}
+        {p.id && (
+          <span className="text-muted-foreground hidden w-[4.75rem] shrink-0 whitespace-nowrap tabular-nums @md:inline">{job.id}</span>
+        )}
+        {p.status && <StatusIcon status={job.status} />}
+        <span className="min-w-0 flex-1 truncate font-medium">{job.title}</span>
+        {labels.length > 0 && (
+          <span className="hidden items-center gap-1 @3xl:flex">
+            {labels.map((l) => <LabelChip key={l.id} name={l.name} colour={l.colour} />)}
+          </span>
+        )}
+        {p.customer && job.customer && (
+          <span className="text-muted-foreground hidden rounded-full border px-2 py-0.5 text-[11px] whitespace-nowrap @4xl:inline">
+            {job.customer}
+          </span>
+        )}
+        {p.photos && job.photos > 0 && (
+          <span className="text-muted-foreground hidden items-center gap-1 @3xl:flex">
+            <HugeiconsIcon icon={Camera01Icon} strokeWidth={2} className="size-3.5" />
+            <span className="tabular-nums">{job.photos}</span>
+          </span>
+        )}
+        {p.due && <span className="text-muted-foreground hidden w-16 shrink-0 text-right text-[11px] @lg:inline">{job.due}</span>}
+        {p.assignee && (job.driver ? <UserAvatar name={job.driver} className="size-5" /> : <NoAssignee className="size-5" />)}
+        <JobDropdownMenu job={job} onOpen={onOpen} onOpenFull={onOpenFull} />
+      </GroupedListRow>
+    </JobContextMenu>
+  )
+}
+
 // Selects the job and scrolls to the full issue page. The delay lets an open
 // side panel release its scroll lock first.
 export function openFullPage(select: (id: string) => void, id: string) {
   select(id)
   setTimeout(() => goTo('issue'), 250)
 }
-
-const LABEL_BY_ID = Object.fromEntries(LABELS.map((l) => [l.id, l]))
 
 // Linear's "peek": the job in a side panel, edited in place, without leaving the list or board.
 export function JobPeek({ jobId, order, onNavigate, onClose }: {
@@ -309,40 +318,22 @@ function JobPeekBody({ job, order, onNavigate, onOpenFull }: {
         <>
           <PropertyMenu label="Status" trigger={<><StatusIcon status={job.status} /> {STATUS[job.status].label}</>}>
             <DropdownMenuRadioGroup value={job.status} onValueChange={(v) => commands.setStatus(v as Status)}>
-              {STATUS_ORDER.map((s) => (
-                <DropdownMenuRadioItem key={s} value={s}>
-                  <StatusIcon status={s} /> {STATUS[s].label}
-                </DropdownMenuRadioItem>
-              ))}
+              <OptionItems kit={DROPDOWN_MENU_KIT} options={STATUS_OPTIONS} />
             </DropdownMenuRadioGroup>
           </PropertyMenu>
           <PropertyMenu label="Priority" trigger={<><PriorityIcon priority={job.priority} /> {PRIORITY[job.priority].label}</>}>
             <DropdownMenuRadioGroup value={job.priority} onValueChange={(v) => commands.setPriority(v as Priority)}>
-              {PRIORITY_ORDER.map((p) => (
-                <DropdownMenuRadioItem key={p} value={p}>
-                  <PriorityIcon priority={p} /> {PRIORITY[p].label}
-                </DropdownMenuRadioItem>
-              ))}
+              <OptionItems kit={DROPDOWN_MENU_KIT} options={PRIORITY_OPTIONS} />
             </DropdownMenuRadioGroup>
           </PropertyMenu>
           <PropertyMenu
             label="Assignee"
             trigger={job.driver
               ? <><UserAvatar name={job.driver} className="size-4" /> {job.driver}</>
-              : <><HugeiconsIcon icon={UserIcon} strokeWidth={2} /> Assign</>}
+              : <><NoAssignee /> Assign</>}
           >
-            <DropdownMenuRadioGroup
-              value={job.driver || NO_ASSIGNEE}
-              onValueChange={(v) => commands.setAssignee(v === NO_ASSIGNEE ? '' : v)}
-            >
-              <DropdownMenuRadioItem value={NO_ASSIGNEE}>
-                <HugeiconsIcon icon={UserIcon} strokeWidth={2} /> No assignee
-              </DropdownMenuRadioItem>
-              {PEOPLE.map((name) => (
-                <DropdownMenuRadioItem key={name} value={name}>
-                  <UserAvatar name={name} className="size-4" /> {name}
-                </DropdownMenuRadioItem>
-              ))}
+            <DropdownMenuRadioGroup value={assigneeValue(job.driver)} onValueChange={(v) => commands.setAssignee(driverOf(v))}>
+              <OptionItems kit={DROPDOWN_MENU_KIT} options={ASSIGNEE_OPTIONS} />
             </DropdownMenuRadioGroup>
           </PropertyMenu>
           {job.due && (
@@ -350,11 +341,7 @@ function JobPeekBody({ job, order, onNavigate, onOpenFull }: {
               <HugeiconsIcon icon={Calendar03Icon} strokeWidth={2} className="size-3.5" /> {job.due}
             </span>
           )}
-          {labels.map((l) => (
-            <span key={l.id} className="text-muted-foreground inline-flex h-6 items-center gap-1.5 rounded-full border px-2 text-[11px]">
-              <span className="size-1.5 rounded-full" style={{ background: l.colour }} /> {l.name}
-            </span>
-          ))}
+          {labels.map((l) => <LabelChip key={l.id} name={l.name} colour={l.colour} size="md" />)}
         </>
       }
       activityTitle="Latest activity"

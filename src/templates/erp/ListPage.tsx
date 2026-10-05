@@ -4,14 +4,20 @@ import { Add01Icon, Copy01Icon, Delete02Icon, Download01Icon, PencilEdit02Icon, 
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import {
-  BulkDelete, DataTable, DeleteConfirm, actionsColumn, copyText, dataTableColumns, exportTableCsv, listNames,
-  selectColumn, useDataTable, type ContainerSize, type DataTableColumn, type DataTableRowAction,
+  BulkDelete, DataTable, actionsColumn, dataTableColumns, exportTableCsv, listNames, selectColumn, useDataTable,
+  type ContainerSize, type DataTableColumn, type DataTableRowAction,
 } from '@/blocks/data-table'
+import { DeleteConfirm } from '@/components/delete-confirm'
+import { PageHeader } from '@/components/page-header'
+import { TONE_DOT } from '@/components/status-badge'
 import { Button } from '@/components/ui/button'
-import { TONE_DOT, toneOf } from './format'
+import { copyText } from '@/lib/clipboard'
+import { formatNumber } from '@/lib/format'
+import { pluralWord } from '@/lib/text'
+import { toneOf } from './format'
 import { useErp } from './store'
 import type { Column, ListSpec, Row, Value } from './types'
-import { CellValue, PageHeader, isNumeric } from './ui'
+import { CellValue, PAGE_HEADER, isNumeric } from './ui'
 
 // A module's list page: the kit's data table block, fed from a ListSpec.
 
@@ -151,7 +157,7 @@ export function ListPage({ spec, embedded = false }: { spec: ListSpec; embedded?
         toast.success(`${b.label}: ${row.id}`)
       },
     })),
-    { label: 'Copy number', icon: Copy01Icon, onSelect: () => copyText(row.id, 'number') },
+    { label: 'Copy number', icon: Copy01Icon, onSelect: () => copyText(row.id, { success: `Copied ${row.id}`, error: 'Could not copy the number' }) },
     'separator',
     {
       label: 'Delete',
@@ -174,8 +180,9 @@ export function ListPage({ spec, embedded = false }: { spec: ListSpec; embedded?
     <div className="flex min-h-full flex-col">
       {!embedded && (
         <PageHeader
+          className={PAGE_HEADER}
           title={spec.plural}
-          description={`${rows.length.toLocaleString()} ${rows.length === 1 ? spec.singular : 'records'}`}
+          description={`${formatNumber(rows.length)} ${pluralWord(rows.length, spec.singular, 'records')}`}
           actions={
             <>
               <Button variant="outline" size="sm" onClick={() => exportTableCsv(table, csv)}>

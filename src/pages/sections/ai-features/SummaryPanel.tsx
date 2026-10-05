@@ -1,19 +1,18 @@
 import { useEffect, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import {
-  Alert02Icon, ArrowUpRight01Icon, Copy01Icon, RefreshIcon, SparklesIcon, StopIcon, ThumbsDownIcon,
-  ThumbsUpIcon,
-} from '@hugeicons/core-free-icons'
-import { cn } from 'cn'
+import { ArrowUpRight01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
+import { AiSummaryCard, SummaryBullets } from '@/blocks/ai/ai-summary-card'
+import { StatusIcon } from '@/components/status-icon'
+import { StreamCaret } from '@/components/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Skeleton } from '@/components/ui/skeleton'
+import { copyText } from '@/lib/clipboard'
+import { plural } from '@/lib/text'
+import { useTimers } from '@/lib/use-timers'
 import { PRIORITY, STATUS, type Job } from '../../data'
 import { useJobs, type Activity } from '../../jobs-store'
 import { goTo } from '../../nav'
 import { Panel } from '../shared'
-import { StatusIcon } from '../StatusSection'
-import { AiLabel, IconAction, StreamCaret, Thinking, copyText, useTimers } from './shared'
 
 type Summary = {
   phase: 'thinking' | 'streaming' | 'done'
@@ -53,7 +52,7 @@ function buildSummary(job: Job, activity: Activity[], version: number) {
   const total = job.subtasks.length
   const done = job.subtasks.filter((s) => s.done).length
   const next = job.subtasks.find((s) => !s.done)
-  const photos = job.photos ? ` ${job.photos} proof ${job.photos === 1 ? 'photo' : 'photos'} attached.` : ' No proof photos yet.'
+  const photos = job.photos ? ` ${plural(job.photos, 'proof photo')} attached.` : ' No proof photos yet.'
   const second = !total
     ? `No sub-tasks yet.${photos}`
     : done === total
@@ -120,7 +119,7 @@ export function SummaryPanel() {
   function copy() {
     if (!summary) return
     const text = revealed(summary).filter(Boolean).map((b) => `- ${b}`).join('\n')
-    copyText(`${selected.id} summary\n${text}`, 'Summary copied')
+    copyText(`${selected.id} summary\n${text}`, { success: 'Summary copied' })
   }
 
   return (
@@ -157,91 +156,36 @@ export function SummaryPanel() {
           </Button>
         </div>
 
-        <section aria-label={`AI summary of ${selected.id}`} className="bg-subtle min-w-0 rounded-lg border">
-          <header className="flex h-9 items-center gap-1.5 border-b pr-1.5 pl-3">
-            <span className="text-xs font-medium">Summary</span>
-            <span aria-hidden className="text-muted-foreground">·</span>
-            <AiLabel />
-            <div className="ml-auto flex items-center gap-0.5">
-              {summary?.phase === 'streaming' && (
-                <Button variant="ghost" size="sm" onClick={() => patch(selected.id, { phase: 'done', stopped: true })}>
-                  <HugeiconsIcon icon={StopIcon} strokeWidth={2} data-icon="inline-start" />
-                  Stop
-                </Button>
-              )}
-              {summary?.phase === 'done' && (
-                <>
-                  <IconAction label="Regenerate" onClick={summarise} icon={RefreshIcon} />
-                  <IconAction label="Copy summary" onClick={copy} icon={Copy01Icon} />
-                </>
-              )}
-            </div>
-          </header>
-
-          {stale && (
-            <div className="bg-status-progress/10 text-status-progress flex flex-wrap items-center gap-x-2 gap-y-1 border-b px-3 py-1.5 text-xs">
-              <HugeiconsIcon icon={Alert02Icon} strokeWidth={2} className="size-3.5 shrink-0" />
-              <span className="font-medium">Stale — job changed</span>
-              <span className="text-muted-foreground">since this summary was written.</span>
-              <Button variant="link" size="xs" className="text-status-progress ml-auto h-auto px-0" onClick={summarise}>
-                Regenerate
+        <AiSummaryCard
+          label={`AI summary of ${selected.id}`}
+          phase={summary?.phase ?? 'idle'}
+          thinkingLabel="Reading the job and its activity…"
+          idle={(
+            <div className="grid justify-items-start gap-2.5 py-1">
+              <p className="text-muted-foreground text-xs">
+                Get three quick points on this job: where it stands, how far along it is and what happened last.
+              </p>
+              <Button variant="outline" size="sm" onClick={summarise}>
+                <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" className="text-brand" />
+                Summarise
               </Button>
             </div>
           )}
-
-          <div className="px-3 py-2.5" aria-busy={summary?.phase === 'thinking' || summary?.phase === 'streaming'}>
-            {!summary && (
-              <div className="grid justify-items-start gap-2.5 py-1">
-                <p className="text-muted-foreground text-xs">
-                  Get three quick points on this job: where it stands, how far along it is and what happened last.
-                </p>
-                <Button variant="outline" size="sm" onClick={summarise}>
-                  <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" className="text-brand" />
-                  Summarise
-                </Button>
-              </div>
-            )}
-
-            {summary?.phase === 'thinking' && (
-              <div className="grid gap-2 py-0.5">
-                <Thinking label="Reading the job and its activity…" />
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Skeleton className="size-1.5 rounded-full" />
-                    <Skeleton className={cn('h-3', i === 1 ? 'w-3/4' : i === 2 ? 'w-2/3' : 'w-full')} />
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {(summary?.phase === 'streaming' || summary?.phase === 'done') && (
-              <SummaryBullets summary={summary} />
-            )}
-          </div>
-
-          {summary?.phase === 'done' && (
-            <footer className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t py-1 pr-1.5 pl-3">
-              <span className="text-muted-foreground mr-auto text-[11px]">
-                {summary.stopped ? 'Stopped early' : `Written just now from ${summary.sources} sources`}
-              </span>
-              {summary.feedback && (
-                <span className="text-muted-foreground text-[11px]" aria-live="polite">Thanks for the feedback</span>
-              )}
-              <IconAction
-                label="Good summary"
-                pressed={summary.feedback === 'up'}
-                onClick={() => patch(selected.id, { feedback: summary.feedback === 'up' ? null : 'up' })}
-                icon={ThumbsUpIcon}
-              />
-              <IconAction
-                label="Bad summary"
-                pressed={summary.feedback === 'down'}
-                onClick={() => patch(selected.id, { feedback: summary.feedback === 'down' ? null : 'down' })}
-                icon={ThumbsDownIcon}
-              />
-            </footer>
+          stale={stale && (
+            <>
+              <span className="font-medium">Stale — job changed</span>
+              <span className="text-muted-foreground">since this summary was written.</span>
+            </>
           )}
-        </section>
+          note={summary && (summary.stopped ? 'Stopped early' : `Written just now from ${summary.sources} sources`)}
+          feedback={summary?.feedback ?? null}
+          onFeedback={(feedback) => patch(selected.id, { feedback })}
+          onStop={() => patch(selected.id, { phase: 'done', stopped: true })}
+          onRegenerate={summarise}
+          onCopy={copy}
+        >
+          {summary && <Bullets summary={summary} />}
+        </AiSummaryCard>
       </div>
     </Panel>
   )
@@ -258,22 +202,14 @@ function revealed(summary: Summary) {
   })
 }
 
-function SummaryBullets({ summary }: { summary: Summary }) {
+function Bullets({ summary }: { summary: Summary }) {
   const parts = revealed(summary)
   const lastVisible = parts.reduce((last, text, i) => (text ? i : last), -1)
-  return (
-    <ul className="grid gap-1.5 text-[13px] leading-5">
-      {parts.map((text, i) =>
-        text ? (
-          <li key={i} className="flex gap-2">
-            <span aria-hidden className="bg-brand/60 mt-2 size-1.5 shrink-0 rounded-full" />
-            <span className="min-w-0 break-words">
-              {text}
-              {summary.phase === 'streaming' && i === lastVisible && <StreamCaret />}
-            </span>
-          </li>
-        ) : null,
-      )}
-    </ul>
-  )
+  const items = parts.filter(Boolean).map((text, i) => (
+    <>
+      {text}
+      {summary.phase === 'streaming' && i === lastVisible && <StreamCaret />}
+    </>
+  ))
+  return <SummaryBullets items={items} />
 }

@@ -1,11 +1,14 @@
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
-import { SidebarLeftIcon } from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { ArrowUpRight01Icon, SidebarLeftIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowUpRight01Icon } from '@hugeicons/core-free-icons'
+import { IconAction } from '@/components/icon-action'
+import { AiMotion } from '@/components/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
+import { downloadText } from '@/lib/download'
+import { plural, slug } from '@/lib/text'
 import { PEOPLE } from '../data'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
@@ -16,11 +19,7 @@ import { modelById, now, uid } from './ai/data'
 import {
   buildScript, continueAfterApproval, play, titleFor, type AgentContext, type Controller, type ScriptEvent, type Sink,
 } from './ai/engine'
-import {
-  artifactRef, chatHasArtifacts, currentReply, downloadText, lastArtifactIn, replyText, slug,
-} from './ai/helpers'
-import { IconAction } from './ai/Message'
-import { AiStyles } from './ai/parts'
+import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
 import { ProjectPage } from './ai/ProjectPage'
 import { SettingsDialog } from './ai/SettingsDialog'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
@@ -168,6 +167,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         model: modelById(chat.model),
         modes: modesRef.current,
         jobs: storeRef.current.jobs,
+        reminded: s.reminded,
         attempt,
         attachments,
         project: s.projects.find((p) => p.id === chat.projectId) ?? null,
@@ -259,10 +259,15 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         stopRun(false)
         const address = { chatId, messageId, replyId }
         dispatch({ type: 'part/patch', ...address, partId, patch: { state: decision } })
-        if (decision === 'approved') {
-          for (const group of part.request.groups) storeRef.current.updateJobs(group.ids, group.patch)
-          const n = new Set(part.request.changes.map((c) => c.jobId)).size
-          toast(`Updated ${n} ${n === 1 ? 'job' : 'jobs'}`, {
+        const { request } = part
+        if (decision === 'approved' && request.kind === 'reminders') {
+          const n = request.invoices.length
+          dispatch({ type: 'invoices/remind', ids: request.invoices.map((i) => i.id) })
+          toast(`Sent ${plural(n, 'payment reminder')}`, { description: 'Each billing contact got one short email.' })
+        } else if (decision === 'approved' && request.kind !== 'reminders') {
+          for (const group of request.groups) storeRef.current.updateJobs(group.ids, group.patch)
+          const n = new Set(request.changes.map((c) => c.jobId)).size
+          toast(`Updated ${plural(n, 'job')}`, {
             description: 'The list, board and issue page show it now.',
             action: { label: 'View board', onClick: () => goTo('board') },
           })
@@ -270,7 +275,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         dispatch({ type: 'reply/patch', ...address, patch: { status: 'running' } })
         const model = modelById(reply.model ?? message.model)
         const plan = reply.parts.find((p): p is PartOf<'plan'> => p.type === 'plan')
-        const events = continueAfterApproval(part.request, decision, {
+        const events = continueAfterApproval(request, decision, {
           model, modes: modesRef.current, project: projectOf(chat), attachments: [],
         })
         startRun(chatId, messageId, replyId, events, model, plan)
@@ -352,7 +357,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
             lines.push(`**${modelById(reply.model ?? m.model).name}:**`, '', replyText(reply) || '_No text._', '')
           }
         }
-        const name = `${slug(chat.title)}.md`
+        const name = `${slug(chat.title, { fallback: 'untitled' })}.md`
         downloadText(name, lines.join('\n'), 'text/markdown')
         toast(`Exported ${name}`)
       },
@@ -372,7 +377,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         const project = stateRef.current.projects.find((p) => p.id === id)
         if (!project) return
         dispatch({ type: 'project/patch', id, patch: { files: [...project.files, ...files] } })
-        toast(`Added ${files.length} ${files.length === 1 ? 'file' : 'files'}`, { description: 'Kept in this browser only. Nothing is uploaded.' })
+        toast(`Added ${plural(files.length, 'file')}`, { description: 'Kept in this browser only. Nothing is uploaded.' })
       },
       removeProjectFile(id, fileId) {
         const project = stateRef.current.projects.find((p) => p.id === id)
@@ -499,7 +504,8 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
 
   return (
     <ActionsContext.Provider value={actions}>
-      <AiStyles />
+      {/* The shimmer, typing dots and voice waveform keyframes, hoisted into <head> once. */}
+      <AiMotion />
       <article
         ref={cardRef}
         aria-label="AI workspace"

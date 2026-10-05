@@ -1,4 +1,5 @@
 import type { Job } from '../../data'
+import type { FileKind } from '@/components/file-chip'
 
 export type ModelId = 'swift' | 'balanced' | 'depth' | 'depth-max'
 
@@ -19,7 +20,8 @@ export type Model = {
 
 export type Modes = { web: boolean; deep: boolean }
 
-export type FileKind = 'pdf' | 'sheet' | 'doc' | 'csv' | 'text' | 'image' | 'code' | 'other'
+// What a file holds: the kit's file kinds (components/file-chip).
+export type { FileKind }
 export type FileRef = { id: string; name: string; size: number; kind: FileKind }
 
 export type Project = {
@@ -37,19 +39,30 @@ export type PlanStep = { label: string; state: StepState; ms?: number; startedAt
 
 export type ToolName =
   | 'search_jobs' | 'read_job' | 'web_search' | 'run_query' | 'update_jobs' | 'read_file' | 'search_knowledge'
-export type ToolState = 'running' | 'done' | 'error' | 'stopped'
+  | 'search_invoices' | 'send_reminders'
+type ToolState = 'running' | 'done' | 'error' | 'stopped'
 
 export type Source = { title: string; url: string; domain: string; snippet: string }
 
 export type JobPatch = Partial<Pick<Job, 'status' | 'priority' | 'driver'>>
 export type Change = { jobId: string; title: string; field: 'Status' | 'Priority' | 'Assignee'; from: string; to: string }
 
-export type ApprovalRequest = {
+// A customer invoice. `due` is an ISO date.
+export type Invoice = { id: string; customer: string; contact: string; amount: number; due: string }
+
+// What the agent asks before it acts: change jobs, or send payment reminders.
+// Requests saved before `kind` existed are job changes.
+export type UpdateRequest = {
+  kind?: 'jobs'
   title: string
   summary: string
   changes: Change[]
   groups: { ids: string[]; patch: JobPatch }[]
 }
+
+export type ReminderRequest = { kind: 'reminders'; title: string; summary: string; invoices: Invoice[] }
+
+export type ApprovalRequest = UpdateRequest | ReminderRequest
 
 export type ArtifactKind = 'document' | 'table' | 'code'
 
@@ -124,7 +137,7 @@ export type Chat = {
   messages: Message[]
 }
 
-export type ArtifactVersion = { content: string; at: number }
+type ArtifactVersion = { content: string; at: number }
 
 export type Artifact = {
   id: string

@@ -7,6 +7,7 @@ file names and when talking about the work. Add a term here before using a
 new one.
 
 ## The kit's five levels
+How the levels fit together, and where each part goes: `docs/architecture.md`.
 Each level is built only from the level below it, so a fix at one level
 shows up everywhere above. This is **atomic design** (Brad Frost's term,
 used by most design systems).
@@ -28,6 +29,30 @@ used by most design systems).
 | Person chip | An avatar with the person's name beside it |
 | Status badge | A small pill showing a record's status, coloured by tone (success, warning, danger…) |
 | Tone | The meaning a colour carries: neutral, info, in progress, success, warning, danger |
+| Workflow status | Where an item is in its process: backlog, todo, in progress, done, cancelled. Shown as a status icon |
+| Priority | How urgent an item is: no priority, low, medium, high, urgent. Shown as a priority icon (signal bars) |
+| Label (tag) | A coloured keyword on an item, such as Fragile; shown as a label dot or a label chip |
+| Empty avatar (no assignee) | The dashed circle shown where an item has nobody assigned |
+| Label chip | A label as a small pill: its colour dot and name, with an × when it can be removed |
+| Mention | An @name or /command shown as a tinted pill inside text |
+| Progress ring | A circle that fills to show progress, with the number in the middle |
+| Chart legend | The key under a chart: a short line or swatch in each series' colour, and its name |
+| Bar list | A ranked breakdown: each row's name with a bar sized by its value (top customers, spend by vendor) |
+| View switch | The icon toggle between ways of showing the same items: list, board, calendar |
+| Nav group | A sidebar heading that folds its rows away (Teams, Favourites) |
+| Search field | A text box with a search icon, a clear button, and room for a shortcut hint |
+| Delete confirmation | The dialog that asks before something is removed for good |
+| Comment box | Where you write a comment on a record: text, attach, Send (Ctrl/⌘ Enter) |
+| Usage meter | How much of an allowance is used: a label, the count, a bar that turns amber then red |
+| Account menu | The avatar and name at the foot of a sidebar, opening your profile, settings and sign out |
+| Workspace switcher | The control at the top of a sidebar that switches workspace or company |
+| Display menu (display options) | The popover that sets how items show: layout, grouping, ordering, which properties appear |
+| Display properties | The fields a list row or board card shows, switched on and off in the display menu |
+| Grouped list | A list split into groups, each under a group header that shows its count and can fold |
+| Sign-in page | Where you sign in: email and password, single sign-on or a passkey, often beside a marketing panel |
+| Single sign-on (SSO) | Signing in with your company's identity provider (Google Workspace, Okta…) instead of a password |
+| Passkey | Signing in with your device (fingerprint, face, PIN) instead of a password |
+| Menu kit | One list of menu items written once and shown both as a dropdown and as a right-click menu |
 | Letter mark / icon mark | A small square standing for a company or team (letters) or a module (an icon) |
 | Delta badge | The change on the period before, with an up or down arrow |
 | Sparkline | A tiny line chart without axes, showing a trend at a glance |
@@ -42,7 +67,10 @@ used by most design systems).
 | Breadcrumb | The path to the current page, such as Accounting › Customer invoices |
 | Command palette | The Ctrl+K / ⌘K box for jumping anywhere, searching and running actions |
 | Launchpad | The home screen of tiles, one per module (SAP Fiori's term) |
+| Worklist | Records that need you to act, one row each with its actions, such as Approve and Reject (SAP Fiori's term) |
 | App switcher (module switcher) | The control that moves between modules or apps. In the ERP template it sits at the top of the sidebar |
+| Start page | The page you land on after signing in. The ERP + AI template lets each user pick the launchpad or the Assistant |
+| Edition | One app shipped in versions that share their code and differ in features: the ERP and ERP + AI templates |
 | KPI (key performance indicator) | A headline number on a dashboard, such as open pipeline or overdue receivables |
 | Side panel (peek, record sheet) | A record opened beside the list, without leaving it. The block is `record-sheet` |
 | Quick create | A light dialog for adding a record fast: a title, a description and property pills |
@@ -64,6 +92,13 @@ used by most design systems).
 | Term | Meaning |
 |---|---|
 | Copilot | An AI assistant inside an app, opened beside the work (the ERP's Ask AI) |
+| Assistant (full-page chat) | The AI chat as a page of its own, for longer questions; its chats are the copilot's too (the ERP + AI template's Home › Assistant) |
+| Chat thread | The scrolling list of messages in a chat; it follows a streaming reply, and "Jump to latest" brings you back after scrolling up |
+| Welcome screen | What a new chat opens on: a greeting, the prompt box and prompt starters |
+| Prompt starters | Cards that start a chat with one click, each with a question and a hint |
+| AI summary card | A few points the AI wrote about a record, labelled AI, with Regenerate, Copy and thumbs |
+| Stale summary | An AI summary written before the record changed; it says so and offers Regenerate |
+| AI briefing | An AI summary of what needs you today, at the top of the launchpad |
 | Prompt box (composer) | Where you type to the AI: attachments, modes, model, Send or Stop |
 | Model picker | Chooses which AI model answers |
 | Mode toggle | Turns on a way of answering, such as web search or deep thinking |

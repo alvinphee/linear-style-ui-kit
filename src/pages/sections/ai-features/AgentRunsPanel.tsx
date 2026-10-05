@@ -12,9 +12,12 @@ import {
 } from '@/components/ui/sheet'
 import { Spinner } from '@/components/ui/spinner'
 import { ThinkingTrail, type TrailStep, type TrailStepStatus } from '@/blocks/ai/thinking-trail'
-import { ShimmerText, formatDuration } from '@/components/thinking-indicator'
+import { AiLabel } from '@/components/ai-label'
+import { IconAction } from '@/components/icon-action'
+import { ShimmerText } from '@/components/thinking-indicator'
+import { copyText } from '@/lib/clipboard'
+import { formatDuration, formatTime, formatTimer } from '@/lib/format'
 import { Panel } from '../shared'
-import { AiLabel, IconAction, copyText } from './shared'
 
 type RunStatus = 'queued' | 'running' | 'approval' | 'done' | 'failed' | 'stopped'
 type LogKind = 'info' | 'step' | 'success' | 'approval' | 'error' | 'user'
@@ -173,16 +176,6 @@ const LOG_ICONS: Record<LogKind, { icon: IconSvgElement; className: string }> = 
   user: { icon: UserIcon, className: 'text-muted-foreground' },
 }
 
-function duration(seconds: number) {
-  const s = Math.floor(seconds)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
-
-function clock(at: number) {
-  const d = new Date(at)
-  return [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':')
-}
-
 export function AgentRunsPanel() {
   const [runs, dispatch] = useReducer(reducer, undefined, () => initialRuns(Date.now()))
   // The id outlives `logOpen` so the sheet keeps its content while it slides out.
@@ -313,7 +306,7 @@ function RunRow({ run, position, blocker, onAct, onLog }: {
   const meta = STATUS_META[run.status]
   const time = run.status === 'queued'
     ? position === 1 ? 'next in line' : `#${position} in line`
-    : run.status === 'done' ? `took ${duration(run.elapsed)}` : duration(run.elapsed)
+    : run.status === 'done' ? `took ${formatTimer(run.elapsed)}` : formatTimer(run.elapsed)
   const showProgress = run.status !== 'queued' && run.status !== 'done'
   // Once a run has started, its steps show as a thinking trail.
   const started = run.status !== 'queued' && (run.status === 'running' || run.progress > 0)
@@ -422,8 +415,8 @@ function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }
   }, [run.log.length])
 
   function copyLog() {
-    const lines = run.log.map((e) => `${clock(e.at)}  ${e.text}`)
-    copyText(`${run.title}\n${lines.join('\n')}`, 'Log copied')
+    const lines = run.log.map((e) => `${formatTime(e.at, { seconds: true })}  ${e.text}`)
+    copyText(`${run.title}\n${lines.join('\n')}`, { success: 'Log copied' })
   }
 
   return (
@@ -433,7 +426,7 @@ function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }
         <SheetDescription className="flex flex-wrap items-center gap-x-1.5">
           <StatusGlyph status={run.status} className="size-3.5" />
           <span className={meta.className}>{meta.label}</span>
-          <span>· {duration(run.elapsed)} · attempt {run.attempt} · step {run.progress} of {run.total}</span>
+          <span>· {formatTimer(run.elapsed)} · attempt {run.attempt} · step {run.progress} of {run.total}</span>
         </SheetDescription>
       </SheetHeader>
 
@@ -442,7 +435,7 @@ function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }
           const icon = LOG_ICONS[entry.kind]
           return (
             <li key={i} className="flex gap-2.5 text-xs">
-              <span className="text-muted-foreground w-14 shrink-0 pt-px text-[11px] tabular-nums">{clock(entry.at)}</span>
+              <span className="text-muted-foreground w-14 shrink-0 pt-px text-[11px] tabular-nums">{formatTime(entry.at, { seconds: true })}</span>
               <HugeiconsIcon icon={icon.icon} strokeWidth={2} className={cn('mt-0.5 size-3.5 shrink-0', icon.className)} />
               <span className={cn('min-w-0 break-words', entry.kind === 'error' && 'text-destructive')}>{entry.text}</span>
             </li>

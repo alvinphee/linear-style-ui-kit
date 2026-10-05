@@ -1,52 +1,29 @@
 import type { ReactNode } from 'react'
 import type { IconSvgElement } from '@hugeicons/react'
 import {
-  Attachment01Icon, BookOpen01Icon, DatabaseIcon, FileTextIcon, FileViewIcon, Globe02Icon, PencilEdit02Icon,
-  Search01Icon, SourceCodeIcon, Table01Icon,
+  Attachment01Icon, BookOpen01Icon, DatabaseIcon, FileTextIcon, FileViewIcon, Globe02Icon, InvoiceIcon,
+  MailSend01Icon, PencilEdit02Icon, Search01Icon, SourceCodeIcon, Table01Icon,
 } from '@hugeicons/core-free-icons'
 import { ArtifactCard as ArtifactCardView, ErrorCard as ErrorCardView } from '@/blocks/ai/chat-message'
 import {
   ApprovalCard as ApprovalCardView, ThinkingTrail, type ApprovalChange, type TrailStep, type TrailStepStatus,
 } from '@/blocks/ai/thinking-trail'
 import { UserAvatar } from '@/components/person'
-import {
-  ActivityLine as ActivityLineView, AiMotion, Elapsed as ElapsedView, useNow as useClock,
-} from '@/components/thinking-indicator'
+import { PriorityIcon } from '@/components/priority-icon'
+import { StatusIcon } from '@/components/status-icon'
 import { PRIORITY, STATUS, type Priority, type Status } from '../../data'
-import { PriorityIcon, StatusIcon } from '../StatusSection'
 import { now } from './data'
-import type { ArtifactKind, Change, PartOf, StepState, ToolName } from './types'
+import type { ApprovalRequest, ArtifactKind, Change, PartOf, StepState, ToolName } from './types'
 
 // The workspace's side of the AI blocks: it turns its reply parts into the
 // props of the thinking trail, approval card and artifact card. The timers
 // read the workspace's demo clock (`now`), which its parts are stamped with.
 
-export { SourcesRow, StoppedNote } from '@/blocks/ai/chat-message'
-export { TypingDots } from '@/components/thinking-indicator'
-
-// Keyframes for the shimmer, the typing dots and the voice waveform. React
-// hoists them into <head> once, however many workspaces are on the page.
-export function AiStyles() {
-  return <AiMotion />
-}
-
-export function useNow(active: boolean, interval = 1000) {
-  return useClock(active, interval, now)
-}
-
-export function Elapsed({ since, interval = 1000 }: { since: number; interval?: number }) {
-  return <ElapsedView since={since} interval={interval} clock={now} />
-}
-
-export function ActivityLine({ text, since }: { text: string; since: number }) {
-  return <ActivityLineView text={text} since={since} clock={now} />
-}
-
 /* ---------- The thinking trail: thinking, plan steps and tool calls in one quiet line ---------- */
 
 export type ProcessPart = PartOf<'thinking'> | PartOf<'plan'> | PartOf<'tool'>
 
-export const TOOL_ICONS: Record<ToolName, IconSvgElement> = {
+const TOOL_ICONS: Record<ToolName, IconSvgElement> = {
   search_jobs: Search01Icon,
   read_job: FileViewIcon,
   web_search: Globe02Icon,
@@ -54,6 +31,8 @@ export const TOOL_ICONS: Record<ToolName, IconSvgElement> = {
   update_jobs: PencilEdit02Icon,
   read_file: Attachment01Icon,
   search_knowledge: BookOpen01Icon,
+  search_invoices: InvoiceIcon,
+  send_reminders: MailSend01Icon,
 }
 
 // Plain-words names, so a tool reads as "Searched jobs", not "search_jobs".
@@ -65,6 +44,8 @@ const TOOL_VERBS: Record<ToolName, [running: string, done: string]> = {
   update_jobs: ['Updating', 'Updated'],
   read_file: ['Reading a file', 'Read a file'],
   search_knowledge: ['Searching the knowledge files', 'Searched the knowledge files'],
+  search_invoices: ['Searching invoices', 'Searched invoices'],
+  send_reminders: ['Sending reminders', 'Sent reminders'],
 }
 
 const STEP_STATUS: Record<StepState, TrailStepStatus> = { pending: 'pending', running: 'running', done: 'done', failed: 'error' }
@@ -152,6 +133,15 @@ const toChange = (change: Change): ApprovalChange => ({
   toIcon: changeIcon(change.field, change.to),
 })
 
+function changesOf(request: ApprovalRequest): ApprovalChange[] {
+  if (request.kind === 'reminders') {
+    return request.invoices.map((invoice) => ({
+      record: invoice.id, title: invoice.customer, field: 'Status', from: 'Overdue', to: 'Reminder sent',
+    }))
+  }
+  return request.changes.map(toChange)
+}
+
 export function ApprovalCard({ part, onDecide, disabled }: {
   part: PartOf<'approval'>
   onDecide: (decision: 'approved' | 'denied') => void
@@ -161,7 +151,7 @@ export function ApprovalCard({ part, onDecide, disabled }: {
     <ApprovalCardView
       title={part.request.title}
       description={part.request.summary}
-      changes={part.request.changes.map(toChange)}
+      changes={changesOf(part.request)}
       state={part.state}
       onApprove={() => onDecide('approved')}
       onDeny={() => onDecide('denied')}

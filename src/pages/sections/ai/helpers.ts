@@ -1,3 +1,4 @@
+import { slug } from '@/lib/text'
 import type { ArtifactDraft } from './engine'
 import type { Artifact, AssistantMessage, Chat, Message, Part, Reply, ReplyStatus } from './types'
 
@@ -75,31 +76,7 @@ export function chatHasArtifacts(chat: Chat) {
   return chat.messages.some((m) => m.role === 'assistant' && m.versions.some((r) => r.parts.some((p) => p.type === 'artifact')))
 }
 
-export function downloadText(name: string, content: string, type: string) {
-  const blob = new Blob([content], { type })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = name
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-export function copyToClipboard(text: string) {
-  try {
-    return navigator.clipboard?.writeText(text).catch(() => {}) ?? Promise.resolve()
-  } catch {
-    return Promise.resolve()
-  }
-}
-
-export function slug(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'untitled'
-}
-
-export const ARTIFACT_FILE: Record<string, { ext: string; type: string }> = {
+const ARTIFACT_FILE: Record<string, { ext: string; type: string }> = {
   markdown: { ext: 'md', type: 'text/markdown' },
   csv: { ext: 'csv', type: 'text/csv' },
   typescript: { ext: 'ts', type: 'text/plain' },
@@ -108,6 +85,6 @@ export const ARTIFACT_FILE: Record<string, { ext: string; type: string }> = {
 
 export function artifactFileName(artifact: Artifact) {
   const file = ARTIFACT_FILE[artifact.language] ?? { ext: 'txt', type: 'text/plain' }
-  const name = /\.\w+$/.test(artifact.title) ? artifact.title : `${slug(artifact.title)}.${file.ext}`
+  const name = /\.\w+$/.test(artifact.title) ? artifact.title : `${slug(artifact.title, { fallback: 'untitled' })}.${file.ext}`
   return { name, type: file.type }
 }
