@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Copy01Icon, Mail01Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { FormDialog, type FormField, type FormValues } from '@/blocks/form-dialog'
+import { FormDialog } from '@/blocks/form-dialog'
+import type { FormField, FormValues } from '@/blocks/form-fields'
 import { RecordSheet, RecordSheetContent, type RecordActivity } from '@/blocks/record-sheet'
 import { Button } from '@/components/ui/button'
 import { copyText } from '@/lib/clipboard'
@@ -11,6 +12,7 @@ import { specFor } from './modules'
 import { useErp } from './store'
 import type { Field, ListSpec, Row, Value } from './types'
 import { CellValue, StatusBadge } from './ui'
+import { SubmissionDetails } from './forms/FormsPages'
 
 const title = (spec: ListSpec) => spec.singular[0].toUpperCase() + spec.singular.slice(1)
 
@@ -86,7 +88,9 @@ export function RecordPeek() {
           }}
           deleteTitle={`Delete ${row.id}?`}
           deleteDescription={`It is removed from ${spec.plural.toLowerCase()} for everyone in this company.`}
-        />
+        >
+          {spec.entity === 'submissions' && <SubmissionDetails row={row} />}
+        </RecordSheetContent>
       )}
     </RecordSheet>
   )

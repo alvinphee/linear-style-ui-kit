@@ -43,6 +43,8 @@ type ErpState = {
   copilotWidth: number
   // A page's own title for the end of the breadcrumb, such as a chat's.
   pageTitle: string | null
+  // Where a deep link (a scanned QR code) was going when sign-in got in the way.
+  returnTo: string | null
   recent: Recent[]
   peek: { entity: EntityId; id: string } | null
   creating: { entity: EntityId; values?: Record<string, Value> } | null
@@ -60,6 +62,7 @@ type ErpState = {
   setGroupByDate: (byDate: boolean) => void
   setCopilotWidth: (width: number) => void
   setPageTitle: (title: string | null) => void
+  setReturnTo: (path: string | null) => void
   openPeek: (entity: EntityId, id: string) => void
   closePeek: () => void
   startCreate: (entity: EntityId, values?: Record<string, Value>) => void
@@ -81,6 +84,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [pageTitle, setPageTitle] = useState<string | null>(null)
+  const [returnTo, setReturnTo] = useState<string | null>(null)
 
   useEffect(() => {
     try {
@@ -111,6 +115,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     groupByDate: saved.groupByDate,
     copilotWidth: saved.copilotWidth,
     pageTitle,
+    returnTo,
     recent,
     peek,
     creating,
@@ -146,6 +151,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     setGroupByDate: (groupByDate) => setSaved((s) => ({ ...s, groupByDate })),
     setCopilotWidth: (copilotWidth) => setSaved((s) => ({ ...s, copilotWidth })),
     setPageTitle,
+    setReturnTo,
     openPeek: (entity, id) => {
       setPeek({ entity, id })
       const row = data[entity].find((r) => r.id === id)
@@ -158,7 +164,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     endCreate: () => setCreating(null),
     setPaletteOpen,
     setCopilotOpen,
-  }), [saved, company, data, recent, peek, creating, paletteOpen, copilotOpen, pageTitle])
+  }), [saved, company, data, recent, peek, creating, paletteOpen, copilotOpen, pageTitle, returnTo])
 
   return <ErpContext.Provider value={value}>{children}</ErpContext.Provider>
 }

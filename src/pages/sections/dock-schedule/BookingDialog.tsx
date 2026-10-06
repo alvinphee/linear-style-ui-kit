@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { format } from 'date-fns'
-import { FormDialog, type FormField, type FormValues } from '@/blocks/form-dialog'
+import { FormDialog } from '@/blocks/form-dialog'
+import type { FormField, FormValues } from '@/blocks/form-fields'
 import {
   DockSlotPicker, bookingConflict, dockTakes, freeDocks, parseDayKey, timeRange,
   type DockDirection, type DockSlot,

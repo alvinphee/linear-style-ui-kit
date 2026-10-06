@@ -1,6 +1,10 @@
+import { useState } from 'react'
 import { Store01Icon } from '@hugeicons/core-free-icons'
+import { toast } from 'sonner'
 import { IconMark } from '@/components/mark'
 import { QrCode, type QrCodeLevel, type QrCodeMark, type QrCodeShape } from '@/components/qr-code'
+import { QrScanner } from '@/components/qr-scanner'
+import { Button } from '@/components/ui/button'
 import { Demos, Gallery, Playground, Variants, bool, imports, jsx, str, type Values } from './Playground'
 
 // Props equal to their default stay out of the snippet.
@@ -35,6 +39,32 @@ ${jsx('QrCode', {
     caption: str(v, 'caption') || undefined,
     mark: unless(mark, 'none'),
   })}`
+}
+
+// The scanner asks for the camera, so it starts on a click, not with the page.
+function ScannerDemo() {
+  const [on, setOn] = useState(false)
+  const [last, setLast] = useState('')
+  if (!on) {
+    return (
+      <div className="grid w-72 justify-items-start gap-2">
+        <Button variant="outline" size="sm" onClick={() => setOn(true)}>Start the scanner</Button>
+        <span className="text-muted-foreground text-[11px]">Asks for the camera. Without one, it takes the code typed.</span>
+      </div>
+    )
+  }
+  return (
+    <div className="grid w-72 gap-2">
+      <QrScanner
+        onScan={(value) => {
+          setLast(value)
+          toast.success('Code read', { description: value })
+        }}
+      />
+      {last && <span className="text-muted-foreground truncate text-[11px]">Last read: {last}</span>}
+      <Button variant="ghost" size="xs" className="justify-self-start" onClick={() => setOn(false)}>Stop</Button>
+    </div>
+  )
 }
 
 export default function QrCodeDemos() {
@@ -88,6 +118,12 @@ export default function QrCodeDemos() {
           { label: 'empty value', node: <QrCode value="" size={128} /> },
           { label: 'too long', node: <QrCode value={'x'.repeat(3000)} size={128} /> },
         ]}
+      />
+
+      <Gallery
+        title="QrScanner"
+        note="Reads a code with the camera (BarcodeDetector), or takes it typed"
+        items={[{ label: 'onScan gets the value', node: <ScannerDemo /> }]}
       />
     </Demos>
   )

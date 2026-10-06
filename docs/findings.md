@@ -608,3 +608,41 @@ polished) and be resizable, and for the other side slide-outs to be modals.
   shows no "Examples" heading, and its demos stand in for examples on the
   All components page.
 
+## Forms and checklists (added 2026-10-06)
+- **One field schema, two homes for the form.** The form dialog's field
+  types and renderer moved to `blocks/form-fields.tsx`, and the page-sized
+  `FormRenderer` uses the same `FormField` and `FormControl`. New field
+  kinds (check, yes-no, rating, photo, signature) were added once and both
+  got them. The dialog file shrank by half and nothing it did changed.
+- **A check's answer is an object.** `FormValue` was `string | boolean`;
+  a check needs its outcome, a note and a photo together, so it is now
+  `{ result, note?, photo? }` as well. Everything that trims or copies
+  values checks `typeof v === 'string'` first, so the object passes
+  through untouched.
+- **The blocks stay generic by taking the definition as data.** A
+  checklist, an expense claim and a survey differ only in their
+  `FormDefinition`; the catalogue, renderer and submission view never name
+  a domain. The sample definitions live with the pages (kit) and the
+  template (ERP), never in the blocks.
+- **A QR code is just a deep link.** The kit route gained an optional
+  third segment and a query (`#/forms-catalogue/vehicle-check?context=…`,
+  `#/templates/erp/forms/catalogue/vehicle-check?context=…`), and
+  `QrCode` encodes the whole address. The ERP keeps the link while it sends
+  you through sign-in and the company pick, then returns to it.
+- **Reading a code in the page.** `BarcodeDetector` is in Chrome, Edge,
+  Safari 17 and Android browsers but not Firefox, and the camera needs
+  https or localhost. `QrScanner` falls back to a text box, so the flow
+  works everywhere; the demo on the QR code page starts the camera on a
+  click, not on page load, so the All components page never asks for it.
+- **Drafts in the browser.** The renderer keeps what is entered under
+  `kit:form-draft:<form>:<context>` in localStorage on every change and
+  clears it on submit, so a phone refresh (or a mis-tap that leaves the
+  page) loses nothing. Two tags of the same form keep separate drafts.
+- **Sticky header and footer inside the scroll container.** In the ERP
+  the page scrolls inside `#erp-main`, so `sticky top-0` works. In the kit
+  the window scrolls under a fixed bar, so the demo gives the form its own
+  scroll area (and a 375px frame for the phone view) instead of offsetting
+  the header.
+- **Radix toggle items re-render on every answer,** so element refs taken
+  before a click are stale after it. When driving the page from a script,
+  answer in one pass or re-find after each click.

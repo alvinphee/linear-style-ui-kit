@@ -5,7 +5,8 @@ import {
   Notification03Icon, SmartPhone01Icon, UserAdd01Icon, UserGroupIcon, UserIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { FormDialog, type FormField } from '@/blocks/form-dialog'
+import { FormDialog } from '@/blocks/form-dialog'
+import type { FormField } from '@/blocks/form-fields'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,

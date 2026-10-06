@@ -3,14 +3,14 @@ import { navigate } from '@/lib/router'
 import {
   AiBrain01Icon, AiChat02Icon, AiMagicIcon, Alert02Icon, AppWindowIcon, ArrowLeftRightIcon, ArrowRightDoubleIcon,
   Audit01Icon, Building06Icon, Calendar01Icon, Calendar03Icon, ChartAreaIcon, ChartGanttIcon,
-  CheckmarkSquare02Icon, CommandIcon, Comment01Icon, Compass01Icon, CursorPointer02Icon, DashboardSquare01Icon,
+  CheckmarkSquare02Icon, ClipboardCheckIcon, CommandIcon, Comment01Icon, Compass01Icon, CursorPointer02Icon, DashboardSquare01Icon,
   DragDropVerticalIcon, DropdownFieldTypeIcon, FileEmpty02Icon, FileUploadIcon, Flag02Icon, FormIcon,
   GitCompareIcon, GridViewIcon, Heading01Icon, HorizontalResizeIcon, InboxIcon, InputTextIcon, KanbanIcon,
   KeyboardIcon, LayoutGridIcon, LayoutPanelTopIcon, LeftToRightListBulletIcon, ListCollapseIcon, Loading03Icon,
   Login01Icon, MenuSquareIcon, Money03Icon, NoteEditIcon, NotebookTabsIcon, PaintBoardIcon, PanelRightIcon,
   ProgressIcon, QrCodeIcon, Rocket01Icon, ScrollVerticalIcon, Search01Icon, Settings01Icon, Settings02Icon,
   SidebarLeftIcon, SlidersHorizontalIcon, SolidLine01Icon, SparklesIcon, Table01Icon, Tag01Icon, Task01Icon,
-  TimelineIcon, UserGroupIcon, WarehouseIcon,
+  TaskDone01Icon, TimelineIcon, UserGroupIcon, WarehouseIcon,
 } from '@hugeicons/core-free-icons'
 
 // `category` sorts a group's pages under small headings (Components only).
@@ -36,6 +36,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { id: 'buttons', label: 'Buttons and toggles', icon: CursorPointer02Icon, category: 'Actions' },
 
+      { id: 'check-item', label: 'Check, rating and signature', icon: TaskDone01Icon, category: 'Inputs' },
       { id: 'selection-controls', label: 'Checkbox, radio and switch', icon: CheckmarkSquare02Icon, category: 'Inputs' },
       { id: 'date-picker', label: 'Date picker', icon: Calendar01Icon, category: 'Inputs' },
       { id: 'file-upload', label: 'File upload', icon: FileUploadIcon, category: 'Inputs' },
@@ -95,6 +96,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'dock-schedule', label: 'Dock schedule', icon: WarehouseIcon },
       { id: 'settings', label: 'Settings', icon: Settings01Icon },
       { id: 'audit-log', label: 'Audit log', icon: Audit01Icon },
+      { id: 'forms-catalogue', label: 'Forms catalogue', icon: ClipboardCheckIcon },
       { id: 'pricing', label: 'Pricing', icon: Money03Icon },
       { id: 'onboarding', label: 'Onboarding', icon: Rocket01Icon },
       { id: 'sign-in', label: 'Sign-in page', icon: Login01Icon },

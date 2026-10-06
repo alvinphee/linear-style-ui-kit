@@ -36,14 +36,18 @@ export default function ErpApp({ edition = CLASSIC }: { edition?: Edition }) {
 function ErpRoutes() {
   const path = usePath()
   const route = parseRoute(path)
-  const { session, company, setPaletteOpen, copilotOpen, setCopilotOpen, startCreate, peek, closePeek, startPage, pageTitle } = useErp()
+  const { session, company, setPaletteOpen, copilotOpen, setCopilotOpen, startCreate, peek, closePeek, startPage, pageTitle, setReturnTo } = useErp()
   const { focusComposer } = useAssistant()
 
   // Guards: sign in first, then choose a company. Replace, so Back skips them.
   const target = !session ? 'login' : !company && route.screen !== 'companies' ? 'companies' : session && route.screen === 'login' ? 'home' : null
   useEffect(() => {
     if (target === 'home') window.location.replace(`#${base()}/home/${landingPage(startPage)}`)
-    else if (target) window.location.replace(`#${base()}/${target}`)
+    else if (target) {
+      // A deep link (a scanned QR code) is kept, to return to once signed in.
+      if (route.screen === 'app' && route.page) setReturnTo(path)
+      window.location.replace(`#${base()}/${target}`)
+    }
     // startPage is read once, as the guard sends you in.
   }, [target])
 

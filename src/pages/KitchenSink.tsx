@@ -33,6 +33,7 @@ import BreadcrumbSection from './sections/BreadcrumbSection'
 import ButtonsSection from './sections/ButtonsSection'
 import CalendarSection from './sections/CalendarSection'
 import CardsSection from './sections/CardsSection'
+import CheckItemSection from './sections/CheckItemSection'
 import ChartsSection from './sections/ChartsSection'
 import CommandPaletteSection from './sections/CommandPaletteSection'
 import DashboardSection from './sections/DashboardSection'
@@ -42,6 +43,7 @@ import DialogsSection from './sections/DialogsSection'
 import DockScheduleSection from './sections/DockScheduleSection'
 import EmptyStateSection from './sections/EmptyStateSection'
 import FileUploadSection from './sections/FileUploadSection'
+import FormsCatalogueSection from './sections/FormsCatalogueSection'
 import FormsSection, { QuickCreateDialog } from './sections/FormsSection'
 import GanttSection from './sections/GanttSection'
 import IconsSection from './sections/IconsSection'
@@ -94,7 +96,9 @@ export default function KitchenSink() {
   const [createOpen, setCreateOpen] = useState(false)
   const { setTheme, applyPreset } = useTheme()
   const path = usePath()
-  const page = NAV.find((n) => `/${n.id}` === path) ?? NAV[0]
+  // A page may carry more after its id (#/forms-catalogue/vehicle-check): the page reads it itself.
+  const pageId = path.split('?')[0].split('/')[1]
+  const page = NAV.find((n) => n.id === pageId) ?? NAV[0]
   const group = NAV_GROUPS.find((g) => g.items.some((i) => i.id === page.id))
   const pressedG = useRef(0)
 
@@ -103,6 +107,7 @@ export default function KitchenSink() {
     overview,
     theme: () => <ThemeSection />,
     buttons: () => <ButtonsSection />,
+    'check-item': () => <CheckItemSection />,
     'selection-controls': () => <SelectionControlsSection />,
     'date-picker': () => <DatePickerSection />,
     'file-upload': () => <FileUploadSection />,
@@ -151,6 +156,7 @@ export default function KitchenSink() {
     'dock-schedule': () => <DockScheduleSection />,
     settings: () => <SettingsSection />,
     'audit-log': () => <AuditLogSection />,
+    'forms-catalogue': () => <FormsCatalogueSection />,
     pricing: () => <PricingSection />,
     onboarding: () => <OnboardingSection />,
     'sign-in': () => <SignInSection />,

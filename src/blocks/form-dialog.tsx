@@ -4,7 +4,6 @@ import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { MOD, ariaKeyShortcuts, keyLabel } from '@/components/shortcut'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -14,23 +13,19 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import {
-  Field, FieldContent, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegend, FieldSet, FieldTitle,
-} from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
-import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from '@/components/ui/input-group'
+import { FieldError, FieldGroup } from '@/components/ui/field'
 import { Kbd } from '@/components/ui/kbd'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
-import { Textarea } from '@/components/ui/textarea'
-import { plural } from '@/lib/text'
+import {
+  FormControl, TYPED, emptyValue, fieldError, overBy, useFieldErrors, type FieldErrors, type FormField, type FormValues,
+} from '@/blocks/form-fields'
 
 // The kit's create and edit dialogs, as blocks. Fields, values and what
-// happens on submit all come in as props.
+// happens on submit all come in as props. The field schema and the field
+// renderer are in form-fields.tsx, shared with the page-sized FormRenderer.
 //
 // FormDialog: a titled dialog of labelled fields built from a definition
 // list. It checks required fields, email and number formats, length limits
@@ -45,8 +40,6 @@ import { plural } from '@/lib/text'
 //
 // Place either anywhere. Pass a `trigger` button and the dialog opens from
 // it and hands focus back to it on close, or control `open` yourself.
-
-export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 // Tall dialogs scroll inside themselves, so they fit a 375px phone screen.
 // Exported for hand-built dialogs that should match.
@@ -67,98 +60,7 @@ function useOpen(open: boolean | undefined, onOpenChange?: (open: boolean) => vo
   return [open ?? own, setOpen] as const
 }
 
-/* ---------- Errors ---------- */
-
-type Errors<F extends string> = Partial<Record<F, string>>
-
-// An error shows once its field has been left with something in it, or after
-// a submit. From then on it follows the value as the person types. Also for
-// hand-built forms: pass every field's current error, in focus order.
-export function useFieldErrors<F extends string>(all: Errors<F>, order: F[]) {
-  const [touched, setTouched] = useState<Record<string, boolean>>({})
-  const [submitted, setSubmitted] = useState(false)
-  const elements = useRef<Record<string, HTMLElement | null>>({})
-
-  const shown: Errors<F> = {}
-  for (const field of order) if (submitted || touched[field]) shown[field] = all[field]
-
-  return {
-    shown,
-    register: (field: F) => (el: HTMLElement | null) => {
-      elements.current[field] = el
-    },
-    focus: (field: F) => elements.current[field]?.focus(),
-    blur(field: F, value: string) {
-      if (value.trim()) setTouched((t) => ({ ...t, [field]: true }))
-    },
-    // True when everything is valid. Otherwise the first bad field gets focus.
-    check() {
-      setSubmitted(true)
-      const first = order.find((field) => all[field])
-      if (first) elements.current[first]?.focus()
-      return !first
-    },
-    reset() {
-      setTouched({})
-      setSubmitted(false)
-    },
-  }
-}
-
 /* ---------- FormDialog ---------- */
-
-export type FormOption = { value: string; label: string; icon?: ReactNode }
-export type FormValue = string | boolean
-export type FormValues = Record<string, FormValue>
-export type FormFieldType = 'text' | 'email' | 'number' | 'date' | 'select' | 'radio' | 'checkbox' | 'textarea'
-
-export type FormField = {
-  key: string
-  label: string
-  type: FormFieldType
-  required?: boolean
-  // Muted text after the label, such as "Optional".
-  hint?: ReactNode
-  // Help under the field. An error takes its place.
-  description?: ReactNode
-  placeholder?: string
-  // Select and radio.
-  options?: FormOption[]
-  // Radio: the grid the options sit in.
-  optionsClassName?: string
-  // Inside the input, at the start: an icon, or a short text such as "@".
-  icon?: IconSvgElement
-  prefix?: string
-  // Textarea: a live counter, and an error once the text runs past it.
-  maxLength?: number
-  rows?: number
-  autoComplete?: string
-  // Replaces "Enter <label>." / "Choose <label>." for an empty required field.
-  requiredMessage?: string
-  // A rule of your own, after the built-in checks: return the error, or nothing.
-  validate?: (value: FormValue, values: FormValues) => string | undefined
-}
-
-// "Create more" clears what was typed and keeps what was picked.
-const TYPED: FormFieldType[] = ['text', 'email', 'number', 'textarea']
-
-const overBy = (field: FormField, value: FormValue | undefined) =>
-  field.maxLength && typeof value === 'string' ? value.length - field.maxLength : 0
-
-function fieldError(field: FormField, value: FormValue | undefined, values: FormValues) {
-  if (field.type === 'checkbox' || typeof value === 'boolean') return field.validate?.(value ?? false, values)
-  const over = overBy(field, value)
-  if (over > 0) return `That is ${plural(over, 'character')} too long.`
-  const text = (value ?? '').trim()
-  if (!text) {
-    if (!field.required) return undefined
-    const verb = field.type === 'select' || field.type === 'radio' ? 'Choose' : 'Enter'
-    return field.requiredMessage ?? `${verb} ${field.label.toLowerCase()}.`
-  }
-  if (field.type === 'email' && !EMAIL_PATTERN.test(text)) return 'Enter an email like name@example.com.'
-  if (field.type === 'number' && !Number.isFinite(Number(text))) return 'Enter a number.'
-  return field.validate?.(value ?? '', values)
-}
 
 export function FormDialog({
   open, onOpenChange, trigger, title, description, fields, initialValues, onSubmit,
@@ -193,14 +95,14 @@ export function FormDialog({
   const uid = useId()
   const [isOpen, setOpen] = useOpen(open, onOpenChange)
   const start = (): FormValues => ({
-    ...Object.fromEntries(fields.map((f) => [f.key, f.type === 'checkbox' ? false : ''])),
+    ...Object.fromEntries(fields.map((f) => [f.key, emptyValue(f)])),
     ...initialValues,
   })
   const [values, setValues] = useState(start)
   const [pending, setPending] = useState(false)
   const [createMore, setCreateMore] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
-  const all: Errors<string> = {}
+  const all: FieldErrors<string> = {}
   for (const f of fields) all[f.key] = fieldError(f, values[f.key], values)
   const errors = useFieldErrors(all, fields.map((f) => f.key))
 
@@ -297,164 +199,6 @@ export function FormDialog({
         </form>
       </DialogContent>
     </Dialog>
-  )
-}
-
-function FormControl({ field, id, value, error, tooLong, inputRef, onChange, onBlur }: {
-  field: FormField
-  id: string
-  value: FormValue | undefined
-  error?: string
-  tooLong: boolean
-  inputRef: (el: HTMLElement | null) => void
-  onChange: (value: FormValue) => void
-  onBlur: (value: string) => void
-}) {
-  const errorId = `${id}-error`
-  const helpId = `${id}-help`
-  const text = typeof value === 'string' ? value : ''
-  const invalid = error ? true : undefined
-  const describedBy = error ? errorId : field.description ? helpId : undefined
-  const message = error
-    ? <FieldError id={errorId}>{error}</FieldError>
-    : field.description && <FieldDescription id={helpId}>{field.description}</FieldDescription>
-  const label = (
-    <>
-      {field.label}
-      {field.hint && <>{' '}<span className="text-muted-foreground font-normal">{field.hint}</span></>}
-    </>
-  )
-
-  if (field.type === 'checkbox') {
-    return (
-      <Field orientation="horizontal" data-invalid={!!error}>
-        <Checkbox
-          id={id}
-          ref={inputRef}
-          checked={value === true}
-          onCheckedChange={(v) => onChange(v === true)}
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-        />
-        <FieldContent>
-          <FieldLabel htmlFor={id}>{label}</FieldLabel>
-          {message}
-        </FieldContent>
-      </Field>
-    )
-  }
-
-  if (field.type === 'radio') {
-    return (
-      <FieldSet className="min-w-0">
-        <FieldLegend variant="label">{label}</FieldLegend>
-        {!error && field.description && <FieldDescription id={helpId}>{field.description}</FieldDescription>}
-        <RadioGroup
-          value={text}
-          onValueChange={onChange}
-          aria-describedby={describedBy}
-          className={cn('grid grid-cols-2 gap-2 sm:grid-cols-4', field.optionsClassName)}
-        >
-          {field.options?.map((o, i) => (
-            <FieldLabel key={o.value} htmlFor={`${id}-${i}`}>
-              <Field orientation="horizontal" className="gap-2">
-                <RadioGroupItem value={o.value} id={`${id}-${i}`} ref={i === 0 ? inputRef : undefined} aria-invalid={invalid} />
-                <FieldTitle className="tabular-nums">{o.icon}{o.label}</FieldTitle>
-              </Field>
-            </FieldLabel>
-          ))}
-        </RadioGroup>
-        {error && <FieldError id={errorId}>{error}</FieldError>}
-      </FieldSet>
-    )
-  }
-
-  if (field.type === 'select') {
-    return (
-      <Field data-invalid={!!error}>
-        <FieldLabel htmlFor={id}>{label}</FieldLabel>
-        <Select value={text} onValueChange={onChange}>
-          <SelectTrigger id={id} ref={inputRef} className="w-full" aria-invalid={invalid} aria-describedby={describedBy}>
-            <SelectValue placeholder={field.placeholder ?? `Choose ${field.label.toLowerCase()}`} />
-          </SelectTrigger>
-          <SelectContent>
-            {field.options?.map((o) => (
-              <SelectItem key={o.value} value={o.value}>{o.icon}{o.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {message}
-      </Field>
-    )
-  }
-
-  if (field.type === 'textarea') {
-    const countId = `${id}-count`
-    const textarea = (
-      <Textarea
-        id={id}
-        ref={inputRef}
-        rows={field.rows ?? 3}
-        placeholder={field.placeholder}
-        value={text}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={(e) => onBlur(e.target.value)}
-        aria-invalid={invalid}
-        aria-describedby={[field.maxLength ? countId : undefined, describedBy].filter(Boolean).join(' ') || undefined}
-        className="max-h-40"
-      />
-    )
-    return (
-      <Field data-invalid={!!error}>
-        {field.maxLength ? (
-          <div className="flex items-baseline justify-between gap-2">
-            <FieldLabel htmlFor={id}>{label}</FieldLabel>
-            <span id={countId} className={cn('text-[11px] tabular-nums', tooLong ? 'text-destructive' : 'text-muted-foreground')}>
-              {text.length}/{field.maxLength}
-            </span>
-          </div>
-        ) : (
-          <FieldLabel htmlFor={id}>{label}</FieldLabel>
-        )}
-        {textarea}
-        {message}
-      </Field>
-    )
-  }
-
-  const email = field.type === 'email'
-  const input = {
-    id,
-    ref: inputRef,
-    // A number field stays a text box, so it takes "12.50" without spinner arrows.
-    type: field.type === 'number' ? 'text' : field.type,
-    inputMode: email ? 'email' as const : field.type === 'number' ? 'decimal' as const : undefined,
-    autoComplete: field.autoComplete ?? (email ? 'email' : undefined),
-    spellCheck: email ? false : undefined,
-    placeholder: field.placeholder,
-    value: text,
-    onChange: (e: { target: { value: string } }) => onChange(e.target.value),
-    onBlur: (e: { target: { value: string } }) => onBlur(e.target.value),
-    'aria-invalid': invalid,
-    'aria-describedby': describedBy,
-  }
-  const dateClass = field.type === 'date' ? 'dark:[color-scheme:dark]' : undefined
-
-  return (
-    <Field data-invalid={!!error}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      {field.icon || field.prefix ? (
-        <InputGroup>
-          <InputGroupAddon>
-            {field.icon ? <HugeiconsIcon icon={field.icon} strokeWidth={2} /> : <InputGroupText>{field.prefix}</InputGroupText>}
-          </InputGroupAddon>
-          <InputGroupInput {...input} className={dateClass} />
-        </InputGroup>
-      ) : (
-        <Input {...input} className={dateClass} />
-      )}
-      {message}
-    </Field>
   )
 }
 

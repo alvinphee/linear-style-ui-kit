@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Add01Icon, ComputerIcon, Logout01Icon, Moon02Icon, SparklesIcon, Sun03Icon, UserSwitchIcon, Building06Icon } from '@hugeicons/core-free-icons'
+import { Add01Icon, ClipboardCheckIcon, ComputerIcon, Logout01Icon, Moon02Icon, SparklesIcon, Sun03Icon, UserSwitchIcon, Building06Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import {
   Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList, CommandSeparator, CommandShortcut,
@@ -8,6 +8,7 @@ import {
 import { IconMark } from '@/components/mark'
 import { useTheme } from '@/lib/theme'
 import { DEMO_USERS, ROLE_LABEL } from './data'
+import { ERP_FORMS } from './forms/definitions'
 import { useAssistant } from './assistant/store'
 import { edition } from './edition'
 import { pageFor, pagesOf, specFor } from './modules'
@@ -78,6 +79,12 @@ export function CommandPalette({ module }: { module: ErpModule }) {
     else setCopilotOpen(true)
   }
 
+  // Forms, by name or category: open one to fill it in.
+  const q = query.trim().toLowerCase()
+  const forms = q.length >= 2 && allowed.has('forms')
+    ? ERP_FORMS.filter((f) => f.name.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q)).slice(0, 5)
+    : []
+
   const creates = CREATE.filter((c) => {
     const home = pageFor(c.entity)
     return home && allowed.has(home.module.id) && specFor(c.entity)?.create
@@ -105,6 +112,18 @@ export function CommandPalette({ module }: { module: ErpModule }) {
                   <span className="min-w-0 flex-1 truncate">{r.label}</span>
                   {r.status && <StatusBadge status={r.status} />}
                   <span className="text-muted-foreground hidden text-[11px] sm:inline">{r.where}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {forms.length > 0 && (
+            <CommandGroup heading="Forms">
+              {forms.map((f) => (
+                <CommandItem key={f.id} value={`form ${f.name} ${f.category ?? ''}`} onSelect={() => run(() => go('forms', 'catalogue', f.id))}>
+                  <HugeiconsIcon icon={f.icon ?? ClipboardCheckIcon} strokeWidth={2} />
+                  <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                  <span className="text-muted-foreground hidden text-[11px] sm:inline">Fill in</span>
                 </CommandItem>
               ))}
             </CommandGroup>

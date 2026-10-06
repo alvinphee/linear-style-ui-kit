@@ -1145,6 +1145,28 @@
       ]
     },
     {
+      "name": "check-item",
+      "type": "registry:component",
+      "title": "Check item",
+      "description": "one line of a checklist: a statement and its outcome (Pass / Fail / N/A, Yes / No)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/status-badge",
+        "@kit/toggle-group",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/check-item.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "comment-box",
       "type": "registry:component",
       "title": "Comment box",
@@ -1496,6 +1518,48 @@
       ]
     },
     {
+      "name": "qr-scanner",
+      "type": "registry:component",
+      "title": "QR scanner",
+      "description": "reads a QR code with the camera (BarcodeDetector), or takes it typed",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/input",
+        "@kit/spinner"
+      ],
+      "files": [
+        {
+          "path": "src/components/qr-scanner.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "rating",
+      "type": "registry:component",
+      "title": "Rating",
+      "description": "star rating",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/rating.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "search-field",
       "type": "registry:component",
       "title": "Search field",
@@ -1545,6 +1609,26 @@
       "files": [
         {
           "path": "src/components/shortcut.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "signature-pad",
+      "type": "registry:component",
+      "title": "Signature pad",
+      "description": "sign by hand on a canvas, kept as a picture",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button"
+      ],
+      "files": [
+        {
+          "path": "src/components/signature-pad.tsx",
           "type": "registry:component"
         }
       ]
@@ -2130,23 +2214,17 @@
       ],
       "registryDependencies": [
         "@kit/button",
-        "@kit/checkbox",
         "@kit/command",
         "@kit/dialog",
         "@kit/dropdown-menu",
         "@kit/field",
-        "@kit/input",
-        "@kit/input-group",
+        "@kit/form-fields",
         "@kit/kbd",
         "@kit/label",
         "@kit/popover",
-        "@kit/radio-group",
-        "@kit/select",
         "@kit/shortcut",
         "@kit/spinner",
         "@kit/switch",
-        "@kit/text",
-        "@kit/textarea",
         "@kit/tokens"
       ],
       "files": [
@@ -2154,6 +2232,110 @@
           "path": "src/blocks/form-dialog.tsx",
           "type": "registry:component",
           "target": "@components/blocks/form-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "form-fields",
+      "type": "registry:block",
+      "title": "Form fields",
+      "description": "the field schema and renderer shared by the form dialog and the",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/check-item",
+        "@kit/checkbox",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/input",
+        "@kit/input-group",
+        "@kit/radio-group",
+        "@kit/rating",
+        "@kit/select",
+        "@kit/signature-pad",
+        "@kit/text",
+        "@kit/textarea"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/form-fields.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/form-fields.tsx"
+        }
+      ]
+    },
+    {
+      "name": "form-renderer",
+      "type": "registry:block",
+      "title": "Form renderer",
+      "description": "a whole form on a page from its definition: sections, progress,",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/check-item",
+        "@kit/dialog",
+        "@kit/empty",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/form-fields",
+        "@kit/format",
+        "@kit/input",
+        "@kit/mark",
+        "@kit/progress",
+        "@kit/rating",
+        "@kit/signature-pad",
+        "@kit/spinner",
+        "@kit/status-badge",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/form-renderer.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/form-renderer.tsx"
+        }
+      ]
+    },
+    {
+      "name": "forms-catalogue",
+      "type": "registry:block",
+      "title": "Forms catalogue",
+      "description": "the forms to pick from: search, by category, a QR code per form",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/dialog",
+        "@kit/empty",
+        "@kit/form-renderer",
+        "@kit/icon-action",
+        "@kit/input",
+        "@kit/label",
+        "@kit/mark",
+        "@kit/qr-code",
+        "@kit/qr-scanner",
+        "@kit/search-field",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/forms-catalogue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/forms-catalogue.tsx"
         }
       ]
     },

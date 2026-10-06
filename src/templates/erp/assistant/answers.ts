@@ -56,6 +56,7 @@ export const PROMPTS: Record<string, string[]> = {
   accounting: ['Which invoices are overdue?', 'Summarise accounts receivable', 'Which vendor bills are due this week?'],
   hr: ['Who is on leave this week?', 'When is the next payroll run?', 'How many employees are on probation?'],
   admin: ['Which users have not set up 2FA?', 'Which users are invited or suspended?', 'What changed in the audit trail today?'],
+  forms: ['Which checks failed this week?', 'What was submitted today?'],
 }
 
 // The home prompts, then the first prompt of each module the role can open.
@@ -596,6 +597,48 @@ const INTENTS: Intent[] = [
       }
       blocks.push(p(`${plural(unpaid.length, 'order')} ${isAre(unpaid.length)} still unpaid, worth ${money(sum(unpaid, 'amount'))}.`))
       return { blocks, source: plural(data.salesOrders.length, 'sales order'), links: [{ label: 'Sales orders', module: 'sales', page: 'orders' }] }
+    },
+  },
+  {
+    module: 'forms', match: /submitted today|today.?s (forms|submissions|checks)|forms? today/,
+    answer: ({ data }) => {
+      const rows = data.submissions.filter((r) => str(r, 'submittedAt').startsWith(TODAY)).sort((a, b) => str(b, 'submittedAt').localeCompare(str(a, 'submittedAt')))
+      const failed = rows.filter((r) => r.result === 'Failed')
+      if (!rows.length) return { blocks: [p('Nothing has been submitted today yet.')], links: [{ label: 'All forms', module: 'forms', page: 'catalogue' }] }
+      return {
+        blocks: [
+          p(`${plural(rows.length, 'form')} ${rows.length === 1 ? 'was' : 'were'} submitted today${failed.length ? `, ${failed.length} with fails` : ', all passed or completed'}:`),
+          list(rows.slice(0, 6).map((r) => [ref('submissions', r.id), ` · ${str(r, 'form')}${str(r, 'context') ? ` for ${str(r, 'context')}` : ''}, ${str(r, 'result').toLowerCase()}, by ${str(r, 'submittedBy')} at ${str(r, 'submittedAt').slice(11)}`])),
+        ],
+        source: plural(data.submissions.length, 'submission'),
+        links: [{ label: 'Submissions', module: 'forms', page: 'submissions' }],
+        followUps: ['Which checks failed this week?'],
+      }
+    },
+  },
+  {
+    module: 'forms', match: /\bfail(ed|s|ures?)?\b|inspection|checklist|submission|\bforms?\b|survey|expense claim/,
+    answer: ({ data }) => {
+      const { start } = thisWeek()
+      const week = data.submissions.filter((r) => str(r, 'submittedAt').slice(0, 10) >= start)
+      const failed = week.filter((r) => r.result === 'Failed').sort((a, b) => num(b, 'failed') - num(a, 'failed'))
+      if (!failed.length) {
+        return {
+          blocks: [p(`${plural(week.length, 'form')} ${week.length === 1 ? 'was' : 'were'} submitted this week and none failed a check.`)],
+          source: plural(data.submissions.length, 'submission'),
+          links: [{ label: 'Submissions', module: 'forms', page: 'submissions' }],
+        }
+      }
+      return {
+        blocks: [
+          p(`${failed.length} of ${plural(week.length, 'form')} submitted this week failed a check:`),
+          list(failed.slice(0, 6).map((r) => [ref('submissions', r.id), ` · ${str(r, 'form')}${str(r, 'context') ? ` for ${str(r, 'context')}` : ''}: ${plural(num(r, 'failed'), 'fail')}, ${formatDate(str(r, 'submittedAt').slice(0, 10))}`])),
+          p('Open one to read the notes and photos on each failed check.'),
+        ],
+        source: plural(data.submissions.length, 'submission'),
+        links: [{ label: 'Failed submissions', module: 'forms', page: 'submissions' }, { label: 'All forms', module: 'forms', page: 'catalogue' }],
+        followUps: ['What was submitted today?'],
+      }
     },
   },
 ]

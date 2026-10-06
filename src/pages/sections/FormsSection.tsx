@@ -44,9 +44,10 @@ import { Spinner } from '@/components/ui/spinner'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  DIALOG_BODY, DIALOG_PANEL, EMAIL_PATTERN, FormDialog, PropertyComboboxPill, PropertyMultiPill, PropertyPill,
-  QuickCreateDialog as QuickCreate, useFieldErrors, type FormField, type FormValues, type PropertyOption,
+  DIALOG_BODY, DIALOG_PANEL, FormDialog, PropertyComboboxPill, PropertyMultiPill, PropertyPill,
+  QuickCreateDialog as QuickCreate, type PropertyOption,
 } from '@/blocks/form-dialog'
+import { EMAIL_PATTERN, useFieldErrors, type FormField, type FormValues } from '@/blocks/form-fields'
 import { PRIORITY, type Priority, DUE_OPTIONS, UNASSIGNED, type Job, type Status } from '../data'
 import {
   ASSIGNEE_OPTIONS, LABEL_OPTIONS, PRIORITY_OPTIONS, STATUS_OPTIONS, assigneeValue, driverOf, type JobOption,

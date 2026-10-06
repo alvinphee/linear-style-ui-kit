@@ -16,6 +16,7 @@ export type EntityId =
   | 'invoices' | 'bills' | 'payments' | 'journals' | 'ledgerAccounts'
   | 'employees' | 'leave' | 'payroll'
   | 'users' | 'audit'
+  | 'submissions'
 
 export type Data = Record<EntityId, Row[]>
 

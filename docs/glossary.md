@@ -160,6 +160,33 @@ used by most design systems).
 | Incognito chat (temporary chat) | A chat that is not kept in the history and is deleted when you leave it |
 | Credits meter | How much of the plan's AI usage is left this month |
 
+## Forms and checklists
+The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
+`form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
+checklist, an expense claim and a survey are all forms to them.
+
+| Term | Meaning |
+|---|---|
+| Form (form template, form definition) | What a form asks: its name, sections and fields, as data. What the catalogue lists. The type is `FormDefinition` |
+| Field schema | The kit's one list of field kinds and how each is drawn and checked, shared by the form dialog and the form renderer (`form-fields.tsx`) |
+| Form renderer | Draws a whole form from its definition: sections, progress, validation, review, submit. The block is `form-renderer` |
+| Submission | One filled-in form, kept as a record: who, when, the answers and the result |
+| Result | How a submission came out: passed or failed (a form with checks), or completed (one without) |
+| Score | A submission's checks counted: passed, failed, N/A |
+| Checklist | A form whose items are checks |
+| Check item | One line of a checklist: a statement answered with an outcome (Pass / Fail / N/A, or Yes / No), with a note and a photo when it fails. The component is `CheckItem` |
+| Outcome | The answer to a check. The bad one (Fail, No) carries the danger tone and asks for a note |
+| Rating | Stars to pick from, 1 to 5 by default. The component is `Rating` |
+| Signature pad | A box to sign in by hand; the strokes are kept as a picture. The component is `SignaturePad` |
+| Forms catalogue | The page listing the forms a person can fill in, searched and grouped by category. The block is `forms-catalogue` |
+| Context (of a form) | What one filling-in is about: the thing named by the link that opened the form, or asked for at the top (a vehicle, a bin, a new starter) |
+| Deep link | A link that opens one form directly, with its context: what a QR code carries |
+| Asset tag | A QR code fixed to a thing. Scanning it opens that thing's form with the thing filled in |
+| QR scanner | Reads a QR code with the device's camera in the page (the browser's BarcodeDetector), or takes the code typed. The component is `QrScanner` |
+| Review step | The dialog before a submission goes: the score and the failed checks, then Submit |
+| Draft (form) | What has been entered so far, kept in this browser under the form and its context until submitted |
+| Sign-off | The last section of a form: a name and a signature |
+
 ## ERP modules
 | Module | Covers |
 |---|---|

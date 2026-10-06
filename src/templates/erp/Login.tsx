@@ -8,6 +8,7 @@ import {
 } from '@/blocks/sign-in'
 import { IconMark, LetterMark } from '@/components/mark'
 import { UserAvatar } from '@/components/person'
+import { navigate } from '@/lib/router'
 import { COMPANIES, DEMO_USERS, ROLE_LABEL } from './data'
 import { MODULES } from './modules'
 import { landingPage } from './edition'
@@ -135,7 +136,7 @@ export function Login() {
 }
 
 export function Companies() {
-  const { session, company, setCompany, signOut, startPage } = useErp()
+  const { session, company, setCompany, signOut, startPage, returnTo, setReturnTo } = useErp()
 
   useEffect(() => {
     document.title = 'Choose a company · Acme ERP'
@@ -158,7 +159,10 @@ export function Companies() {
                   type="button"
                   onClick={() => {
                     setCompany(c.id)
-                    go('home', landingPage(startPage))
+                    if (returnTo) {
+                      setReturnTo(null)
+                      navigate(returnTo)
+                    } else go('home', landingPage(startPage))
                   }}
                   className="hover:bg-accent/60 hover:border-foreground/15 focus-visible:ring-ring/40 flex w-full items-center gap-3 rounded-lg border p-2.5 text-left outline-none focus-visible:ring-2"
                 >

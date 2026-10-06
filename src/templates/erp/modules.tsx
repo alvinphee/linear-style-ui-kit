@@ -4,7 +4,7 @@ import {
   Calendar03Icon, Note01Icon, PackageIcon, PackageReceiveIcon, Plug01Icon, QuoteDownIcon, ReceiptTextIcon,
   Settings01Icon, Shield01Icon, ShoppingCart01Icon, Store01Icon, Tag01Icon, Target02Icon, UserGroupIcon,
   UserLock01Icon, UserMultipleIcon, Wallet01Icon, WarehouseIcon, Home01Icon, Calculator01Icon, PipelineIcon,
-  Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon, BubbleChatIcon,
+  Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon, BubbleChatIcon, ClipboardCheckIcon, ClipboardListIcon, FileValidationIcon,
 } from '@hugeicons/core-free-icons'
 import { CUSTOMERS, PEOPLE, VENDORS, WAREHOUSES } from './data'
 import { TODAY, addDays } from './format'
@@ -15,6 +15,7 @@ import { ModuleOverview } from './pages/Overview'
 import { OpportunityPipeline } from './pages/Pipeline'
 import { FinancialReports } from './pages/Reports'
 import { CompanySettings, Integrations, RolesPermissions } from './pages/Admin'
+import { FormsCataloguePage } from './forms/FormsPages'
 import type { Data, ErpModule, ListSpec, Row } from './types'
 
 // Every module, its pages, and how each list looks. Names follow the
@@ -25,6 +26,7 @@ const WH = WAREHOUSES.map((w) => w.id)
 const is = (...statuses: string[]) => (r: Row) => statuses.includes(String(r.status))
 const count = (rows: Row[], ...statuses: string[]) => rows.filter(is(...statuses)).length
 const sum = (rows: Row[], key: string) => rows.reduce((t, r) => t + Number(r[key] ?? 0), 0)
+const today = (rows: Row[]) => rows.filter((r) => String(r.submittedAt).startsWith(TODAY))
 const short = (n: number) => (n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}K`)
 
 export const LISTS = {
@@ -464,6 +466,18 @@ export const LISTS = {
     },
     bulk: [{ label: 'Suspend', patch: { status: 'Suspended' } }, { label: 'Reactivate', patch: { status: 'Active' } }],
   },
+  submissions: {
+    entity: 'submissions', singular: 'submission', plural: 'Submissions', prefix: 'SUB-', primary: 'form',
+    columns: [
+      { key: 'id', label: 'Number', kind: 'id' }, { key: 'form', label: 'Form' }, { key: 'context', label: 'About', hide: 'md' },
+      { key: 'result', label: 'Result', kind: 'status' }, { key: 'failed', label: 'Fails', kind: 'number', hide: 'lg' },
+      { key: 'submittedBy', label: 'Submitted by', kind: 'person', hide: 'md' }, { key: 'submittedAt', label: 'When', kind: 'datetime' },
+    ],
+    views: [
+      { id: 'all', label: 'All' }, { id: 'failed', label: 'Failed', match: (r) => r.result === 'Failed' },
+      { id: 'passed', label: 'Passed', match: (r) => r.result === 'Passed' }, { id: 'today', label: 'Today', match: (r) => String(r.submittedAt).startsWith(TODAY) },
+    ],
+  },
   audit: {
     entity: 'audit', singular: 'event', plural: 'Audit trail', primary: 'action',
     columns: [
@@ -511,6 +525,7 @@ export const MODULES: ErpModule[] = [
       { id: 'orders', label: 'Sales orders', icon: Agreement01Icon, list: list('salesOrders'), badge: (d) => count(d.salesOrders, 'Confirmed') },
       { id: 'deliveries', label: 'Deliveries', icon: DeliveryTruck01Icon, list: list('deliveries'), badge: (d) => count(d.deliveries, 'Ready to pick') },
       { id: 'price-lists', label: 'Price lists', icon: Tag01Icon, list: list('priceLists') },
+      { id: 'forms', label: 'Forms', icon: ClipboardCheckIcon, render: () => <FormsCataloguePage module="sales" title="Sales forms" /> },
     ],
   },
   {
@@ -524,6 +539,7 @@ export const MODULES: ErpModule[] = [
       { id: 'transfers', label: 'Stock transfers', icon: Exchange01Icon, list: list('transfers'), badge: (d) => count(d.transfers, 'In transit') },
       { id: 'adjustments', label: 'Stock adjustments', icon: SlidersHorizontalIcon, list: list('adjustments') },
       { id: 'warehouses', label: 'Warehouses', icon: WarehouseIcon, list: list('warehouses') },
+      { id: 'forms', label: 'Forms', icon: ClipboardCheckIcon, render: () => <FormsCataloguePage module="inventory" title="Inventory forms" /> },
     ],
   },
   {
@@ -561,6 +577,17 @@ export const MODULES: ErpModule[] = [
       { id: 'employees', label: 'Employees', icon: UserMultipleIcon, list: list('employees') },
       { id: 'leave', label: 'Leave requests', icon: Calendar03Icon, list: list('leave'), badge: (d) => count(d.leave, 'Pending') },
       { id: 'payroll', label: 'Payroll', icon: Wallet01Icon, list: list('payroll') },
+      { id: 'forms', label: 'Forms', icon: ClipboardCheckIcon, render: () => <FormsCataloguePage module="hr" title="HR forms" /> },
+    ],
+  },
+  {
+    id: 'forms', name: 'Forms', icon: ClipboardCheckIcon, colour: 'oklch(0.62 0.14 300)', key: 'F',
+    description: 'Checklists, claims and surveys, filled in on the spot or from a QR code',
+    roles: ['admin', 'sales', 'operations', 'finance', 'hr'],
+    metric: (d) => `${today(d.submissions).length} submitted today · ${today(d.submissions).filter((r) => r.result === 'Failed').length} failed`,
+    pages: [
+      { id: 'catalogue', label: 'All forms', icon: ClipboardListIcon, render: () => <FormsCataloguePage /> },
+      { id: 'submissions', label: 'Submissions', icon: FileValidationIcon, list: list('submissions'), badge: (d) => today(d.submissions).filter((r) => r.result === 'Failed').length },
     ],
   },
   {
@@ -573,6 +600,7 @@ export const MODULES: ErpModule[] = [
       { id: 'company', label: 'Company settings', icon: Settings01Icon, render: () => <CompanySettings /> },
       { id: 'integrations', label: 'Integrations', icon: Plug01Icon, render: () => <Integrations /> },
       { id: 'audit', label: 'Audit trail', icon: Audit01Icon, list: list('audit') },
+      { id: 'forms', label: 'Forms', icon: ClipboardCheckIcon, render: () => <FormsCataloguePage module="admin" title="Administration forms" /> },
     ],
   },
 ]

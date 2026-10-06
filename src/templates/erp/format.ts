@@ -38,7 +38,7 @@ const TONES: Record<string, Tone> = {
   // Good outcomes
   Won: 'success', Accepted: 'success', Paid: 'success', Delivered: 'success', Received: 'success', Approved: 'success',
   Active: 'success', Posted: 'success', Completed: 'success', Qualified: 'success', 'In stock': 'success', Connected: 'success',
-  Reconciled: 'success',
+  Reconciled: 'success', Passed: 'success',
   // In motion
   Sent: 'info', Confirmed: 'info', Contacted: 'info', Proposal: 'info', 'In transit': 'info', Shipped: 'info',
   Ordered: 'info', Processing: 'progress', Negotiation: 'progress', 'Partially paid': 'progress', 'Partially received': 'progress',
@@ -47,7 +47,7 @@ const TONES: Record<string, Tone> = {
   'Awaiting approval': 'warning', Pending: 'warning', Overdue: 'danger', 'Low stock': 'warning', Expiring: 'warning',
   'Ready to pick': 'warning', New: 'info', Open: 'warning', Unpaid: 'warning',
   // Stopped
-  Lost: 'danger', Rejected: 'danger', Cancelled: 'neutral', Void: 'neutral', Expired: 'neutral', 'Out of stock': 'danger',
+  Lost: 'danger', Rejected: 'danger', Failed: 'danger', Cancelled: 'neutral', Void: 'neutral', Expired: 'neutral', 'Out of stock': 'danger',
   Suspended: 'danger', Inactive: 'neutral', Archived: 'neutral', Draft: 'neutral', Closed: 'neutral', Disconnected: 'neutral',
 }
 

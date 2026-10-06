@@ -88,6 +88,14 @@ linear-style-ui-kit/
     │   │                      heatmap, slot picker
     │   ├── filter-bar/        filter menu, filter chips, saved views
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
+    │   ├── form-fields.tsx    the field schema and renderer shared by the form dialog and the
+    │   │                      form renderer: text, select, radio… and check, yes-no, rating,
+    │   │                      photo, signature
+    │   ├── form-renderer.tsx  a whole form on a page from its definition: sections, progress,
+    │   │                      review step, a draft in the browser, the submission read back
+    │   ├── forms-catalogue.tsx  the forms to pick from: search, by category, a QR code per form
+    │   │                      (deep link, print), a scanner. Generic: checklists, claims and
+    │   │                      surveys are only the sample definitions
     │   ├── global-header.tsx  the top row: start, search in the middle, end (Two rows, the ERP)
     │   ├── form-dialog.tsx    field-driven dialog, quick create, property pills
     │   ├── gantt-chart.tsx    Gantt chart: timescale, bars, milestones, today line, Weeks / Months
@@ -116,6 +124,10 @@ linear-style-ui-kit/
     │   ├── search-trigger.tsx button that looks like search and opens the palette
     │   ├── shortcut.tsx       keyboard keys, ⌘ or Ctrl by platform
     │   ├── ai-label.tsx       "AI" tag for AI-made content
+    │   ├── check-item.tsx     one line of a checklist: a statement and its outcome (Pass / Fail / N/A, Yes / No)
+    │   ├── rating.tsx         star rating
+    │   ├── signature-pad.tsx  sign by hand on a canvas, kept as a picture
+    │   ├── qr-scanner.tsx     reads a QR code with the camera (BarcodeDetector), or takes it typed
     │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
     │   ├── icon-action.tsx    icon button with a tooltip and shortcut (copy, retry…)
     │   ├── theme-toggle.tsx   light / dark button for a header
@@ -150,7 +162,8 @@ linear-style-ui-kit/
     ├── templates/             whole apps built from the kit (level 5)
     │   ├── ai-chat/AiChatApp.tsx   the AI workspace filling the window
     │   ├── erp/               the ERP app (see "The ERP template")
-    │   │   └── assistant/     Ask AI: answers, shared chats, the Assistant page
+    │   │   ├── assistant/     Ask AI: answers, shared chats, the Assistant page
+    │   │   └── forms/         the Forms module: form definitions, catalogue and fill pages, sample submissions
     │   └── erp-ai/ErpAiApp.tsx     the ERP + AI edition of the same app
     └── pages/
         ├── KitchenSink.tsx      page shell, one section per page, header, shortcuts, Ctrl+K menu
@@ -168,7 +181,7 @@ linear-style-ui-kit/
             ├── shared.tsx            Section and Panel wrappers
             ├── ThemeSection.tsx      presets and the theme mixer
             ├── <Page>Section.tsx     one per Components page, named after its id: ButtonsSection,
-            │                         TextFieldsSection, QrCodeSection… (38, listed in nav.ts)
+            │                         TextFieldsSection, QrCodeSection… (39, listed in nav.ts)
             ├── FormsSection.tsx      whole forms, inline and in dialogs, sheets and a wizard;
             │                         exports QuickCreateDialog (the C shortcut)
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
@@ -185,6 +198,8 @@ linear-style-ui-kit/
             ├── RoadmapSection.tsx
             ├── DockScheduleSection.tsx  yard: KPIs, day / week schedule, yard queue, exceptions
             ├── dock-schedule/         its made-up yard, side panel and booking dialog
+            ├── FormsCatalogueSection.tsx  forms catalogue, a form filled in (phone width too), submissions
+            ├── forms-catalogue/       its sample forms and past submissions
             ├── SettingsSection.tsx
             ├── AuditLogSection.tsx   filterable event log
             ├── PricingSection.tsx    plans, yearly switch, comparison table
@@ -206,7 +221,7 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **Components:** single building blocks, restyled, each with its
   playground and variants. One page per component family: a component and
   its close relatives (Badges and labels: Badge, StatusBadge, DeltaBadge,
-  LabelChip). 38 pages under category headings: Actions, Inputs, Data
+  LabelChip). 39 pages under category headings: Actions, Inputs, Data
   display, Feedback, Overlays, Navigation, Layout, Charts, AI. Every part a
   block uses has its own demo here. A new component joins its family's
   page; a new family gets its own page (see below).
@@ -273,7 +288,7 @@ session, company and starred modules are kept in the browser.
   it, its edge resizes it and the width is kept in the browser. Below 1024px
   wide it is a sheet over the page.
 - Modules (`modules.tsx`): CRM, Sales, Inventory, Purchasing, Accounting,
-  Human resources, Administration. Each lists its pages; a list page is a
+  Human resources, Forms, Administration. Each lists its pages; a list page is a
   `ListSpec` (columns, saved views, create form, bulk actions) rendered by
   `ListPage.tsx`. Roles decide which modules a user sees.
 - Every record opens in a centred modal (center peek, `Overlays.tsx`) and
@@ -285,7 +300,17 @@ session, company and starred modules are kept in the browser.
   Administration, `G L` launchpad), `C` create on a list, `[` hide the
   sidebar.
 - Routes: `#/templates/erp/<module>/<page>`, for example
-  `#/templates/erp/accounting/invoices`.
+  `#/templates/erp/accounting/invoices`. A third segment names one thing on
+  the page: `#/templates/erp/forms/catalogue/vehicle-check?context=SGX%204821`
+  is that form, open for that vehicle (the link a QR code carries). Signed
+  out, the link is kept and returned to after sign-in and the company pick.
+- Forms (`forms/`): every form in one catalogue (Forms › All forms), and
+  each module's own on its Forms page (Inventory, Sales, HR,
+  Administration). The kit's `FormsCatalogue` lists them; `FormRenderer`
+  fills one in; a submission is a record (Forms › Submissions, with Failed /
+  Passed / Today views) whose peek shows every answer. Each form's QR button
+  prints the code that opens it; the Scan button reads one. Ask AI answers
+  "Which checks failed this week?" from the submissions.
 - Ask AI (`Copilot.tsx`, with its answers, chats and views in `assistant/`)
   answers from the live records: about 25 kinds of question, scripted, no
   model. Record numbers in answers open the record's peek, with Ask AI still
@@ -376,8 +401,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 117 items: `tokens` (the whole theme from `styles.css`), 47 ui, 33
-components, 27 blocks and 9 lib files. Which level becomes which item:
+needs. 124 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
+components, 30 blocks and 9 lib files. Which level becomes which item:
 `docs/architecture.md`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes

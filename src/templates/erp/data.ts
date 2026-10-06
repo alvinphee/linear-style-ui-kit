@@ -1,6 +1,7 @@
 import { seededRandom } from '@/lib/random'
 import { TODAY, addDays } from './format'
 import type { Data, Role, Row } from './types'
+import { sampleSubmissions } from './forms/sample'
 
 // Sample data for the ERP template. Made up, generated from a fixed seed so
 // every visit shows the same records. Names are invented; dates sit around
@@ -293,10 +294,12 @@ function build(): Data {
     }
   })
 
+  const submissions = sampleSubmissions(rand, PEOPLE.slice(0, 14))
+
   return {
     leads, opportunities, accounts, contacts, activities, quotations, salesOrders, deliveries, priceLists, items, stock,
     transfers, adjustments, warehouses, requisitions, purchaseOrders, goodsReceipts, vendors, invoices, bills, payments,
-    journals, ledgerAccounts, employees, leave, payroll, users, audit,
+    journals, ledgerAccounts, employees, leave, payroll, users, audit, submissions,
   }
 }
 
