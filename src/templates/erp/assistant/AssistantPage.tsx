@@ -171,16 +171,17 @@ function ProjectDialog({ editing, onClose, onCreated }: {
 }
 
 // The Assistant's part of the app sidebar, under the Home pages: + New chat,
-// then Search chats, All chats and Incognito chat, then Projects (with their
-// instructions), Pinned and Chats (by date or one list, any type or one).
+// then Search chats and All chats, then Projects (with their instructions),
+// Pinned and Chats (by date or one list, any type or one). Incognito is the
+// toggle at the top right of the chat, not a row here.
 // Every chat shows the icon of the module it is about. From the kit's
 // ChatHistory block. Shown on the Assistant and All chats pages.
 export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => void; pageId?: string }) {
   const {
-    chats, projects, active, draftProjectId, runningChatId, incognito, setIncognito, newChat, openChat, renameChat, pinChat,
+    chats, projects, active, draftProjectId, runningChatId, newChat, openChat, renameChat, pinChat,
     deleteChat, moveChat, deleteProject,
   } = useAssistant()
-  const { chatsByDate, setChatsByDate } = useErp()
+  const { groupByDate, setGroupByDate } = useErp()
   const [editing, setEditing] = useState<string | null>(null)
 
   // New rows only when a row would look different, not on every streamed word.
@@ -200,16 +201,6 @@ export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => vo
         activeChatId={pageId === 'assistant' && active && !active.temporary ? active.id : null}
         activeProjectId={pageId === 'assistant' && !active ? draftProjectId : null}
         newChatIcon={Add01Icon}
-        links={[{
-          id: 'incognito',
-          label: 'Incognito chat',
-          icon: IncognitoIcon,
-          active: pageId === 'assistant' && incognito,
-          onSelect: () => {
-            setIncognito(true)
-            toChat()
-          },
-        }]}
         types={getChatTypes()}
         onNewChat={() => {
           newChat()
@@ -242,8 +233,8 @@ export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => vo
           deleteChat(id)
           toast('Chat deleted')
         }}
-        groupByDate={chatsByDate}
-        onGroupByDateChange={setChatsByDate}
+        groupByDate={groupByDate}
+        onGroupByDateChange={setGroupByDate}
         onViewAll={() => go('home', 'chats')}
         viewAllActive={pageId === 'chats'}
         onNavigate={onNavigate}

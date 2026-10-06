@@ -196,7 +196,7 @@ linear-style-ui-kit/
             ├── OnboardingSection.tsx
             ├── SignInSection.tsx
             ├── AiWorkspaceSection.tsx AI chat workspace: projects, history, agent, artifacts
-            ├── ai/                    its engine, scripted scenarios, parts and SettingsDialog
+            ├── ai/                    its engine, scripted scenarios, parts, All chats and SettingsDialog
             ├── AiFeaturesSection.tsx  inline AI, summary, triage, AI search and more
             ├── ai-features/           its panels and scripted helpers
             └── IconsSection.tsx
@@ -236,6 +236,15 @@ full page outside the kit's shell. They import the same components and
 share the same stores, so a chat started in the kit shows up in the AI chat
 template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
 - `#/templates/ai-chat`: the AI workspace filling the window, with Settings.
+  Its sidebar is laid out like the ERP + AI Assistant's: + New chat; Search
+  chats and All chats (a page: search, filter chips by type); Projects (each
+  with a menu: new chat in it, edit on its page, delete); Pinned; Chats (one
+  list by default, or by date, kept in the browser; any type or one). A chat's type is
+  the kind of work its first prompt asked for (`chatTypeOf` in
+  `ai/engine.ts`: jobs, writing, research, invoices, code…), shown as an
+  icon beside it. Incognito is the toggle at the top right of the chat, not
+  in the sidebar: those chats are never saved and are deleted when you
+  leave them; opening a kept chat, a project or All chats ends incognito.
 - `#/templates/erp`: the ERP app, below.
 - `#/templates/erp-ai`: the same ERP with the AI assistant built in, below.
 
@@ -281,18 +290,18 @@ into it: switch features on with `edition().assistant` instead. It adds:
   today, marked stale when records change).
 - Home › Assistant: the full-page chat. Its chat history fills the app
   sidebar under the Home pages (a page's `sidebar`), so there is still one
-  sidebar, laid out like the big chat apps: + New chat; Search chats, All
-  chats and Incognito chat; Projects (folders of chats, each with
+  sidebar, laid out like the big chat apps: + New chat; Search chats and All
+  chats; Projects (folders of chats, each with
   instructions, set up in a dialog; a project's menu offers a new chat in
-  it, edit and delete); Pinned; then Chats, whose options button switches
-  between dates and one list (kept in the browser) and shows one type of
+  it, edit and delete); Pinned; then Chats, one list by default, whose
+  options button groups them by date (kept in the browser) and shows one type of
   chat. Every chat shows the icon of the module it is about. The
   breadcrumb ends with the chat's title.
 - Home › All chats (reached from that sidebar, not listed under Home): every
   chat, with a search and filter chips by type (the module a chat is about,
   from `topicOf` in `answers.ts`).
-- Incognito (Incognito chat in the sidebar, or the toggle at the top right of
-  the Assistant): chats that stay out of the history and are deleted when
+- Incognito (the toggle at the top right of the Assistant; not in the
+  sidebar): chats that stay out of the history and are deleted when
   you leave them. The scripted answers cannot follow a project's
   instructions; the views show them.
 - One set of chats (`assistant/store.tsx`) for the Assistant, the Ask AI

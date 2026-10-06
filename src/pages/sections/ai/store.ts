@@ -18,6 +18,10 @@ export type State = {
   artifact: { id: string; version: number } | null
   // Invoices that already got a payment reminder.
   reminded: string[]
+  // Incognito is on: a new chat is temporary (Chat.temporary). Not saved.
+  incognito: boolean
+  // The history's Chats by date (Today, Yesterday…), or one list.
+  groupByDate: boolean
 }
 
 type ReplyAddress = { chatId: string; messageId: string; replyId: string }
@@ -46,6 +50,10 @@ export type Action =
   | { type: 'project/delete'; id: string }
   | { type: 'credits'; amount: number }
   | { type: 'invoices/remind'; ids: string[] }
+  | { type: 'incognito'; on: boolean }
+  | { type: 'groupByDate'; on: boolean }
+  // Leaving an incognito chat deletes it: every temporary chat but `keep`.
+  | { type: 'chat/drop-temporary'; keep?: string }
   | { type: 'reset'; state: State }
 
 function patchChat(state: State, id: string, change: (chat: Chat) => Chat): State {
@@ -154,6 +162,14 @@ export function reducer(state: State, action: Action): State {
       return { ...state, credits: Math.min(100, Math.round((state.credits + action.amount) * 10) / 10) }
     case 'invoices/remind':
       return { ...state, reminded: [...new Set([...state.reminded, ...action.ids])] }
+    case 'incognito':
+      return { ...state, incognito: action.on }
+    case 'groupByDate':
+      return { ...state, groupByDate: action.on }
+    case 'chat/drop-temporary':
+      return state.chats.some((c) => c.temporary && c.id !== action.keep)
+        ? { ...state, chats: state.chats.filter((c) => !c.temporary || c.id === action.keep) }
+        : state
     case 'reset':
       return action.state
   }
@@ -175,6 +191,8 @@ export function initialState(): State {
     credits: 68,
     artifact: null,
     reminded: [],
+    incognito: false,
+    groupByDate: false,
   }
 }
 
@@ -207,7 +225,7 @@ export function loadState(at: number): State {
     if (!isObject(saved) || !Array.isArray(saved.chats) || !Array.isArray(saved.projects) || !Array.isArray(saved.artifacts)) {
       return fallback
     }
-    const chats = saved.chats.filter(validChat).map((c) => settle(c, at))
+    const chats = saved.chats.filter(validChat).filter((c) => !c.temporary).map((c) => settle(c, at))
     const projects = saved.projects.filter((p): p is Project => isObject(p) && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.files))
     const artifacts = saved.artifacts.filter((a): a is Artifact => isObject(a) && typeof a.id === 'string' && Array.isArray(a.versions) && a.versions.length > 0)
     const view = isObject(saved.view) && saved.view.kind === 'chat' && chats.some((c) => c.id === (saved.view as { chatId?: string }).chatId)
@@ -222,6 +240,8 @@ export function loadState(at: number): State {
       credits: typeof saved.credits === 'number' ? saved.credits : 68,
       artifact: null,
       reminded: Array.isArray(saved.reminded) ? saved.reminded.filter((id): id is string => typeof id === 'string') : [],
+      incognito: false,
+      groupByDate: typeof saved.groupByDate === 'boolean' ? saved.groupByDate : false,
     }
   } catch {
     return fallback
@@ -230,8 +250,10 @@ export function loadState(at: number): State {
 
 export function saveState(state: State) {
   try {
-    const { projects, chats, artifacts, view, model, credits, reminded } = state
-    window.localStorage.setItem(KEY, JSON.stringify({ projects, chats, artifacts, view, model, credits, reminded }))
+    const { projects, artifacts, view, model, credits, reminded, groupByDate } = state
+    // Incognito chats are never written down.
+    const chats = state.chats.filter((c) => !c.temporary)
+    window.localStorage.setItem(KEY, JSON.stringify({ projects, chats, artifacts, view, model, credits, reminded, groupByDate }))
   } catch {
     // Storage full or blocked: the demo keeps working in memory.
   }

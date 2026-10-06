@@ -35,9 +35,9 @@ import { plural } from '@/lib/text'
 //              (onNewProject), such as a dialog with its instructions. A
 //              project's menu offers a new chat in it, edit and delete.
 //   Pinned     pinned chats
-//   Chats      the rest, under Today, Yesterday, Previous 7 days, Older (or
-//              a chat's own `group`). Its options button turns the dates
-//              off for one list (keep that choice with `groupByDate`) and,
+//   Chats      the rest, newest first in one list. Its options button groups
+//              them under Today, Yesterday, Previous 7 days, Older (or a
+//              chat's own `group`; keep that choice with `groupByDate`) and,
 //              given `types`, shows one type of chat.
 // Every chat has an icon before its title: its `icon` (what it is about,
 // such as a module) or a chat bubble. A row opens its chat; double-click
@@ -474,7 +474,7 @@ export function ChatHistory({
   // The heading over the chats that are not pinned or in a project.
   historyLabel?: string
   // Chats by date, or one list. Leave out to let the options menu keep the
-  // choice itself (by date at first).
+  // choice itself (one list at first).
   groupByDate?: boolean
   onGroupByDateChange?: (groupByDate: boolean) => void
   // The kinds of chat, for the options menu's Show filter (chat.type).
@@ -497,7 +497,7 @@ export function ChatHistory({
   const [creating, setCreating] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
-  const [byDateState, setByDateState] = useState(true)
+  const [byDateState, setByDateState] = useState(false)
   const [show, setShow] = useState('all')
   const byDate = groupByDate ?? byDateState
   const newChatButton = useRef<HTMLButtonElement | null>(null)

@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode, type RefObject } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { DashboardSquare01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
+import { Add01Icon, DashboardSquare01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { AccountMenu } from '@/blocks/account-menu'
 import {
@@ -11,13 +11,19 @@ import { Shortcut } from '@/components/shortcut'
 import { UsageMeter } from '@/components/usage-meter'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { useActions } from './context'
-import { USER, now } from './data'
+import { CHAT_TYPES, USER, now } from './data'
 import type { Chat, Project, View } from './types'
 
 // The workspace's sidebar: the chat-history block wired to the workspace's
-// actions, with its credits and account menu in the footer.
+// actions, with its credits and account menu in the footer. From the top:
+// + New chat, Search chats and All chats, Projects (each with a menu: new
+// chat in it, edit on its page, delete), Pinned, then Chats (by date or one
+// list, any type or one). Every chat shows its type's icon. Incognito is the
+// toggle at the top right of the chat, not a row here.
 
+// A chat as the sidebar shows it, with its type (chatTypeOf) and that type's icon.
 export type ChatSummary = Pick<Chat, 'id' | 'title' | 'projectId' | 'pinned' | 'updatedAt'>
+  & Pick<HistoryChat, 'type' | 'icon' | 'iconColour'>
 
 // The same actions in the hover menu, the right-click menu and the chat header.
 export function ChatMenuItems({ kit, chat, projects, onRename, onDelete, extra }: {
@@ -44,12 +50,15 @@ export function ChatMenuItems({ kit, chat, projects, onRename, onDelete, extra }
   )
 }
 
-export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, runningChatId, onNavigate, onClose, newChatRef, kitLink }: {
+export const Sidebar = memo(function Sidebar({
+  chats, projects, view, credits, runningChatId, groupByDate, onNavigate, onClose, newChatRef, kitLink,
+}: {
   chats: ChatSummary[]
   projects: Project[]
   view: View
   credits: number
   runningChatId: string | null
+  groupByDate: boolean
   // Called after moving somewhere, so the mobile sheet can close.
   onNavigate?: () => void
   onClose?: () => void
@@ -70,12 +79,22 @@ export const Sidebar = memo(function Sidebar({ chats, projects, view, credits, r
       activeChatId={view.kind === 'chat' ? view.chatId : null}
       activeProjectId={view.kind === 'project' ? view.projectId : null}
       now={now}
+      newChatIcon={Add01Icon}
       newChatRef={newChatRef}
       newChatShortcut={<Shortcut keys={['mod', 'shift', 'O']} />}
+      types={CHAT_TYPES}
       onNewChat={() => actions.newChat(null)}
       onOpenChat={actions.openChat}
       onOpenProject={actions.openProject}
+      // A new project opens on its page, where its instructions and files go.
       onCreateProject={(name) => actions.openProject(actions.createProject(name))}
+      onNewChatInProject={(id) => actions.newChat(id)}
+      onEditProject={actions.openProject}
+      onDeleteProject={actions.deleteProject}
+      onViewAll={actions.openLibrary}
+      viewAllActive={view.kind === 'library'}
+      groupByDate={groupByDate}
+      onGroupByDateChange={actions.setGroupByDate}
       onRenameChat={actions.renameChat}
       onPinChat={actions.pinChat}
       onMoveChat={actions.moveChat}

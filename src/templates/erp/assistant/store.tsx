@@ -377,8 +377,10 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
       setDraftProjectId(projectId)
       setFocusKey((k) => k + 1)
     },
+    // A kept chat ends incognito; only a new chat keeps it on.
     openChat(id) {
       dropTemporary(id)
+      setIncognitoState(false)
       setActiveId(id)
       setDraftProjectId(null)
       setFocusKey((k) => k + 1)

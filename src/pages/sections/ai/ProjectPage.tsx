@@ -182,7 +182,12 @@ export function ProjectPage({ project, chats, sidebarToggle }: {
                       onClick={() => actions.openChat(chat.id)}
                       className="hover:bg-accent/60 focus-visible:bg-accent flex h-10 w-full min-w-0 items-center gap-2.5 px-3 text-left text-xs outline-none"
                     >
-                      <HugeiconsIcon icon={BubbleChatIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
+                      <HugeiconsIcon
+                        icon={chat.icon ?? BubbleChatIcon}
+                        strokeWidth={2}
+                        className="text-muted-foreground size-3.5 shrink-0"
+                        style={{ color: chat.iconColour }}
+                      />
                       <span className="min-w-0 flex-1 truncate">{chat.title}</span>
                       <span className="text-muted-foreground shrink-0 text-[11px]">{formatWhen(chat.updatedAt)}</span>
                     </button>

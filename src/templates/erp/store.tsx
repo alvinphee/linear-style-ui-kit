@@ -14,12 +14,12 @@ export type Recent = { entity: EntityId; id: string; label: string }
 // Where you land after signing in (the ERP + AI edition lets you choose).
 export type StartPage = 'launchpad' | 'assistant'
 
-// chatsByDate: the Assistant's chat history grouped by date, or one list.
-type Saved = { session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; chatsByDate: boolean }
+// groupByDate: the Assistant's chat history grouped by date, or one list (the default).
+type Saved = { session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean }
 
 const KEY = 'linear-kit:erp:v1'
 
-const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', chatsByDate: true }
+const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false }
 
 function load(): Saved {
   try {
@@ -35,7 +35,7 @@ type ErpState = {
   data: Data
   favourites: string[]
   startPage: StartPage
-  chatsByDate: boolean
+  groupByDate: boolean
   // A page's own title for the end of the breadcrumb, such as a chat's.
   pageTitle: string | null
   recent: Recent[]
@@ -52,7 +52,7 @@ type ErpState = {
   remove: (entity: EntityId, ids: string[]) => void
   toggleFavourite: (moduleId: string) => void
   setStartPage: (page: StartPage) => void
-  setChatsByDate: (byDate: boolean) => void
+  setGroupByDate: (byDate: boolean) => void
   setPageTitle: (title: string | null) => void
   openPeek: (entity: EntityId, id: string) => void
   closePeek: () => void
@@ -102,7 +102,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     data,
     favourites: saved.favourites,
     startPage: saved.startPage,
-    chatsByDate: saved.chatsByDate,
+    groupByDate: saved.groupByDate,
     pageTitle,
     recent,
     peek,
@@ -136,7 +136,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       favourites: s.favourites.includes(moduleId) ? s.favourites.filter((m) => m !== moduleId) : [...s.favourites, moduleId],
     })),
     setStartPage: (startPage) => setSaved((s) => ({ ...s, startPage })),
-    setChatsByDate: (chatsByDate) => setSaved((s) => ({ ...s, chatsByDate })),
+    setGroupByDate: (groupByDate) => setSaved((s) => ({ ...s, groupByDate })),
     setPageTitle,
     openPeek: (entity, id) => {
       setPeek({ entity, id })

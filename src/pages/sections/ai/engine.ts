@@ -3,7 +3,7 @@ import { code, files, general, plan, research, revise, translate } from './scena
 import { continueReminders, reminders } from './scenarios-invoices'
 import { compare, continueUpdate, email, summary, update } from './scenarios-jobs'
 import { Builder, type AgentContext, type ArtifactDraft, type BuilderContext, type ScriptEvent } from './script'
-import type { ApprovalRequest, Model, Part, PartOf, PlanStep } from './types'
+import type { ApprovalRequest, Chat, Model, Part, PartOf, PlanStep } from './types'
 
 // The scripted agent. Nothing here calls a model: a prompt is matched to a
 // scenario by keywords, the scenario writes a script of events (script.ts),
@@ -56,6 +56,20 @@ export function buildScript(ctx: AgentContext) {
 // The rest of the script once the person approves or denies.
 export function continueAfterApproval(request: ApprovalRequest, decision: 'approved' | 'denied', ctx: BuilderContext) {
   return request.kind === 'reminders' ? continueReminders(request, decision, ctx) : continueUpdate(request, decision, ctx)
+}
+
+// What a chat is about (CHAT_TYPES in data.ts): the kind of work its first
+// prompt asked for.
+const INTENT_TYPE: Record<Intent, string> = {
+  summary: 'jobs', update: 'jobs', compare: 'jobs', email: 'writing', translate: 'writing', revise: 'writing',
+  research: 'research', reminders: 'invoices', code: 'code', plan: 'planning', files: 'files', general: 'general',
+}
+
+export function chatTypeOf(chat: Pick<Chat, 'messages'>) {
+  const first = chat.messages.find((m) => m.role === 'user')
+  if (first?.role !== 'user') return 'general'
+  const intent = detectIntent({ prompt: first.text, modes: { web: false, deep: false }, lastArtifact: null, attachments: first.attachments })
+  return INTENT_TYPE[intent]
 }
 
 export function titleFor(prompt: string) {

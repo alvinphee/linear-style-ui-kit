@@ -474,7 +474,7 @@ and filters by type, and an incognito mode.
   Assistant file crashed on load, so the chat types are built on first use.
 - **Then laid out like the big chat apps** (from two screenshots Alvin
   gave, structure only; the look is the kit's): New chat, a few rows
-  (Search chats, All chats, Incognito chat, folding under More past four),
+  (Search chats, All chats and any of your own, folding under More past four),
   then Projects, Pinned and Chats as folding NavGroup headings, the rows
   NavItem-sized on the sidebar's colours. The date switch and a type filter
   moved into one options menu on Chats. Every chat has an icon: its type's
@@ -486,3 +486,32 @@ and filters by type, and an incognito mode.
   `lib/text.ts`) can swap the assistant store under a running page:
   "useAssistant must be used inside AssistantProvider". A full reload
   clears it; it cannot happen in a build.
+- **Incognito left the sidebar** (Alvin's call): one way in is enough, the
+  toggle at the top right of the chat, where you are when you want it. The
+  block's `links` stay for rows of your own; the kit's Chat history demo
+  shows the incognito row only when its switch is on.
+- **The AI chat template got the same sidebar** (the AI workspace, so the
+  kit's AI workspace page too): + New chat, All chats (`ai/AllChats.tsx`,
+  the ChatLibrary block), a type icon on every chat, the project menu,
+  Chats by date or as one list (saved with the chats), and the incognito
+  toggle at the top right. No ERP code was copied: both wire the same
+  blocks. The types come from the scripted agent's own intents
+  (`chatTypeOf`), as the ERP's come from `topicOf`.
+- **The incognito toggle never looked pressed.** It styled `data-[state=on]`,
+  but its tooltip trigger (`TooltipTrigger asChild`) writes its own
+  `data-state` ("closed", "delayed-open") over the Toggle's. The Mira Toggle
+  styles `aria-pressed` for this reason; the incognito toggle now does too.
+  Any Toggle inside a tooltip trigger needs `aria-pressed:` variants.
+- **Opening a kept chat now ends incognito**, in both apps. Before, the
+  toggle could stay pressed over a chat that was being saved.
+- **The All chats preview skips tables, code and list marks**: a line made
+  from a Markdown table read as "--- :---- Backlog 1 0".
+- **The Browser pane can freeze CSS transitions** when it is not on screen:
+  `getComputedStyle` then returns a colour halfway through its fade. Turn
+  `transition` off on the element (or take a screenshot) before trusting a
+  computed colour.
+- **Chats are one list by default** (Alvin's call), in the ChatHistory
+  block and both apps; the options menu groups them by date. The saved
+  setting was renamed from `chatsByDate` to `groupByDate` (the block's
+  prop), so a browser that saved the old default starts on the new one.
+

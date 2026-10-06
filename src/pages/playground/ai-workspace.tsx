@@ -456,7 +456,7 @@ function HistoryDemos() {
         { kind: 'switch', name: 'types', label: 'Type filter (types)', initial: true },
         { kind: 'switch', name: 'plus', label: '+ New chat (newChatIcon)', initial: true },
         { kind: 'switch', name: 'viewAll', label: 'All chats row (onViewAll)', initial: true },
-        { kind: 'switch', name: 'link', label: 'Incognito row (links)', initial: true },
+        { kind: 'switch', name: 'link', label: 'Incognito row (links)', initial: false },
       ]}
       render={(v) => (
         <HistoryPreview

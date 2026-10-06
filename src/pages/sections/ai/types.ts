@@ -135,6 +135,8 @@ export type Chat = {
   updatedAt: number
   model: ModelId
   messages: Message[]
+  // Incognito: kept out of the history and the saved state, deleted when you leave it.
+  temporary?: boolean
 }
 
 type ArtifactVersion = { content: string; at: number }
@@ -153,3 +155,5 @@ export type View =
   | { kind: 'chat'; chatId: string }
   | { kind: 'new'; projectId: string | null }
   | { kind: 'project'; projectId: string }
+  // All chats: the chat library.
+  | { kind: 'library' }

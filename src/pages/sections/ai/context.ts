@@ -16,6 +16,12 @@ export type WorkspaceActions = {
   openChat: (id: string) => void
   newChat: (projectId?: string | null) => void
   openProject: (id: string) => void
+  // All chats: the chat library.
+  openLibrary: () => void
+  // Incognito on or off; either way a new chat starts.
+  setIncognito: (on: boolean) => void
+  // The history's chats by date, or one list.
+  setGroupByDate: (on: boolean) => void
   renameChat: (id: string, title: string) => void
   pinChat: (id: string, pinned: boolean) => void
   moveChat: (id: string, projectId: string | null) => void

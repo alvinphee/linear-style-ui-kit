@@ -1,8 +1,10 @@
 import type { IconSvgElement } from '@hugeicons/react'
 import {
-  AiBrain02Icon, Atom01Icon, BalanceScaleIcon, CheckListIcon, ChartColumnIcon, FlashIcon, Mail01Icon,
-  QuillWrite01Icon, TaskDone01Icon, TextAlignLeftIcon, TranslateIcon, Alert02Icon,
+  AiBrain02Icon, Atom01Icon, BalanceScaleIcon, BubbleChatIcon, CheckListIcon, ChartColumnIcon, DeliveryTruck01Icon,
+  FileAttachmentIcon, FlashIcon, Globe02Icon, Invoice01Icon, Mail01Icon, QuillWrite01Icon, SourceCodeIcon,
+  TaskDone01Icon, TextAlignLeftIcon, TranslateIcon, Alert02Icon,
 } from '@hugeicons/core-free-icons'
+import type { ChatType } from '@/blocks/ai/chat-history'
 import { formatRelativeDate } from '@/lib/format'
 import { fileKind } from '@/components/file-chip'
 import type { FileRef, Model, ModelId } from './types'
@@ -47,6 +49,21 @@ export const SLASH_COMMANDS: { name: string; icon: IconSvgElement; description: 
   { name: 'translate', icon: TranslateIcon, description: 'Translate the last draft or a notice' },
   { name: 'plan', icon: CheckListIcon, description: 'Plan tomorrow’s deliveries' },
 ]
+
+// What a chat is about, from its first prompt (chatTypeOf in engine.ts): the
+// icon beside it in the history, and the filters in its options and All chats.
+export const CHAT_TYPES: ChatType[] = [
+  { value: 'jobs', label: 'Jobs', icon: DeliveryTruck01Icon, colour: 'var(--chart-1)' },
+  { value: 'writing', label: 'Writing', icon: QuillWrite01Icon, colour: 'var(--chart-2)' },
+  { value: 'research', label: 'Research', icon: Globe02Icon, colour: 'var(--chart-3)' },
+  { value: 'invoices', label: 'Invoices', icon: Invoice01Icon, colour: 'var(--chart-4)' },
+  { value: 'code', label: 'Code', icon: SourceCodeIcon, colour: 'var(--chart-5)' },
+  { value: 'planning', label: 'Planning', icon: CheckListIcon },
+  { value: 'files', label: 'Files', icon: FileAttachmentIcon },
+  { value: 'general', label: 'General', icon: BubbleChatIcon },
+]
+
+export const chatType = (value: string) => CHAT_TYPES.find((t) => t.value === value) ?? CHAT_TYPES[CHAT_TYPES.length - 1]
 
 export const USER = { name: 'Alex Morgan', first: 'Alex', email: 'alex@example.com', plan: 'Team plan' }
 

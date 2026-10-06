@@ -23,8 +23,10 @@ export function IncognitoToggle({ pressed, onPressedChange, label = 'Incognito',
           pressed={pressed}
           onPressedChange={onPressedChange}
           aria-label="Incognito chat"
+          // aria-pressed, as the Toggle itself uses: the tooltip's trigger
+          // writes over data-state, so data-[state=on] never matches.
           className={cn(
-            'text-muted-foreground data-[state=on]:border-foreground data-[state=on]:bg-foreground data-[state=on]:text-background data-[state=on]:hover:bg-foreground/90',
+            'text-muted-foreground aria-pressed:border-foreground aria-pressed:bg-foreground aria-pressed:text-background aria-pressed:hover:bg-foreground/90',
             className,
           )}
         >

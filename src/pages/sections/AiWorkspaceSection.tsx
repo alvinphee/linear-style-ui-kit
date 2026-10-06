@@ -12,12 +12,14 @@ import { plural, slug } from '@/lib/text'
 import { PEOPLE } from '../data'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
+import { AllChats } from './ai/AllChats'
 import { ArtifactPanel } from './ai/ArtifactPanel'
 import { ActionsContext, type WorkspaceActions } from './ai/context'
 import { Conversation } from './ai/Conversation'
-import { modelById, now, uid } from './ai/data'
+import { chatType, modelById, now, uid } from './ai/data'
 import {
-  buildScript, continueAfterApproval, play, titleFor, type AgentContext, type Controller, type ScriptEvent, type Sink,
+  buildScript, chatTypeOf, continueAfterApproval, play, titleFor, type AgentContext, type Controller, type ScriptEvent,
+  type Sink,
 } from './ai/engine'
 import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
 import { ProjectPage } from './ai/ProjectPage'
@@ -198,6 +200,20 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
       dispatch({ type: 'reply/finish', ...address, status: 'done', at: now() })
     }
 
+    // Leaving an incognito chat deletes it: every one but `keep`.
+    function dropTemporary(keep?: string) {
+      const run = runRef.current
+      if (run && run.chatId !== keep && chatById(run.chatId)?.temporary) stopRun(false)
+      dispatch({ type: 'chat/drop-temporary', keep })
+    }
+
+    // Opening a kept chat, a project or All chats ends incognito; only New
+    // chat keeps it on.
+    function endIncognito() {
+      dropTemporary()
+      if (stateRef.current.incognito) dispatch({ type: 'incognito', on: false })
+    }
+
     function closePanel(restoreFocus = true) {
       if (!stateRef.current.artifact) return
       dispatch({ type: 'artifact/close' })
@@ -217,8 +233,12 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         stopRun(false)
         if (chat) settleApproval(chat)
         else {
-          const projectId = s.view.kind === 'chat' ? null : s.view.projectId
-          chat = { id: uid('c'), title: titleFor(text), projectId, pinned: false, updatedAt: at, model: s.model, messages: [] }
+          const projectId = s.view.kind === 'new' || s.view.kind === 'project' ? s.view.projectId : null
+          chat = {
+            id: uid('c'), title: titleFor(text), projectId, pinned: false, updatedAt: at, model: s.model, messages: [],
+            temporary: s.incognito || undefined,
+          }
+          dropTemporary()
           dispatch({ type: 'chat/add', chat })
           dispatch({ type: 'view', view: { kind: 'chat', chatId: chat.id } })
           setFocusKey((k) => k + 1)
@@ -311,19 +331,36 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         if (s.view.kind === 'chat' && s.view.chatId === id) return
         if (runRef.current && runRef.current.chatId !== id) stopRun()
         closePanel(false)
+        endIncognito()
         dispatch({ type: 'view', view: { kind: 'chat', chatId: id } })
       },
       newChat(projectId = null) {
         stopRun()
         closePanel(false)
+        dropTemporary()
         dispatch({ type: 'view', view: { kind: 'new', projectId } })
         setFocusKey((k) => k + 1)
       },
       openProject(id) {
         stopRun()
         closePanel(false)
+        endIncognito()
         dispatch({ type: 'view', view: { kind: 'project', projectId: id } })
       },
+      openLibrary() {
+        stopRun()
+        closePanel(false)
+        endIncognito()
+        dispatch({ type: 'view', view: { kind: 'library' } })
+      },
+      setIncognito(on) {
+        closePanel(false)
+        dropTemporary()
+        dispatch({ type: 'incognito', on })
+        dispatch({ type: 'view', view: { kind: 'new', projectId: null } })
+        setFocusKey((k) => k + 1)
+      },
+      setGroupByDate: (on) => dispatch({ type: 'groupByDate', on }),
       renameChat: (id, title) => dispatch({ type: 'chat/patch', id, patch: { title } }),
       pinChat(id, pinned) {
         dispatch({ type: 'chat/patch', id, patch: { pinned } })
@@ -413,7 +450,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
 
   const { view } = state
   const chat = view.kind === 'chat' ? state.chats.find((c) => c.id === view.chatId) ?? null : null
-  const projectId = view.kind === 'chat' ? chat?.projectId ?? null : view.projectId
+  const projectId = view.kind === 'chat' ? chat?.projectId ?? null : view.kind === 'library' ? null : view.projectId
   const project = state.projects.find((p) => p.id === projectId) ?? null
   const last = chat?.messages[chat.messages.length - 1]
   const lastReply = last?.role === 'assistant' ? currentReply(last) : null
@@ -426,8 +463,16 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
 
   // The sidebar only gets new rows when a row would look different, not on
   // every streamed chunk, so it can skip re-rendering while the agent writes.
-  const signature = state.chats.map((c) => `${c.id}|${c.title}|${c.projectId}|${c.pinned}|${c.updatedAt}`).join('\n')
-  const summaries = useMemo((): ChatSummary[] => state.chats.map(({ id, title, projectId, pinned, updatedAt }) => ({ id, title, projectId, pinned, updatedAt })), [signature])
+  // Incognito chats are not in the history.
+  const kept = useMemo(() => state.chats.filter((c) => !c.temporary), [state.chats])
+  const signature = kept.map((c) => `${c.id}|${c.title}|${c.projectId}|${c.pinned}|${c.updatedAt}`).join('\n')
+  const summaries = useMemo((): ChatSummary[] => kept.map((c) => {
+    const type = chatType(chatTypeOf(c))
+    return {
+      id: c.id, title: c.title, projectId: c.projectId, pinned: c.pinned, updatedAt: c.updatedAt,
+      type: type.value, icon: type.icon, iconColour: type.colour,
+    }
+  }), [signature])
 
   const mentions = useMemo(() => {
     const names = [...PEOPLE, ...jobsStore.jobs.map((j) => j.id), ...state.projects.map((p) => p.name)]
@@ -457,7 +502,8 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
 
   function exportAll() {
     const lines: string[] = []
-    for (const c of stateRef.current.chats) {
+    const chats = stateRef.current.chats.filter((c) => !c.temporary)
+    for (const c of chats) {
       lines.push(`# ${c.title}`, '')
       for (const m of c.messages) {
         if (m.role === 'user') lines.push(`**You:** ${m.text}`, '')
@@ -468,7 +514,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
       }
     }
     downloadText('all-chats.md', lines.join('\n'), 'text/markdown')
-    toast(`Exported ${stateRef.current.chats.length} chats`)
+    toast(`Exported ${chats.length} chats`)
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLElement>) {
@@ -492,6 +538,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
       view={view}
       credits={state.credits}
       runningChatId={runningChatId}
+      groupByDate={state.groupByDate}
       newChatRef={newChatRef}
       kitLink={page}
       onNavigate={inSheet ? () => setSheetOpen(false) : undefined}
@@ -528,6 +575,8 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
               chats={summaries.filter((c) => c.projectId === project.id)}
               sidebarToggle={sidebarToggle}
             />
+          ) : view.kind === 'library' ? (
+            <AllChats chats={kept} projects={state.projects} runningChatId={runningChatId} sidebarToggle={sidebarToggle} />
           ) : (
             <Conversation
               chat={chat}
@@ -536,6 +585,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
               model={chat?.model ?? state.model}
               modes={modes}
               running={running}
+              incognito={state.incognito}
               openArtifactId={artifact?.id ?? null}
               hasArtifacts={!!chat && chatHasArtifacts(chat)}
               sidebarToggle={sidebarToggle}

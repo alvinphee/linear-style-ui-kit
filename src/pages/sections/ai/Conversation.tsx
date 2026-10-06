@@ -1,11 +1,14 @@
 import { memo, useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Download01Icon, Folder01Icon, MoreHorizontalIcon, PanelRightOpenIcon, Share08Icon } from '@hugeicons/core-free-icons'
+import {
+  Download01Icon, Folder01Icon, IncognitoIcon, MoreHorizontalIcon, PanelRightOpenIcon, Share08Icon,
+} from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { RenameInput } from '@/blocks/ai/chat-history'
 import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat-thread'
 import { ModelPicker, type PromptModel } from '@/blocks/ai/prompt-box'
 import { IconAction } from '@/components/icon-action'
+import { IncognitoToggle } from '@/components/incognito-toggle'
 import { DROPDOWN_MENU_KIT } from '@/components/menu-kit'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
@@ -65,11 +68,15 @@ function ProjectChip({ project }: { project: Project }) {
   )
 }
 
-function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, onOpenArtifacts, onDeleted }: {
+// The chat's header row: its title (rename on click) and project, then the
+// model, artifacts, share, its menu and, top right, the incognito toggle. An
+// incognito chat has no title, share or menu: it is not kept.
+function Header({ chat, project, projects, model, incognito, sidebarToggle, hasArtifacts, onOpenArtifacts, onDeleted }: {
   chat: Chat | null
   project: Project | null
   projects: Project[]
   model: ModelId
+  incognito: boolean
   sidebarToggle: ReactNode
   hasArtifacts: boolean
   onOpenArtifacts: () => void
@@ -80,6 +87,7 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
   const [confirm, setConfirm] = useState(false)
   const skipFocusReturn = useRef(false)
   const titleRef = useRef<HTMLButtonElement>(null)
+  const kept = chat && !chat.temporary ? chat : null
 
   function share() {
     if (!chat) return
@@ -93,7 +101,12 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
     <header className="flex h-11 shrink-0 items-center gap-1 border-b px-2">
       {sidebarToggle}
       <div className="flex min-w-0 flex-1 items-center gap-1.5">
-        {chat && renaming ? (
+        {chat?.temporary ? (
+          <span className="flex min-w-0 items-center gap-1.5 px-1.5 text-xs font-medium">
+            <HugeiconsIcon icon={IncognitoIcon} strokeWidth={2} className="size-3.5 shrink-0" />
+            <span className="truncate">Incognito chat</span>
+          </span>
+        ) : chat && renaming ? (
           <RenameInput
             initial={chat.title}
             label="Chat title"
@@ -131,8 +144,8 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
         defaultId={DEFAULT_MODEL}
       />
       {hasArtifacts && <IconAction label="Artifacts" icon={PanelRightOpenIcon} onClick={onOpenArtifacts} />}
-      {chat && <IconAction label="Share" icon={Share08Icon} onClick={share} className="hidden @sm:inline-flex" />}
-      {chat && (
+      {kept && <IconAction label="Share" icon={Share08Icon} onClick={share} className="hidden @sm:inline-flex" />}
+      {kept && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm" aria-label="Chat options" className="text-muted-foreground">
@@ -150,7 +163,7 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
           >
             <ChatMenuItems
               kit={DROPDOWN_MENU_KIT}
-              chat={chat}
+              chat={kept}
               projects={projects}
               onRename={() => {
                 skipFocusReturn.current = true
@@ -162,7 +175,7 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
                   <DropdownMenuItem className="@sm:hidden" onSelect={share}>
                     <HugeiconsIcon icon={Share08Icon} strokeWidth={2} /> Share
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => actions.exportChat(chat.id)}>
+                  <DropdownMenuItem onSelect={() => actions.exportChat(kept.id)}>
                     <HugeiconsIcon icon={Download01Icon} strokeWidth={2} /> Export as Markdown
                   </DropdownMenuItem>
                 </>
@@ -171,7 +184,10 @@ function Header({ chat, project, projects, model, sidebarToggle, hasArtifacts, o
           </DropdownMenuContent>
         </DropdownMenu>
       )}
-      <DeleteChatDialog chatId={confirm && chat ? chat.id : null} title={chat?.title ?? ''} onClose={() => setConfirm(false)} onDeleted={onDeleted} />
+      {/* The label goes in a narrow chat, leaving the icon. */}
+      <IncognitoToggle pressed={incognito} onPressedChange={actions.setIncognito} className="ml-1 hidden @lg:inline-flex" />
+      <IncognitoToggle pressed={incognito} onPressedChange={actions.setIncognito} label="" className="@lg:hidden" />
+      <DeleteChatDialog chatId={confirm && kept ? kept.id : null} title={kept?.title ?? ''} onClose={() => setConfirm(false)} onDeleted={onDeleted} />
     </header>
   )
 }
@@ -195,15 +211,24 @@ function MessageList({ chat, openArtifactId, mentions }: { chat: Chat; openArtif
   )
 }
 
-function Greeting({ project, projects, modes, focusKey }: { project: Project | null; projects: Project[]; modes: Modes; focusKey: number }) {
+function Greeting({ project, projects, modes, incognito, focusKey }: {
+  project: Project | null
+  projects: Project[]
+  modes: Modes
+  incognito: boolean
+  focusKey: number
+}) {
   const actions = useActions()
   return (
     <ChatWelcome
-      title={<>{greeting()}, {USER.first}</>}
+      icon={incognito ? IncognitoIcon : undefined}
+      title={incognito ? 'Incognito chat' : <>{greeting()}, {USER.first}</>}
       headingAs="h3"
-      description={project
-        ? <>New chat in <span className="text-foreground font-medium">{project.name}</span>. Replies follow its instructions and files.</>
-        : 'Ask about jobs, drivers and customers. Every reply is scripted in your browser, so start with a card below.'}
+      description={incognito
+        ? "This chat isn't saved to your chats, and it's deleted when you leave it."
+        : project
+          ? <>New chat in <span className="text-foreground font-medium">{project.name}</span>. Replies follow its instructions and files.</>
+          : 'Ask about jobs, drivers and customers. Every reply is scripted in your browser, so start with a card below.'}
       starters={(
         <PromptStarters
           items={STARTERS.map((starter) => ({
@@ -219,8 +244,8 @@ function Greeting({ project, projects, modes, focusKey }: { project: Project | n
 }
 
 export const Conversation = memo(function Conversation({
-  chat, project, projects, model, modes, running, openArtifactId, hasArtifacts, sidebarToggle, focusKey, mentions,
-  onOpenArtifacts, onDeleted,
+  chat, project, projects, model, modes, running, incognito, openArtifactId, hasArtifacts, sidebarToggle, focusKey,
+  mentions, onOpenArtifacts, onDeleted,
 }: {
   chat: Chat | null
   project: Project | null
@@ -228,6 +253,7 @@ export const Conversation = memo(function Conversation({
   model: ModelId
   modes: Modes
   running: boolean
+  incognito: boolean
   openArtifactId: string | null
   hasArtifacts: boolean
   sidebarToggle: ReactNode
@@ -243,6 +269,7 @@ export const Conversation = memo(function Conversation({
         project={project}
         projects={projects}
         model={model}
+        incognito={incognito}
         sidebarToggle={sidebarToggle}
         hasArtifacts={hasArtifacts}
         onOpenArtifacts={onOpenArtifacts}
@@ -252,6 +279,12 @@ export const Conversation = memo(function Conversation({
         <>
           <MessageList chat={chat} openArtifactId={openArtifactId} mentions={mentions} />
           <div className="mx-auto w-full max-w-3xl min-w-0 px-4 pb-3">
+            {chat.temporary && (
+              <p className="text-muted-foreground mb-2 flex items-center justify-center gap-1.5 text-[11px]">
+                <HugeiconsIcon icon={IncognitoIcon} strokeWidth={2} className="size-3" />
+                Incognito: this chat isn't saved, and is deleted when you leave it.
+              </p>
+            )}
             <PromptBox
               key={chat.id}
               running={running}
@@ -263,7 +296,7 @@ export const Conversation = memo(function Conversation({
           </div>
         </>
       ) : (
-        <Greeting project={project} projects={projects} modes={modes} focusKey={focusKey} />
+        <Greeting project={project} projects={projects} modes={modes} incognito={incognito} focusKey={focusKey} />
       )}
     </div>
   )
