@@ -11,6 +11,7 @@ import { cn } from 'cn'
 import { AccountMenu } from '@/blocks/account-menu'
 import { FilterBar as FilterBarBlock, activeFields } from '@/blocks/filter-bar'
 import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
+import { GlobalHeader } from '@/blocks/global-header'
 import { WorkspaceSwitcher, type WorkspaceOption } from '@/blocks/workspace-switcher'
 import { IconAction } from '@/components/icon-action'
 import { LetterMark } from '@/components/mark'
@@ -20,6 +21,7 @@ import { UserAvatar } from '@/components/person'
 import { SearchField } from '@/components/search-field'
 import { SearchTrigger } from '@/components/search-trigger'
 import { MOD, Shortcut } from '@/components/shortcut'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { UsageMeter } from '@/components/usage-meter'
 import { LIST_BOARD_VIEWS, ViewSwitch } from '@/components/view-switch'
 import { AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
@@ -268,7 +270,7 @@ export default function AppShellSection() {
   const main = (
     <div className="flex min-w-0 flex-1 flex-col">
       {topRow === 'content' && (
-        <GlobalHeader {...topRowProps} place="content" switcher={sidebarShown ? 'narrow' : 'always'} />
+        <ShellTopRow {...topRowProps} place="content" switcher={sidebarShown ? 'narrow' : 'always'} />
       )}
       {sidebar === 'top' && <TopNav {...nav} {...ws} notes={notes} onOpenJob={setPeekId} tabsOnly={twoRows} />}
       {/* Two rows: the breadcrumb header is the second row, under the top row. */}
@@ -365,7 +367,7 @@ export default function AppShellSection() {
         >
           {topRow === 'app' ? (
             <>
-              <GlobalHeader {...topRowProps} place="app" switcher="always" inset={sidebar === 'inset'} />
+              <ShellTopRow {...topRowProps} place="app" switcher="always" inset={sidebar === 'inset'} />
               <div className="flex min-h-0 flex-1">{shell}</div>
             </>
           ) : shell}
@@ -482,9 +484,9 @@ function AccountItems({ onPage }: { onPage: (id: string) => void }) {
   )
 }
 
-// The Two rows header's first row (the global header). Left: the menu and
-// sidebar buttons, and the workspace. Middle: search. Right: Ask AI,
-// notifications and the account (theme is in its menu). The page's
+// The Two rows header's first row: the shared GlobalHeader block. Left: the
+// menu and sidebar buttons, and the workspace. Middle: search. Right: Ask AI,
+// notifications, the light / dark toggle and the account. The page's
 // breadcrumb is the second row (the Breadcrumb header). It sits in one of
 // two places:
 //   content  over the page only, on the page's colour; the sidebar keeps its
@@ -493,9 +495,8 @@ function AccountItems({ onPage }: { onPage: (id: string) => void }) {
 //   app      across the whole app, over the sidebar, on the sidebar's colour
 // The account can sit at the sidebar's foot instead (account="narrow"): the
 // avatar then shows here only when no sidebar is beside the page.
-// From @3xl a three-column grid keeps search centred; on a phone the box
-// becomes an icon that opens over the row.
-function GlobalHeader({ place, switcher, account, inset, lead, query, setQuery, issues, notes, onOpenJob, onPage, ...ws }: Ws & {
+// On a phone the search box becomes an icon that opens over the row.
+function ShellTopRow({ place, switcher, account, inset, lead, query, setQuery, issues, notes, onOpenJob, onPage, ...ws }: Ws & {
   place: 'content' | 'app'
   // narrow: only below @2xl, where the sidebar is hidden (a menu button opens it).
   switcher: 'always' | 'narrow'
@@ -513,45 +514,46 @@ function GlobalHeader({ place, switcher, account, inset, lead, query, setQuery, 
   const [open, setOpen] = useState(false)
   const surface = place === 'app' ? 'bg-sidebar text-sidebar-foreground' : 'bg-background'
   return (
-    <div
-      className={cn(
-        'relative flex h-11 shrink-0 items-center gap-2 px-2',
-        '@3xl:grid @3xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]',
-        surface,
-        !(place === 'app' && inset) && 'border-b',
-      )}
+    <GlobalHeader
+      className={cn('h-11', surface, !(place === 'app' && inset) && 'border-b')}
+      start={
+        <>
+          {lead}
+          <WorkspaceMenu
+            {...ws}
+            variant="compact"
+            detail={ws.workspace.plan.replace(' plan', '')}
+            badgeClassName="hidden @md:inline"
+            className={cn(switcher === 'narrow' && '@2xl:hidden')}
+          />
+        </>
+      }
+      center={<SearchBox query={query} setQuery={setQuery} issues={issues} className="h-7 w-full" />}
+      centerClassName="hidden @md:flex"
+      end={
+        <>
+          <Button variant="ghost" size="icon" className="relative @md:hidden" aria-label="Search" onClick={() => setOpen(true)}>
+            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+            {query && <span className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" />}
+          </Button>
+          <Button variant="outline" size="sm" aria-label="Ask AI" onClick={() => onPage('ai')}>
+            <HugeiconsIcon icon={AiChat02Icon} strokeWidth={2} data-icon="inline-start" />
+            <span className="hidden @lg:inline">Ask AI</span>
+          </Button>
+          <NotificationsMenu notes={notes} onOpenJob={onOpenJob} />
+          <ThemeToggle />
+          <AccountMenu
+            variant="avatar"
+            name={PEOPLE[0]}
+            email={EMAIL}
+            menuClassName="w-52"
+            className={cn(account === 'narrow' && '@2xl:hidden')}
+          >
+            <AccountItems onPage={onPage} />
+          </AccountMenu>
+        </>
+      }
     >
-      <div className="flex min-w-0 flex-1 items-center gap-1">
-        {lead}
-        <WorkspaceMenu
-          {...ws}
-          variant="compact"
-          detail={ws.workspace.plan.replace(' plan', '')}
-          badgeClassName="hidden @md:inline"
-          className={cn(switcher === 'narrow' && '@2xl:hidden')}
-        />
-      </div>
-      <SearchBox query={query} setQuery={setQuery} issues={issues} className="hidden h-7 max-w-96 min-w-40 flex-1 @md:flex @3xl:max-w-none" />
-      <div className="flex shrink-0 items-center justify-end gap-1">
-        <Button variant="ghost" size="icon" className="relative @md:hidden" aria-label="Search" onClick={() => setOpen(true)}>
-          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-          {query && <span className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" />}
-        </Button>
-        <Button variant="outline" size="sm" aria-label="Ask AI" onClick={() => onPage('ai')}>
-          <HugeiconsIcon icon={AiChat02Icon} strokeWidth={2} data-icon="inline-start" />
-          <span className="hidden @lg:inline">Ask AI</span>
-        </Button>
-        <NotificationsMenu notes={notes} onOpenJob={onOpenJob} />
-        <AccountMenu
-          variant="avatar"
-          name={PEOPLE[0]}
-          email={EMAIL}
-          menuClassName="w-52"
-          className={cn(account === 'narrow' && '@2xl:hidden')}
-        >
-          <AccountItems onPage={onPage} />
-        </AccountMenu>
-      </div>
       {open && (
         <div
           className={cn('absolute inset-0 z-10 flex items-center gap-2 px-2 @md:hidden', surface)}
@@ -561,7 +563,7 @@ function GlobalHeader({ place, switcher, account, inset, lead, query, setQuery, 
           <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Done</Button>
         </div>
       )}
-    </div>
+    </GlobalHeader>
   )
 }
 

@@ -11,18 +11,15 @@ import type { Data, EntityId, Role, Row, Value } from './types'
 export type Session = { name: string; email: string; role: Role; title: string }
 export type Recent = { entity: EntityId; id: string; label: string }
 
-// The header's layout: breadcrumb with a search box beside it, or the
-// breadcrumb alone (search then lives in the sidebar).
-export type HeaderStyle = 'crumbs-search' | 'crumbs'
-
 // Where you land after signing in (the ERP + AI edition lets you choose).
 export type StartPage = 'launchpad' | 'assistant'
 
-type Saved = { session: Session | null; companyId: string | null; favourites: string[]; headerStyle: HeaderStyle; startPage: StartPage }
+// chatsByDate: the Assistant's chat history grouped by date, or one list.
+type Saved = { session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; chatsByDate: boolean }
 
 const KEY = 'linear-kit:erp:v1'
 
-const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], headerStyle: 'crumbs-search', startPage: 'launchpad' }
+const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', chatsByDate: true }
 
 function load(): Saved {
   try {
@@ -37,8 +34,8 @@ type ErpState = {
   company: Company | null
   data: Data
   favourites: string[]
-  headerStyle: HeaderStyle
   startPage: StartPage
+  chatsByDate: boolean
   // A page's own title for the end of the breadcrumb, such as a chat's.
   pageTitle: string | null
   recent: Recent[]
@@ -54,8 +51,8 @@ type ErpState = {
   update: (entity: EntityId, ids: string[], patch: Record<string, Value>) => void
   remove: (entity: EntityId, ids: string[]) => void
   toggleFavourite: (moduleId: string) => void
-  setHeaderStyle: (style: HeaderStyle) => void
   setStartPage: (page: StartPage) => void
+  setChatsByDate: (byDate: boolean) => void
   setPageTitle: (title: string | null) => void
   openPeek: (entity: EntityId, id: string) => void
   closePeek: () => void
@@ -104,8 +101,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     company,
     data,
     favourites: saved.favourites,
-    headerStyle: saved.headerStyle,
     startPage: saved.startPage,
+    chatsByDate: saved.chatsByDate,
     pageTitle,
     recent,
     peek,
@@ -138,8 +135,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       ...s,
       favourites: s.favourites.includes(moduleId) ? s.favourites.filter((m) => m !== moduleId) : [...s.favourites, moduleId],
     })),
-    setHeaderStyle: (headerStyle) => setSaved((s) => ({ ...s, headerStyle })),
     setStartPage: (startPage) => setSaved((s) => ({ ...s, startPage })),
+    setChatsByDate: (chatsByDate) => setSaved((s) => ({ ...s, chatsByDate })),
     setPageTitle,
     openPeek: (entity, id) => {
       setPeek({ entity, id })

@@ -600,6 +600,14 @@ const INTENTS: Intent[] = [
   },
 ]
 
+// The module a question is about (where its records live), for filtering
+// chats by type: "home" for questions across modules, null when no answer
+// matches it.
+export function topicOf(question: string) {
+  const q = question.toLowerCase()
+  return INTENTS.find((i) => i.match.test(q))?.module ?? null
+}
+
 export function respond(question: string, ctx: Ctx): Answer {
   const q = question.toLowerCase()
   const intent = INTENTS.find((i) => i.match.test(q))

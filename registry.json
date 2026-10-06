@@ -1251,6 +1251,27 @@
       ]
     },
     {
+      "name": "incognito-toggle",
+      "type": "registry:component",
+      "title": "Incognito toggle",
+      "description": "incognito (temporary) chat switch for an AI chat",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/toggle",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/components/incognito-toggle.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "label-dot",
       "type": "registry:component",
       "title": "Label dot",
@@ -1553,6 +1574,27 @@
       ]
     },
     {
+      "name": "theme-toggle",
+      "type": "registry:component",
+      "title": "Theme toggle",
+      "description": "light / dark button for a header",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/icon-action",
+        "@kit/theme"
+      ],
+      "files": [
+        {
+          "path": "src/components/theme-toggle.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "thinking-indicator",
       "type": "registry:component",
       "title": "Thinking indicator",
@@ -1724,7 +1766,9 @@
         "@kit/delete-confirm",
         "@kit/dropdown-menu",
         "@kit/format",
+        "@kit/icon-action",
         "@kit/menu-kit",
+        "@kit/nav-item",
         "@kit/search-field",
         "@kit/spinner",
         "@kit/text"
@@ -1734,6 +1778,32 @@
           "path": "src/blocks/ai/chat-history.tsx",
           "type": "registry:component",
           "target": "@components/blocks/ai/chat-history.tsx"
+        }
+      ]
+    },
+    {
+      "name": "chat-library",
+      "type": "registry:block",
+      "title": "Chat library",
+      "description": "Chat library",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/chat-history",
+        "@kit/format",
+        "@kit/search-field",
+        "@kit/spinner",
+        "@kit/text"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat-library.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat-library.tsx"
         }
       ]
     },
@@ -2054,6 +2124,22 @@
           "path": "src/blocks/gantt-chart.tsx",
           "type": "registry:component",
           "target": "@components/blocks/gantt-chart.tsx"
+        }
+      ]
+    },
+    {
+      "name": "global-header",
+      "type": "registry:block",
+      "title": "Global header",
+      "description": "the top row: start, search in the middle, end (Two rows, the ERP)",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/global-header.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/global-header.tsx"
         }
       ]
     },

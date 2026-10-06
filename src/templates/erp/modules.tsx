@@ -4,11 +4,11 @@ import {
   Calendar03Icon, Note01Icon, PackageIcon, PackageReceiveIcon, Plug01Icon, QuoteDownIcon, ReceiptTextIcon,
   Settings01Icon, Shield01Icon, ShoppingCart01Icon, Store01Icon, Tag01Icon, Target02Icon, UserGroupIcon,
   UserLock01Icon, UserMultipleIcon, Wallet01Icon, WarehouseIcon, Home01Icon, Calculator01Icon, PipelineIcon,
-  Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon,
+  Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon, BubbleChatIcon,
 } from '@hugeicons/core-free-icons'
 import { CUSTOMERS, PEOPLE, VENDORS, WAREHOUSES } from './data'
 import { TODAY, addDays } from './format'
-import { AssistantPage, AssistantSidebar } from './assistant/AssistantPage'
+import { AllChatsPage, AssistantPage, AssistantSidebar } from './assistant/AssistantPage'
 import { edition } from './edition'
 import Launchpad from './Launchpad'
 import { ModuleOverview } from './pages/Overview'
@@ -482,6 +482,7 @@ export const MODULES: ErpModule[] = [
     pages: [
       { id: 'launchpad', label: 'Launchpad', icon: DashboardSquare01Icon, render: () => <Launchpad /> },
       { id: 'assistant', label: 'Assistant', icon: AiChat02Icon, render: () => <AssistantPage />, sidebar: AssistantSidebar, assistant: true },
+      { id: 'chats', label: 'All chats', icon: BubbleChatIcon, render: () => <AllChatsPage />, sidebar: AssistantSidebar, assistant: true, hidden: true },
     ],
   },
   {

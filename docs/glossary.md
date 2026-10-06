@@ -66,6 +66,7 @@ used by most design systems).
 | Account menu | Who is signed in, opening your profile, settings, theme and sign out: the avatar and name at the foot of a sidebar, or just the avatar at the right of a header |
 | Global header | The top row for what belongs to the whole app, not the page: search, the assistant, notifications and the account. It sits over the page only, beside a full-height sidebar, or across the whole app with the workspace in it (SAP calls that the shell bar). The App shells page's Two rows header |
 | Breadcrumb bar | A row of its own for the breadcrumb, under the global header, with the page's own buttons at its right |
+| Theme toggle | The header button that switches between light and dark mode (a sun that turns into a moon) |
 | Workspace switcher | The control at the top of a sidebar that switches workspace or company |
 | Display menu (display options) | The popover that sets how items show: layout, grouping, ordering, which properties appear |
 | Display properties | The fields a list row or board card shows, switched on and off in the display menu |
@@ -135,7 +136,11 @@ used by most design systems).
 | File chip | An attached file shown as a small pill: type icon, name, size |
 | Citation | A numbered link from a sentence to the source it came from |
 | Artifact | A document, table or code the AI made, opened in its own panel with versions |
-| Chat history | The list of past chats: projects, pinned, grouped by date |
+| Chat history | The list of past chats: projects, pinned, then the rest grouped by date (Today, Yesterday, Previous 7 days) or as one list |
+| Project (AI chat) | A folder of related chats with its own instructions, which the assistant follows in each of them |
+| Instructions (custom instructions) | Standing directions for the assistant: who you are, what to focus on, how to answer |
+| Chat library (All chats) | A page of every chat, with a search and filters by type |
+| Incognito chat (temporary chat) | A chat that is not kept in the history and is deleted when you leave it |
 | Credits meter | How much of the plan's AI usage is left this month |
 
 ## ERP modules

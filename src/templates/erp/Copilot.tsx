@@ -74,7 +74,7 @@ export function CopilotPanel() {
               </span>
             </span>
           </div>
-          {messages.length > 0 && <IconAction label="New chat" icon={PencilEdit02Icon} onClick={newChat} />}
+          {messages.length > 0 && <IconAction label="New chat" icon={PencilEdit02Icon} onClick={() => newChat()} />}
           {edition().assistant && (
             <IconAction
               label="Open full page"

@@ -1,20 +1,22 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { IconSvgElement } from '@hugeicons/react'
 import {
-  AiBrain02Icon, AiChat02Icon, Calculator01Icon, ChartColumnIcon, Invoice01Icon, Mail01Icon, PackageIcon,
-  ShoppingCart01Icon, SparklesIcon, Target02Icon, UserGroupIcon,
+  Add01Icon, AiBrain02Icon, AiChat02Icon, BubbleChatIcon, Calculator01Icon, ChartColumnIcon, IncognitoIcon, Invoice01Icon,
+  Mail01Icon, PackageIcon, ShoppingCart01Icon, SparklesIcon, Target02Icon, UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { Thinking } from '@/components/thinking-indicator'
 import { AssistantMessage, UserMessage } from '@/blocks/ai/chat-message'
+import { ChatHistory, type ChatType, type HistoryChat, type HistoryProject } from '@/blocks/ai/chat-history'
+import { ChatLibrary, type LibraryChat, type LibraryType } from '@/blocks/ai/chat-library'
 import { ChatThread, ChatWelcome, PromptStarters, type PromptStarter } from '@/blocks/ai/chat-thread'
 import { PromptBox } from '@/blocks/ai/prompt-box'
 import { Markdown } from '@/blocks/markdown'
 import { Demos, Gallery, Playground, bool, element, imports, indent, jsx, lit, pick, str, type Values } from './Playground'
 
 // The chat screen's blocks: the welcome screen a new chat opens on, the
-// thread that scrolls and follows a streaming reply, and the prompt starter
-// cards. All content is made up.
+// thread that scrolls and follows a streaming reply, the prompt starter
+// cards, and the chat library (All chats). All content is made up.
 
 /* ---------- Snippet helpers ---------- */
 
@@ -354,12 +356,235 @@ function ThreadDemos() {
   )
 }
 
+/* ---------- Chat history ---------- */
+
+// The sample chats below are aged in hours.
+const HOUR = 3_600_000
+
+const NEW_PROJECT_MODES = ['dialog', 'inline', 'none'] as const
+type NewProjectMode = (typeof NEW_PROJECT_MODES)[number]
+
+const HISTORY_PROJECTS: HistoryProject[] = [
+  { id: 'month-end', name: 'Month-end close', colour: 'var(--chart-4)' },
+  { id: 'ops', name: 'Weekly operations review', colour: 'var(--chart-2)' },
+]
+
+// What a chat is about: its type, and that type's icon (a module, or a chat
+// bubble for the rest).
+const HISTORY_TYPES: ChatType[] = [
+  { value: 'sales', label: 'Sales', icon: ShoppingCart01Icon, colour: 'var(--chart-2)' },
+  { value: 'inventory', label: 'Inventory', icon: PackageIcon, colour: 'var(--chart-3)' },
+  { value: 'accounting', label: 'Accounting', icon: Calculator01Icon, colour: 'var(--chart-4)' },
+  { value: 'crm', label: 'CRM', icon: Target02Icon, colour: 'var(--chart-1)' },
+  { value: 'general', label: 'General', icon: BubbleChatIcon },
+]
+const ABOUT = Object.fromEntries(HISTORY_TYPES.map((t) => [t.value, { type: t.value, icon: t.icon, iconColour: t.colour }]))
+
+// Made-up chats, aged in hours from when the page loads.
+const HISTORY_CHATS: HistoryChat[] = [
+  { id: 'h1', title: 'Overdue invoices this week', about: 'accounting', ago: 2, projectId: 'month-end' },
+  { id: 'h2', title: 'Sales orders waiting to ship', about: 'sales', ago: 3 },
+  { id: 'h3', title: 'What needs my attention today?', about: 'general', ago: 5 },
+  { id: 'h4', title: 'Quotations expiring this week', about: 'sales', ago: 20, pinned: true },
+  { id: 'h5', title: 'Stock transfers in transit', about: 'inventory', ago: 27, projectId: 'ops' },
+  { id: 'h6', title: 'Largest open opportunities', about: 'crm', ago: 30 },
+  { id: 'h7', title: 'Items below their reorder point', about: 'inventory', ago: 80 },
+  { id: 'h8', title: 'Vendor bills due this month', about: 'accounting', ago: 400 },
+].map(({ about, ago, ...chat }) => ({ ...chat, ...ABOUT[about], updatedAt: Date.now() - ago * HOUR }))
+
+// A working history: rename, pin, move and delete change the demo's own list.
+function HistoryPreview({ projects, projectMenu, newProject, icons, types, plus, viewAll, link }: {
+  projects: boolean
+  projectMenu: boolean
+  newProject: NewProjectMode
+  icons: boolean
+  types: boolean
+  plus: boolean
+  viewAll: boolean
+  link: boolean
+}) {
+  const [chats, setChats] = useState(HISTORY_CHATS)
+  const [folders, setFolders] = useState(HISTORY_PROJECTS)
+  const [active, setActive] = useState('h2')
+  const say = (title: string) => toast(title, { description: 'Demo only.' })
+  const patch = (id: string, change: Partial<HistoryChat>) => setChats((list) => list.map((c) => (c.id === id ? { ...c, ...change } : c)))
+  const nameOf = (id: string) => folders.find((p) => p.id === id)?.name ?? 'the project'
+
+  return (
+    <div className="bg-sidebar text-sidebar-foreground h-[30rem] w-64 overflow-hidden rounded-lg border">
+      <ChatHistory
+        chats={icons ? chats : chats.map(({ icon: _icon, iconColour: _colour, ...c }) => c)}
+        projects={projects ? folders : undefined}
+        activeChatId={active}
+        newChatIcon={plus ? Add01Icon : undefined}
+        types={types ? HISTORY_TYPES : undefined}
+        links={link ? [{ id: 'incognito', label: 'Incognito chat', icon: IncognitoIcon, onSelect: () => say('Incognito chat') }] : undefined}
+        onNewChat={() => say('New chat')}
+        onOpenChat={setActive}
+        onCreateProject={newProject === 'inline'
+          ? (name) => setFolders((list) => [...list, { id: `p-${list.length}-${name}`, name, colour: 'var(--chart-1)' }])
+          : undefined}
+        onNewProject={newProject === 'dialog' ? () => say('Your project setup opens here: a dialog with its name and instructions') : undefined}
+        onNewChatInProject={projectMenu ? (id) => say(`New chat in ${nameOf(id)}`) : undefined}
+        onEditProject={projectMenu ? (id) => say(`Edit ${nameOf(id)}: its name and instructions`) : undefined}
+        onDeleteProject={projectMenu
+          ? (id) => {
+            setFolders((list) => list.filter((p) => p.id !== id))
+            setChats((list) => list.map((c) => (c.projectId === id ? { ...c, projectId: null } : c)))
+          }
+          : undefined}
+        onRenameChat={(id, title) => patch(id, { title })}
+        onPinChat={(id, pinned) => patch(id, { pinned })}
+        onMoveChat={projects ? (id, projectId) => patch(id, { projectId }) : undefined}
+        onDeleteChat={(id) => setChats((list) => list.filter((c) => c.id !== id))}
+        onViewAll={viewAll ? () => say('All chats opens here: the chat library') : undefined}
+      />
+    </div>
+  )
+}
+
+function HistoryDemos() {
+  return (
+    <Playground
+      title="Chat history"
+      description="The sidebar of a chat app: New chat, links, Projects, Pinned, then Chats (its options: by date or one list, and which type)"
+      controls={[
+        { kind: 'switch', name: 'projects', label: 'Projects (projects)', initial: true },
+        { kind: 'switch', name: 'menu', label: 'Project menu (onEditProject…)', initial: true },
+        { kind: 'select', name: 'newProject', label: 'New project', options: NEW_PROJECT_MODES, initial: 'dialog' },
+        { kind: 'switch', name: 'icons', label: 'Icons by type (chat.icon)', initial: true },
+        { kind: 'switch', name: 'types', label: 'Type filter (types)', initial: true },
+        { kind: 'switch', name: 'plus', label: '+ New chat (newChatIcon)', initial: true },
+        { kind: 'switch', name: 'viewAll', label: 'All chats row (onViewAll)', initial: true },
+        { kind: 'switch', name: 'link', label: 'Incognito row (links)', initial: true },
+      ]}
+      render={(v) => (
+        <HistoryPreview
+          // A fresh list when the projects come and go.
+          key={String(bool(v, 'projects'))}
+          projects={bool(v, 'projects')}
+          projectMenu={bool(v, 'menu')}
+          newProject={str(v, 'newProject') as NewProjectMode}
+          icons={bool(v, 'icons')}
+          types={bool(v, 'types')}
+          plus={bool(v, 'plus')}
+          viewAll={bool(v, 'viewAll')}
+          link={bool(v, 'link')}
+        />
+      )}
+      code={(v) => {
+        const projects = bool(v, 'projects')
+        const menu = projects && bool(v, 'menu')
+        const mode = str(v, 'newProject') as NewProjectMode
+        return [
+          imports({
+            '@hugeicons/core-free-icons': [bool(v, 'plus') && 'Add01Icon', bool(v, 'link') && 'IncognitoIcon'].filter((n): n is string => !!n),
+            '@/blocks/ai/chat-history': ['ChatHistory'],
+          }),
+          '',
+          '// chats: { id, title, updatedAt, pinned?, projectId?, type?, icon?, iconColour? }[]',
+          element('ChatHistory', [
+            'chats={chats}',
+            projects && 'projects={projects}',
+            'activeChatId={activeId}',
+            bool(v, 'plus') && 'newChatIcon={Add01Icon}',
+            bool(v, 'link') && "links={[{ id: 'incognito', label: 'Incognito chat', icon: IncognitoIcon, onSelect: startIncognito }]}",
+            bool(v, 'types') && 'types={types}',
+            'onNewChat={newChat}',
+            'onOpenChat={openChat}',
+            projects && mode === 'dialog' && 'onNewProject={openProjectSetup}',
+            projects && mode === 'inline' && 'onCreateProject={createProject}',
+            menu && 'onNewChatInProject={newChatIn}',
+            menu && 'onEditProject={openProjectSetup}',
+            menu && 'onDeleteProject={deleteProject}',
+            'onRenameChat={renameChat}',
+            'onPinChat={pinChat}',
+            projects && 'onMoveChat={moveChat}',
+            'onDeleteChat={deleteChat}',
+            bool(v, 'viewAll') && 'onViewAll={openAllChats}',
+          ]),
+        ].join('\n')
+      }}
+    />
+  )
+}
+
+/* ---------- Chat library ---------- */
+
+const LIBRARY_TYPES: LibraryType[] = [
+  { value: 'sales', label: 'Sales', icon: ShoppingCart01Icon, colour: 'var(--chart-2)' },
+  { value: 'inventory', label: 'Inventory', icon: PackageIcon, colour: 'var(--chart-3)' },
+  { value: 'accounting', label: 'Accounting', icon: Calculator01Icon, colour: 'var(--chart-4)' },
+  { value: 'general', label: 'General', icon: SparklesIcon },
+]
+
+// Made-up chats, aged from when the page loads.
+const LIBRARY_CHATS: LibraryChat[] = [
+  { id: 'l1', title: 'Overdue invoices this week', type: 'accounting', ago: 1, project: 'Month-end close', preview: 'Seven invoices are overdue, $184,200 in all. The oldest is INV-2026-0407…' },
+  { id: 'l2', title: 'Sales orders waiting to ship', type: 'sales', ago: 5, pinned: true, preview: 'Twelve orders are confirmed but not shipped. Four are past their promised date…' },
+  { id: 'l3', title: 'Items below their reorder point', type: 'inventory', ago: 26, preview: 'Nine items are below their reorder point; three are out of stock…' },
+  { id: 'l4', title: 'Vendor bills due this week', type: 'accounting', ago: 30, project: 'Month-end close', preview: 'Five bills fall due by Friday, $41,350 in all…' },
+  { id: 'l5', title: 'What needs my attention today?', type: 'general', ago: 74, preview: 'Two purchase orders await your approval, and one invoice is overdue…' },
+  { id: 'l6', title: 'Largest open opportunities', type: 'sales', ago: 150, preview: 'The five largest open opportunities add up to $1.2M…' },
+  { id: 'l7', title: 'Stock transfers in transit', type: 'inventory', ago: 320, preview: 'Three transfers are on the road between warehouses…' },
+].map(({ ago, ...chat }) => ({ ...chat, updatedAt: Date.now() - ago * HOUR }))
+
+function LibraryDemos() {
+  return (
+    <Playground
+      title="Chat library"
+      description="Every chat on one page, with a search and filters by type: an assistant's All chats"
+      controls={[
+        { kind: 'switch', name: 'types', label: 'Types (types, chat.type)', initial: true },
+        { kind: 'switch', name: 'preview', label: 'Previews (chat.preview)', initial: true },
+        { kind: 'switch', name: 'project', label: 'Projects (chat.project)', initial: true },
+        { kind: 'switch', name: 'empty', label: 'No chats yet', initial: false },
+      ]}
+      render={(v) => {
+        const chats = bool(v, 'empty') ? [] : LIBRARY_CHATS.map((c) => ({
+          ...c,
+          type: bool(v, 'types') ? c.type : undefined,
+          preview: bool(v, 'preview') ? c.preview : undefined,
+          project: bool(v, 'project') ? c.project : undefined,
+        }))
+        return (
+          <div className="bg-background h-[28rem] w-[min(40rem,80vw)] overflow-hidden rounded-lg border">
+            <ChatLibrary
+              chats={chats}
+              types={bool(v, 'types') ? LIBRARY_TYPES : []}
+              headingAs="h3"
+              onOpenChat={(id) => toast(LIBRARY_CHATS.find((c) => c.id === id)?.title ?? 'Chat', { description: 'Demo only. This would open the chat.' })}
+              onNewChat={() => toast('New chat', { description: 'Demo only.' })}
+              emptyText="No chats yet. Ask something to start one."
+            />
+          </div>
+        )
+      }}
+      code={(v) => [
+        imports({ '@/blocks/ai/chat-library': ['ChatLibrary', 'type LibraryChat', 'type LibraryType'] }),
+        '',
+        bool(v, 'types') && "const types: LibraryType[] = [{ value: 'sales', label: 'Sales', icon: ShoppingCart01Icon, colour: 'var(--chart-2)' }, …]",
+        "// chats: { id, title, updatedAt, pinned?, running?, type?, preview?, project? }[]",
+        '',
+        element('ChatLibrary', [
+          'chats={chats}',
+          bool(v, 'types') && 'types={types}',
+          'onOpenChat={openChat}',
+          'onNewChat={newChat}',
+        ]),
+      ].filter((line) => line !== false).join('\n')}
+    />
+  )
+}
+
 export default function AiWorkspaceDemos() {
   return (
     <Demos>
       <WelcomeDemos />
       <ThreadDemos />
       <StartersDemos />
+      <HistoryDemos />
+      <LibraryDemos />
     </Demos>
   )
 }

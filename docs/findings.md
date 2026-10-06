@@ -425,7 +425,64 @@ A switch, "Top row over the sidebar", sets where row 1 sits:
   top row's avatar then shows only when no sidebar is beside the page, so
   the account is always one click away.
 - **The account menu got an avatar trigger** (`variant="avatar"`). Its name
-  is not on screen, so the menu starts with it. Light and dark mode live in
-  its Theme sub-menu, not in a header button of their own.
+  is not on screen, so the menu starts with it. Light and dark mode are a
+  toggle in the top row (added with the ERP change), with System in the
+  menu's Theme sub-menu.
 - **On a phone** the search box becomes an icon that opens over the row and
   Ask AI shows its icon only; the breadcrumb row folds as before.
+
+## The ERP on Two rows (added 2026-10-06)
+Both ERP templates now use the App shells combination Alvin chose: the
+Teams sidebar (full height, no inset card), the top row over the page only,
+and the account at the sidebar's foot. The top row holds search (opens the
+command palette), Ask AI, notifications and a light / dark toggle; the
+breadcrumb has its own row. The account menu's Header setting (breadcrumb
+with or without search) is gone: search always sits in the top row now.
+- **Two new shared parts, so nothing is written twice:** the GlobalHeader
+  block (the top row's layout, used by App shells and the ERP) and the
+  ThemeToggle component (also in the kit's header and the theme
+  comparison, which each had their own copy).
+- **The top row centres search without breakpoints:** the start and end
+  slots share the room either side equally (`flex-1 basis-0`), so it works
+  the same in a window (the ERP) and in a demo frame (App shells). A first
+  idea, a container on the row itself, would have taken over the frame's
+  own `@2xl` checks, which decide whether the sidebar is showing.
+- **Checked in the browser:** the invoice list and the ERP + AI Assistant
+  at desktop width, the sidebar hidden (module switcher and account move
+  up), light mode, and 390px (no sideways scrolling).
+
+## The Assistant's sidebar, All chats and incognito (added 2026-10-06)
+Alvin asked for the ERP + AI Assistant to look like a polished chat app:
++ New chat, projects with instructions, project folders, pinned, then the
+history with the date groups switchable, a page of all chats with a search
+and filters by type, and an incognito mode.
+- **Kit first.** ChatHistory gained `newChatIcon`, `onNewProject` (your own
+  setup instead of naming in place), a project menu (new chat in it, edit,
+  delete with a confirm), a Chats heading whose calendar button turns the
+  date groups off (`groupByDate`, uncontrolled unless you pass it) and an
+  "All chats" link (`onViewAll`). New: the ChatLibrary block (All chats)
+  and the IncognitoToggle component, with demos on the AI workspace and AI
+  components pages. The project setup is the existing FormDialog block
+  (name, plus instructions with a 1,000-character counter).
+- **Chat type = module.** `topicOf` in `answers.ts` returns the module of
+  the answer a question matches, so a chat's type needs no extra data.
+- **Incognito chats live in the store but not in `chats`**, so the
+  sidebar, All chats and the side panel never list them; starting or
+  opening another chat, or turning incognito off, deletes them.
+- **A circular import to watch:** `modules.tsx` imports the Assistant's
+  pages, which use `MODULES`. A list built from `MODULES` at the top of the
+  Assistant file crashed on load, so the chat types are built on first use.
+- **Then laid out like the big chat apps** (from two screenshots Alvin
+  gave, structure only; the look is the kit's): New chat, a few rows
+  (Search chats, All chats, Incognito chat, folding under More past four),
+  then Projects, Pinned and Chats as folding NavGroup headings, the rows
+  NavItem-sized on the sidebar's colours. The date switch and a type filter
+  moved into one options menu on Chats. Every chat has an icon: its type's
+  (the ERP's module icons) or a chat bubble.
+- **A load-order slip:** a playground's sample data used a constant defined
+  further down the file. TypeScript allows it, but the module throws when it
+  loads, and every kit page went blank. Only opening the page shows this.
+- **Live reload while another session edits shared files** (here
+  `lib/text.ts`) can swap the assistant store under a running page:
+  "useAssistant must be used inside AssistantProvider". A full reload
+  clears it; it cannot happen in a build.

@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  ComputerIcon, DashboardSquare01Icon, Home01Icon, LayoutTopIcon, Logout01Icon, Menu01Icon, Moon02Icon,
-  Search01Icon, SidebarLeftIcon, SparklesIcon, Sun03Icon, Tick02Icon, UnfoldMoreIcon, UserSwitchIcon,
+  ComputerIcon, DashboardSquare01Icon, Home01Icon, Logout01Icon, Menu01Icon, Moon02Icon, Search01Icon,
+  SidebarLeftIcon, SparklesIcon, Sun03Icon, Tick02Icon, UnfoldMoreIcon, UserSwitchIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import { AccountMenu as KitAccountMenu } from '@/blocks/account-menu'
 import { FoldingBreadcrumb, type Crumb } from '@/blocks/folding-breadcrumb'
+import { GlobalHeader } from '@/blocks/global-header'
 import { NotificationsMenu } from '@/blocks/notifications-menu'
 import { WorkspaceSwitcher } from '@/blocks/workspace-switcher'
 import { IconAction } from '@/components/icon-action'
@@ -15,6 +16,7 @@ import { IconMark, LetterMark } from '@/components/mark'
 import { NavHeading, NavItem } from '@/components/nav-item'
 import { SearchTrigger } from '@/components/search-trigger'
 import { Shortcut } from '@/components/shortcut'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem,
@@ -30,7 +32,7 @@ import { COMPANIES, DEMO_USERS, ROLE_LABEL } from './data'
 import { edition } from './edition'
 import { MODULES, pagesOf } from './modules'
 import { go, goScreen } from './route'
-import { useErp, type HeaderStyle, type StartPage } from './store'
+import { useErp, type StartPage } from './store'
 import type { EntityId, ErpModule, ErpPage, Role } from './types'
 
 export const allowedModules = (role: Role | undefined) => MODULES.filter((m) => role && m.roles.includes(role))
@@ -40,11 +42,12 @@ export const allowedModules = (role: Role | undefined) => MODULES.filter((m) => 
 const moduleLabel = (m: ErpModule) => (m.id === 'home' && !edition().assistant ? 'Launchpad' : m.name)
 const moduleDescription = (m: ErpModule) => (m.id === 'home' && edition().assistant ? 'Your launchpad and the Assistant' : m.description)
 
-// The app frame: one sidebar (company, module switcher, the module's pages,
-// recent records, and Ask AI, notifications and the account at the foot) and
-// the page in an inset card. On a phone the sidebar opens as a sheet.
+// The app frame: a full-height sidebar (company, module switcher, the
+// module's pages, recent records, and the account at the foot) beside the
+// page. Over the page, two rows: the global header (search, Ask AI,
+// notifications and light / dark) and the breadcrumb bar. On a phone the
+// sidebar opens as a sheet.
 export function Shell({ module, page, children }: { module: ErpModule; page: ErpPage; children: ReactNode }) {
-  const { headerStyle } = useErp()
   const [collapsed, setCollapsed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -60,25 +63,24 @@ export function Shell({ module, page, children }: { module: ErpModule; page: Erp
 
   return (
     // relative: keeps any visually hidden (sr-only) text inside the frame.
-    <div className="bg-sidebar text-foreground relative flex h-svh overflow-hidden">
+    <div className="bg-background text-foreground relative flex h-svh overflow-hidden">
       {!collapsed && (
-        <aside aria-label="Navigation" className="hidden w-60 shrink-0 flex-col md:flex">
-          <Sidebar module={module} page={page} showSearch={headerStyle === 'crumbs'} />
+        <aside aria-label="Navigation" className="bg-sidebar text-sidebar-foreground hidden w-60 shrink-0 flex-col border-r md:flex">
+          <Sidebar module={module} page={page} />
         </aside>
       )}
 
-      <div className={cn('flex min-w-0 flex-1 flex-col md:py-2 md:pr-2', collapsed && 'md:pl-2')}>
-        <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden md:rounded-xl md:border md:shadow-sm">
-          <Header module={module} page={page} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onMenu={() => setMenuOpen(true)} />
-          <main id="erp-main" className="@container min-h-0 flex-1 overflow-y-auto">{children}</main>
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <TopRow module={module} page={page} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onMenu={() => setMenuOpen(true)} />
+        <BreadcrumbBar module={module} page={page} />
+        <main id="erp-main" className="@container min-h-0 flex-1 overflow-y-auto">{children}</main>
       </div>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
         <SheetContent side="left" showCloseButton={false} className="bg-sidebar gap-0 p-0 data-[side=left]:w-72 data-[side=left]:max-w-[85vw]">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <SheetDescription className="sr-only">Switch module or open a page.</SheetDescription>
-          <Sidebar module={module} page={page} onNavigate={() => setMenuOpen(false)} showSearch={false} />
+          <Sidebar module={module} page={page} onNavigate={() => setMenuOpen(false)} />
         </SheetContent>
       </Sheet>
     </div>
@@ -139,8 +141,8 @@ function ModuleMenu({ module, onNavigate, children }: { module: ErpModule; onNav
   )
 }
 
-function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; page: ErpPage; onNavigate?: () => void; showSearch: boolean }) {
-  const { data, recent, openPeek, setPaletteOpen } = useErp()
+function Sidebar({ module, page, onNavigate }: { module: ErpModule; page: ErpPage; onNavigate?: () => void }) {
+  const { data, recent, openPeek } = useErp()
   // A page's own part of the sidebar, such as the Assistant's chat history.
   const Extra = page.sidebar
   const open = (m: string, p: string) => {
@@ -150,7 +152,7 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
   // Consecutive pages with the same group share a heading ("Receivables"…).
   const groups = useMemo(() => {
     const out: { title?: string; pages: ErpPage[] }[] = []
-    for (const p of pagesOf(module)) {
+    for (const p of pagesOf(module).filter((p) => !p.hidden)) {
       const last = out[out.length - 1]
       if (last && last.title === p.group) last.pages.push(p)
       else out.push({ title: p.group, pages: [p] })
@@ -173,14 +175,6 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
             <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />
           </button>
         </ModuleMenu>
-        {/* One search at a time: here only when the header has none. */}
-        {showSearch && (
-          <SearchTrigger
-            label="Search or jump to…"
-            onClick={() => setPaletteOpen(true)}
-            className="hover:bg-sidebar-accent border-transparent"
-          />
-        )}
       </div>
 
       <nav aria-label={`${module.name} pages`} className={cn('px-2', Extra ? 'shrink-0 pb-1' : 'min-h-0 flex-1 overflow-y-auto pb-3')}>
@@ -222,30 +216,97 @@ function Sidebar({ module, page, onNavigate, showSearch }: { module: ErpModule; 
           </>
         )}
       </nav>
-      {Extra && <Extra onNavigate={onNavigate} />}
+      {Extra && <Extra onNavigate={onNavigate} pageId={page.id} />}
 
-      <footer className="grid gap-px border-t p-2">
-        <Notifications variant="row" />
+      <footer className="border-t p-2">
         <AccountMenu />
       </footer>
     </div>
   )
 }
 
-// The header: the path to this page on the left (company › module › section
-// › page, folding to fit, from the shared FoldingBreadcrumb block), a search
-// box in the middle, and Ask AI. The account menu can drop the search box
-// (Header › Breadcrumb only), which moves search back into the sidebar.
-function Header({ module, page, collapsed, onToggle, onMenu }: {
+// The global header, the first of the two rows over the page (the shared
+// GlobalHeader block). Left: the menu button (phone), the sidebar toggle,
+// and the module switcher while the sidebar is hidden. Middle: search, which
+// opens the command palette. Right: Ask AI, notifications, light / dark, and
+// the account whenever the sidebar (where it lives) is out of sight.
+function TopRow({ module, page, collapsed, onToggle, onMenu }: {
   module: ErpModule
   page: ErpPage
   collapsed: boolean
   onToggle: () => void
   onMenu: () => void
 }) {
-  const { setPaletteOpen, setCopilotOpen, company, headerStyle, pageTitle } = useErp()
+  const { setPaletteOpen, setCopilotOpen } = useErp()
   const onAssistant = module.id === 'home' && page.id === 'assistant'
-  const withSearch = headerStyle === 'crumbs-search' || collapsed
+
+  return (
+    <GlobalHeader
+      className="bg-background border-b md:px-3"
+      start={
+        <>
+          <Button variant="ghost" size="icon" className="shrink-0 md:hidden" aria-label="Open menu" onClick={onMenu}>
+            <HugeiconsIcon icon={Menu01Icon} strokeWidth={2} />
+          </Button>
+          {/* aria-pressed, not `pressed`: the button keeps its plain look while the sidebar is hidden. */}
+          <IconAction
+            label={collapsed ? 'Show sidebar' : 'Hide sidebar'}
+            icon={SidebarLeftIcon}
+            shortcut={['[']}
+            size="icon"
+            aria-pressed={collapsed}
+            onClick={onToggle}
+            className="text-foreground hidden shrink-0 md:inline-flex"
+          />
+          {/* With the sidebar hidden, the module switcher moves up here. */}
+          {collapsed && (
+            <ModuleMenu module={module}>
+              <Button variant="ghost" size="icon" className="hidden shrink-0 md:inline-flex" aria-label={`Module: ${module.name}. Switch module`}>
+                <IconMark icon={module.icon} colour={module.colour} size="sm" />
+              </Button>
+            </ModuleMenu>
+          )}
+        </>
+      }
+      center={
+        <SearchTrigger
+          size="md"
+          label="Search records, pages and actions"
+          onClick={() => setPaletteOpen(true)}
+          className="bg-muted/40 hover:bg-accent w-full"
+        />
+      }
+      centerClassName="hidden md:flex"
+      end={
+        <>
+          <Button variant="ghost" size="icon" className="md:hidden" aria-label="Search" onClick={() => setPaletteOpen(true)}>
+            <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+          </Button>
+          {!onAssistant && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={() => setCopilotOpen(true)}>
+                  <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" />
+                  <span className="hidden sm:inline">Ask AI</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></TooltipContent>
+            </Tooltip>
+          )}
+          <Notifications />
+          <ThemeToggle />
+          <AccountMenu variant="avatar" className={cn(!collapsed && 'md:hidden')} />
+        </>
+      }
+    />
+  )
+}
+
+// The breadcrumb bar, the second row: where this page sits (company ›
+// module › section › page), folding to fit, from the shared
+// FoldingBreadcrumb block. The company opens the company list.
+function BreadcrumbBar({ module, page }: { module: ErpModule; page: ErpPage }) {
+  const { company, pageTitle } = useErp()
   const sectionStart = page.group ? module.pages.find((p) => p.group === page.group) : undefined
 
   const trail: Crumb[] = [
@@ -266,60 +327,9 @@ function Header({ module, page, collapsed, onToggle, onMenu }: {
   ]
 
   return (
-    <header className={cn(
-      'grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b px-2 md:px-3',
-      withSearch && 'md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)_minmax(0,1fr)]',
-    )}>
-      <div className="flex min-w-0 items-center gap-1">
-        <Button variant="ghost" size="icon" className="shrink-0 md:hidden" aria-label="Open menu" onClick={onMenu}>
-          <HugeiconsIcon icon={Menu01Icon} strokeWidth={2} />
-        </Button>
-        {/* aria-pressed, not `pressed`: the button keeps its plain look while the sidebar is hidden. */}
-        <IconAction
-          label={collapsed ? 'Show sidebar' : 'Hide sidebar'}
-          icon={SidebarLeftIcon}
-          shortcut={['[']}
-          size="icon"
-          aria-pressed={collapsed}
-          onClick={onToggle}
-          className="text-foreground hidden shrink-0 md:inline-flex"
-        />
-        {/* With the sidebar hidden, the module switcher moves up here. */}
-        {collapsed && (
-          <ModuleMenu module={module}>
-            <Button variant="ghost" size="icon" className="hidden shrink-0 md:inline-flex" aria-label={`Module: ${module.name}. Switch module`}>
-              <IconMark icon={module.icon} colour={module.colour} size="sm" />
-            </Button>
-          </ModuleMenu>
-        )}
-        <FoldingBreadcrumb trail={trail} current={pageTitle ?? page.label} />
-      </div>
-      {withSearch && (
-        <SearchTrigger
-          size="md"
-          label="Search records, pages and actions"
-          onClick={() => setPaletteOpen(true)}
-          className="bg-muted/40 hover:bg-accent hidden md:flex"
-        />
-      )}
-      <div className="flex shrink-0 items-center justify-end gap-1">
-        <Button variant="ghost" size="icon" className={cn(withSearch && 'md:hidden')} aria-label="Search" onClick={() => setPaletteOpen(true)}>
-          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
-        </Button>
-        {!onAssistant && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="sm" onClick={() => setCopilotOpen(true)}>
-                <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" />
-                <span className="hidden sm:inline">Ask AI</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></TooltipContent>
-          </Tooltip>
-        )}
-        <div className="md:hidden"><Notifications variant="icon" /></div>
-      </div>
-    </header>
+    <div className="flex h-10 shrink-0 items-center border-b px-2 md:px-3">
+      <FoldingBreadcrumb trail={trail} current={pageTitle ?? page.label} />
+    </div>
   )
 }
 
@@ -342,24 +352,19 @@ function useAlerts() {
   ].map((alert) => ({ ...alert, unread: true })), [data])
 }
 
-// The shared notifications block. It keeps the read state itself, so every
-// alert starts unread.
-function Notifications({ variant }: { variant: 'row' | 'icon' }) {
+// The shared notifications block, the bell in the global header. It keeps
+// the read state itself, so every alert starts unread.
+function Notifications() {
   const { openPeek } = useErp()
   const alerts = useAlerts()
-  return (
-    <NotificationsMenu
-      variant={variant}
-      side={variant === 'row' ? 'right' : 'bottom'}
-      items={alerts}
-      onOpen={(a) => openPeek(a.entity, a.id)}
-    />
-  )
+  return <NotificationsMenu items={alerts} onOpen={(a) => openPeek(a.entity, a.id)} />
 }
 
-// The shared account menu, with the ERP's settings as sub-menus.
-function AccountMenu() {
-  const { session, setRole, signOut, headerStyle, setHeaderStyle, startPage, setStartPage } = useErp()
+// The shared account menu, with the ERP's settings as sub-menus: a row at
+// the sidebar's foot, or the avatar in the global header (while the sidebar
+// is out of sight).
+function AccountMenu({ variant = 'row', className }: { variant?: 'row' | 'avatar'; className?: string }) {
+  const { session, setRole, signOut, startPage, setStartPage } = useErp()
   const { theme, setTheme } = useTheme()
   if (!session) return null
   return (
@@ -367,9 +372,13 @@ function AccountMenu() {
       name={session.name}
       detail={session.title}
       email={session.email}
+      variant={variant}
       size="md"
       menuClassName="w-60"
-      className="hover:bg-sidebar-accent focus-visible:ring-ring/40 aria-expanded:bg-sidebar-accent mt-1"
+      className={cn(
+        variant === 'row' && 'hover:bg-sidebar-accent focus-visible:ring-ring/40 aria-expanded:bg-sidebar-accent',
+        className,
+      )}
     >
       <DropdownMenuSub>
         <DropdownMenuSubTrigger>
@@ -395,17 +404,6 @@ function AccountMenu() {
             <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
             <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
-          </DropdownMenuRadioGroup>
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <HugeiconsIcon icon={LayoutTopIcon} strokeWidth={2} /> Header
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent className="w-52">
-          <DropdownMenuRadioGroup value={headerStyle} onValueChange={(v) => setHeaderStyle(v as HeaderStyle)}>
-            <DropdownMenuRadioItem value="crumbs-search">Breadcrumb and search</DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="crumbs">Breadcrumb only</DropdownMenuRadioItem>
           </DropdownMenuRadioGroup>
         </DropdownMenuSubContent>
       </DropdownMenuSub>

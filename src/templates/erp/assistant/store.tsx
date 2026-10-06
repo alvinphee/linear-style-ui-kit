@@ -4,14 +4,16 @@ import type { SummaryPhase } from '@/blocks/ai/ai-summary-card'
 import { edition } from '../edition'
 import { MODULES } from '../modules'
 import { useErp } from '../store'
-import { PROMPTS, respond, type Block, type Ctx, type Inline, type Link, type Ref } from './answers'
+import { PROMPTS, respond, topicOf, type Block, type Ctx, type Inline, type Link, type Ref } from './answers'
 
 // Ask AI's chats, shared by the side panel (the copilot), the full-page
 // Assistant and the launchpad, so a chat started in one carries on in the
 // others. One reply streams at a time; it keeps streaming while you move
 // between pages. The launchpad's AI briefing streams here too, so it is
 // written once per visit, not each time the launchpad opens.
-// Chats live in memory, like the records, and reset on reload.
+// Projects group chats under instructions of their own. Incognito chats
+// stay out of `chats` (the history) and are deleted when you leave them.
+// Chats and projects live in memory, like the records, and reset on reload.
 
 export type UserTurn = { id: string; role: 'user'; text: string }
 export type Reply = {
@@ -30,7 +32,36 @@ export type Reply = {
   feedback?: Feedback | null
 }
 export type Turn = UserTurn | Reply
-export type Chat = { id: string; title: string; pinned: boolean; updatedAt: number; messages: Turn[] }
+export type Chat = {
+  id: string
+  title: string
+  pinned: boolean
+  updatedAt: number
+  messages: Turn[]
+  // The project it sits in; null for the plain history.
+  projectId: string | null
+  // The module it is about (topicOf its first question), to filter chats by type.
+  topic: string | null
+  // Incognito: kept out of the history, deleted when you leave it.
+  temporary?: boolean
+}
+// The scripted answers cannot follow the instructions; the views show them.
+export type Project = { id: string; name: string; instructions: string; colour: string }
+
+const PROJECT_COLOURS = ['var(--chart-4)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-1)', 'var(--chart-5)']
+
+// The projects a returning user already has, with the modules whose chats sit in them.
+const SEED_PROJECTS: (Project & { modules: string[] })[] = [
+  {
+    id: 'p-month-end', name: 'Month-end close', colour: PROJECT_COLOURS[0], modules: ['accounting'],
+    instructions: "I'm closing the month as the finance controller. Give amounts in the company's currency, rounded to the dollar, and list overdue invoices and unpaid bills first, oldest first.",
+  },
+  {
+    id: 'p-ops-review', name: 'Weekly operations review', colour: PROJECT_COLOURS[1], modules: ['inventory', 'purchasing'],
+    instructions: 'Summaries for the Monday operations meeting: stock below its reorder point, transfers in transit and late purchase orders. Short bullet points.',
+  },
+]
+const seedProjects = (): Project[] => SEED_PROJECTS.map(({ modules: _modules, ...p }) => p)
 
 export type Briefing = {
   phase: SummaryPhase
@@ -100,14 +131,16 @@ function seedChats(ctx: Ctx): Chat[] {
   const HOUR = 3_600_000
   const ages = [2 * HOUR, 27 * HOUR, 3 * 24 * HOUR, 6 * 24 * HOUR, 12 * 24 * HOUR]
   const asks = [
-    ...MODULES.filter((m) => m.id !== 'home' && m.roles.includes(ctx.role)).map((m) => PROMPTS[m.id]?.[1]),
-    PROMPTS.home[1],
-  ].filter((q): q is string => !!q).slice(0, ages.length)
+    ...MODULES.filter((m) => m.id !== 'home' && m.roles.includes(ctx.role)).map((m) => ({ module: m.id, question: PROMPTS[m.id]?.[1] })),
+    { module: 'home', question: PROMPTS.home[1] },
+  ].filter((a): a is { module: string; question: string } => !!a.question).slice(0, ages.length)
   const now = Date.now()
-  return asks.map((question, i) => {
+  return asks.map(({ module, question }, i) => {
     const reply = replyFor(question, ctx)
     return {
       id: uid('c'), title: titleFor(question), pinned: i === 1, updatedAt: now - ages[i],
+      projectId: SEED_PROJECTS.find((p) => p.modules.includes(module))?.id ?? null,
+      topic: topicOf(question) ?? module,
       messages: [{ id: uid('m'), role: 'user', text: question }, { ...reply, shown: reply.pieces.length, state: 'done', startedAt: now - ages[i] }],
     }
   })
@@ -116,8 +149,20 @@ function seedChats(ctx: Ctx): Chat[] {
 /* ---------- The store ---------- */
 
 type AssistantState = {
+  // The history: every chat but an incognito one.
   chats: Chat[]
+  // The open chat, incognito or not; null on a new chat.
   active: Chat | null
+  projects: Project[]
+  // The project a new chat will start in (New chat in project).
+  draftProjectId: string | null
+  incognito: boolean
+  setIncognito: (on: boolean) => void
+  createProject: (project: Pick<Project, 'name' | 'instructions'>) => string
+  updateProject: (id: string, patch: Partial<Pick<Project, 'name' | 'instructions'>>) => void
+  // Its chats go back to the history.
+  deleteProject: (id: string) => void
+  moveChat: (id: string, projectId: string | null) => void
   // A reply is being written (in any chat).
   busy: boolean
   runningChatId: string | null
@@ -128,7 +173,8 @@ type AssistantState = {
   stop: () => void
   regenerate: (chatId: string, replyId: string) => void
   setFeedback: (chatId: string, replyId: string, feedback: Feedback | null) => void
-  newChat: () => void
+  // Optionally in a project.
+  newChat: (projectId?: string | null) => void
   openChat: (id: string) => void
   renameChat: (id: string, title: string) => void
   pinChat: (id: string, pinned: boolean) => void
@@ -151,6 +197,9 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     ? seedChats({ data, role: session.role, name: session.name })
     : []))
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [projects, setProjects] = useState<Project[]>(seedProjects)
+  const [draftProjectId, setDraftProjectId] = useState<string | null>(null)
+  const [incognito, setIncognitoState] = useState(false)
   const [focusKey, setFocusKey] = useState(0)
   const [briefing, setBriefing] = useState<Briefing | null>(null)
   const ctx = useRef<Ctx>({ data, role: session?.role ?? 'admin', name: session?.name ?? '' })
@@ -171,6 +220,9 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
     setActiveId(null)
     setBriefing(null)
     setChats(signedIn && edition().assistant ? seedChats(ctx.current) : [])
+    setProjects(seedProjects())
+    setDraftProjectId(null)
+    setIncognitoState(false)
   }, [signedIn])
 
   useEffect(() => () => clear(), [])
@@ -246,9 +298,39 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
 
   const active = chats.find((c) => c.id === activeId) ?? null
 
+  // Leaving an incognito chat deletes it: every one but `keep`.
+  function dropTemporary(keep: string | null = null) {
+    const streaming = run.current && chats.find((c) => c.id === run.current?.chatId)
+    if (streaming && streaming.temporary && streaming.id !== keep) clearReply()
+    setChats((list) => list.filter((c) => !c.temporary || c.id === keep))
+  }
+
   const value: AssistantState = {
-    chats,
+    chats: chats.filter((c) => !c.temporary),
     active,
+    projects,
+    draftProjectId,
+    incognito,
+    // Either way a new chat starts: an incognito one, or back to a kept one.
+    setIncognito(on) {
+      setIncognitoState(on)
+      dropTemporary()
+      setActiveId(null)
+      setDraftProjectId(null)
+      setFocusKey((k) => k + 1)
+    },
+    createProject({ name, instructions }) {
+      const id = uid('p')
+      setProjects((list) => [...list, { id, name, instructions, colour: PROJECT_COLOURS[list.length % PROJECT_COLOURS.length] }])
+      return id
+    },
+    updateProject: (id, patch) => setProjects((list) => list.map((p) => (p.id === id ? { ...p, ...patch } : p))),
+    deleteProject(id) {
+      setProjects((list) => list.filter((p) => p.id !== id))
+      setChats((list) => list.map((c) => (c.projectId === id ? { ...c, projectId: null } : c)))
+      if (draftProjectId === id) setDraftProjectId(null)
+    },
+    moveChat: (id, projectId) => setChats((list) => list.map((c) => (c.id === id ? { ...c, projectId } : c))),
     busy: !!running,
     runningChatId: running,
     focusKey,
@@ -260,10 +342,20 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
       const chatId = chat?.id ?? uid('c')
       const reply = replyFor(text, ctx.current)
       const turns: Turn[] = [{ id: uid('m'), role: 'user', text }, reply]
+      // A new chat from the Assistant takes its project and incognito; one
+      // from the launchpad or the palette (newChat) is a plain chat.
+      const fresh: Chat = {
+        id: chatId, title: titleFor(text), pinned: false, updatedAt: Date.now(), messages: turns,
+        projectId: options?.newChat ? null : draftProjectId,
+        topic: topicOf(text) ?? 'home',
+        temporary: !options?.newChat && incognito ? true : undefined,
+      }
+      if (!chat) dropTemporary()
       setChats((list) => (chat
         ? list.map((c) => (c.id === chatId ? { ...c, updatedAt: Date.now(), messages: [...c.messages, ...turns] } : c))
-        : [{ id: chatId, title: titleFor(text), pinned: false, updatedAt: Date.now(), messages: turns }, ...list]))
+        : [fresh, ...list]))
       setActiveId(chatId)
+      setDraftProjectId(null)
       play(chatId, reply)
       return true
     },
@@ -279,12 +371,16 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
       play(chatId, fresh)
     },
     setFeedback: (chatId, replyId, feedback) => patchReply(chatId, replyId, { feedback }),
-    newChat() {
+    newChat(projectId = null) {
+      dropTemporary()
       setActiveId(null)
+      setDraftProjectId(projectId)
       setFocusKey((k) => k + 1)
     },
     openChat(id) {
+      dropTemporary(id)
       setActiveId(id)
+      setDraftProjectId(null)
       setFocusKey((k) => k + 1)
     },
     renameChat: (id, title) => setChats((list) => list.map((c) => (c.id === id ? { ...c, title } : c))),
@@ -316,8 +412,9 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
         shown: briefing.shown, state: briefing.stopped ? 'stopped' : 'done',
       }
       const chatId = uid('c')
+      dropTemporary()
       setChats((list) => [{
-        id: chatId, title: "Today's briefing", pinned: false, updatedAt: Date.now(),
+        id: chatId, title: "Today's briefing", pinned: false, updatedAt: Date.now(), projectId: null, topic: 'home',
         messages: [{ id: uid('m'), role: 'user', text: BRIEFING_QUESTION }, reply],
       }, ...list])
       setActiveId(chatId)

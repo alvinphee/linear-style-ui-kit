@@ -7,12 +7,13 @@ import { toast } from 'sonner'
 import { AiLabel } from '@/components/ai-label'
 import { FileChip } from '@/components/file-chip'
 import { IconAction } from '@/components/icon-action'
+import { IncognitoToggle } from '@/components/incognito-toggle'
 import {
   ActivityLine, Elapsed, PulseDot, ShimmerText, StreamCaret, Thinking, TypingDots, type ThinkingIndicator,
 } from '@/components/thinking-indicator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
-import { Demos, Gallery, Playground, Variants, bool, component, imports, jsx, lit, str, unless } from './Playground'
+import { CodeBlock, Demos, Gallery, Playground, Variants, bool, component, imports, jsx, lit, str, unless } from './Playground'
 
 // The small AI components: the AI label, the thinking indicator and its
 // working signs, icon actions and file chips. The blocks they make up are on
@@ -289,6 +290,36 @@ function FileChipDemos() {
   )
 }
 
+/* ---------- Incognito toggle ---------- */
+
+function IncognitoPreview({ initial, label }: { initial: boolean; label?: string }) {
+  const [on, setOn] = useState(initial)
+  return <IncognitoToggle pressed={on} onPressedChange={setOn} label={label} />
+}
+
+function IncognitoDemos() {
+  return (
+    <Gallery
+      title="Incognito toggle"
+      note="IncognitoToggle: a chat that is not kept in the history (a temporary chat). Top right of the chat"
+      items={[
+        { label: 'off', node: <IncognitoPreview initial={false} /> },
+        { label: 'on', node: <IncognitoPreview initial /> },
+        { label: 'icon only (label="")', node: <IncognitoPreview initial={false} label="" /> },
+        {
+          label: 'code',
+          node: (
+            <CodeBlock
+              code={"import { IncognitoToggle } from '@/components/incognito-toggle'\n\n<IncognitoToggle pressed={incognito} onPressedChange={setIncognito} />"}
+              className="w-[min(30rem,80vw)]"
+            />
+          ),
+        },
+      ]}
+    />
+  )
+}
+
 export default function AiComponentsDemos() {
   return (
     <Demos>
@@ -296,6 +327,7 @@ export default function AiComponentsDemos() {
       <ThinkingDemos />
       <IconActionDemos />
       <FileChipDemos />
+      <IncognitoDemos />
     </Demos>
   )
 }

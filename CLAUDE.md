@@ -71,7 +71,9 @@ linear-style-ui-kit/
     ├── styles.css             Tailwind + the Linear-style colour tokens
     ├── shadcn-default.css     shadcn's default theme, used only by the theme comparison
     ├── blocks/                reusable blocks: props in, no sample data
-    │   ├── ai/                prompt box, chat history, artifact panel, thinking
+    │   ├── ai/                prompt box, chat history (projects, pinned, chats by
+    │   │                      date or as one list), chat library (All chats:
+    │   │                      search, filter by type), artifact panel, thinking
     │   │                      trail, chat message, markdown, chat thread (with
     │   │                      the welcome screen and prompt starters), AI
     │   │                      summary card (the AI workspace, AI in the product
@@ -84,6 +86,7 @@ linear-style-ui-kit/
     │   │                      heatmap, slot picker
     │   ├── filter-bar/        filter menu, filter chips, saved views
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
+    │   ├── global-header.tsx  the top row: start, search in the middle, end (Two rows, the ERP)
     │   ├── form-dialog.tsx    field-driven dialog, quick create, property pills
     │   ├── gantt-chart.tsx    Gantt chart: timescale, bars, milestones, today line, Weeks / Months
     │   ├── grouped-list.tsx   list in folding groups, row shell, selection
@@ -113,6 +116,8 @@ linear-style-ui-kit/
     │   ├── ai-label.tsx       "AI" tag for AI-made content
     │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
     │   ├── icon-action.tsx    icon button with a tooltip and shortcut (copy, retry…)
+    │   ├── theme-toggle.tsx   light / dark button for a header
+    │   ├── incognito-toggle.tsx  incognito (temporary) chat switch for an AI chat
     │   ├── file-chip.tsx      attached file: icon, name, size, remove
     │   ├── label-dot.tsx      LabelDot, LabelChip
     │   ├── mention.tsx        @mention pill
@@ -240,12 +245,15 @@ No back end: records live in memory (`store.tsx`) and reset on reload; the
 session, company and starred modules are kept in the browser.
 - Flow: sign in (any email and password; demo accounts per role) → choose
   a company (multi-company) → the launchpad → module pages.
-- Layout: one sidebar (company switcher, module switcher, the module's
-  pages, recent records; notifications and the account at the foot) and the
-  page in an inset card. The header holds the folding breadcrumb (company ›
-  module › section › page), a search box and Ask AI; the account menu's
-  Header option can drop the search box, which moves search to the sidebar. With the sidebar hidden (`[`), the module
-  in the breadcrumb becomes the switcher. On a phone the sidebar is a sheet.
+- Layout: the App shells page's Teams sidebar with the Two rows header (top
+  row over the page, account at the sidebar's foot). A full-height sidebar
+  (company switcher, module switcher, the module's pages, recent records;
+  the account at the foot) beside the page, and two rows over the page: the
+  global header (search, which opens the command palette, then Ask AI,
+  notifications and the light / dark toggle) and the breadcrumb bar
+  (company › module › section › page, folding to fit). With the sidebar
+  hidden (`[`), the module switcher and the account move into the global
+  header. On a phone the sidebar is a sheet.
 - Modules (`modules.tsx`): CRM, Sales, Inventory, Purchasing, Accounting,
   Human resources, Administration. Each lists its pages; a list page is a
   `ListSpec` (columns, saved views, create form, bulk actions) rendered by
@@ -273,7 +281,20 @@ into it: switch features on with `edition().assistant` instead. It adds:
   today, marked stale when records change).
 - Home › Assistant: the full-page chat. Its chat history fills the app
   sidebar under the Home pages (a page's `sidebar`), so there is still one
-  sidebar. The breadcrumb ends with the chat's title.
+  sidebar, laid out like the big chat apps: + New chat; Search chats, All
+  chats and Incognito chat; Projects (folders of chats, each with
+  instructions, set up in a dialog; a project's menu offers a new chat in
+  it, edit and delete); Pinned; then Chats, whose options button switches
+  between dates and one list (kept in the browser) and shows one type of
+  chat. Every chat shows the icon of the module it is about. The
+  breadcrumb ends with the chat's title.
+- Home › All chats (reached from that sidebar, not listed under Home): every
+  chat, with a search and filter chips by type (the module a chat is about,
+  from `topicOf` in `answers.ts`).
+- Incognito (Incognito chat in the sidebar, or the toggle at the top right of
+  the Assistant): chats that stay out of the history and are deleted when
+  you leave them. The scripted answers cannot follow a project's
+  instructions; the views show them.
 - One set of chats (`assistant/store.tsx`) for the Assistant, the Ask AI
   side panel ("Open full page" moves the chat across) and the launchpad.
   A new session starts with a few chats asked of today's data.
@@ -336,8 +357,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 110 items: `tokens` (the whole theme from `styles.css`), 47 ui, 30
-components, 24 blocks and 8 lib files. Which level becomes which item:
+needs. 114 items: `tokens` (the whole theme from `styles.css`), 47 ui, 32
+components, 26 blocks and 8 lib files. Which level becomes which item:
 `docs/architecture.md`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes

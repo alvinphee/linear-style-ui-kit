@@ -2,10 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
   ArrowLeft01Icon, ArrowUpRight01Icon, ComputerIcon, LayoutLeftIcon, LayoutRightIcon, LayoutTwoColumnIcon,
-  Moon02Icon, MouseScroll01Icon, Sun03Icon, Tick02Icon,
+  MouseScroll01Icon, Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { IconAction } from '@/components/icon-action'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { ViewSwitch, type ViewOption } from '@/components/view-switch'
 import { Button } from '@/components/ui/button'
 import {
@@ -14,7 +15,6 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { navigate, usePath } from '@/lib/router'
-import { useTheme } from '@/lib/theme'
 import { NAV_GROUPS, TEMPLATES } from './nav'
 
 // Theme comparison: one kit page shown twice, side by side. The left frame
@@ -102,8 +102,6 @@ export default function ThemeCompare() {
 function Comparison() {
   const path = usePath()
   const page = path.replace(/^\/compare/, '') || '/overview'
-  const { resolvedTheme, setTheme } = useTheme()
-  const dark = resolvedTheme === 'dark'
   const [view, setView] = useState<View>('both')
   const [parts, setParts] = useState(() => PARTS.map((p) => p.id))
   const [desktop, setDesktop] = useState(true)
@@ -210,14 +208,7 @@ function Comparison() {
             onClick={() => setScrollTogether((s) => !s)}
           />
           <ViewSwitch views={VIEWS} value={view} onChange={setView} label="Layout" className="mx-1" />
-          <IconAction
-            label={dark ? 'Light mode' : 'Dark mode'}
-            size="icon"
-            className="text-foreground"
-            onClick={() => setTheme(dark ? 'light' : 'dark')}
-          >
-            <HugeiconsIcon icon={Sun03Icon} altIcon={Moon02Icon} showAlt={dark} strokeWidth={2} />
-          </IconAction>
+          <ThemeToggle />
         </div>
       </header>
 

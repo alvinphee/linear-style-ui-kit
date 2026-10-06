@@ -3,7 +3,8 @@ import { Add01Icon, ArrowRight01Icon, StarIcon, TextBoldIcon } from '@hugeicons/
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { Toggle } from '@/components/ui/toggle'
-import { Demos, Gallery, Playground, Variants, bool, imports, jsx, str } from './Playground'
+import { ThemeToggle } from '@/components/theme-toggle'
+import { CodeBlock, Demos, Gallery, Playground, Variants, bool, imports, jsx, str } from './Playground'
 
 const BUTTON_VARIANTS = ['default', 'secondary', 'outline', 'ghost', 'destructive', 'link'] as const
 const BUTTON_SIZES = ['xs', 'sm', 'default', 'lg'] as const
@@ -144,6 +145,15 @@ export default function ButtonsDemos() {
             <HugeiconsIcon icon={StarIcon} strokeWidth={2} />
           </Toggle>
         )}
+      />
+
+      <Gallery
+        title="Theme toggle"
+        note="ThemeToggle: light and dark for a header. It switches the kit itself; System is in the theme menus"
+        items={[
+          { label: 'ThemeToggle', node: <ThemeToggle /> },
+          { label: 'code', node: <CodeBlock code={"import { ThemeToggle } from '@/components/theme-toggle'\n\n<ThemeToggle />"} /> },
+        ]}
       />
     </Demos>
   )

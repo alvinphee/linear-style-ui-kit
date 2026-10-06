@@ -8,6 +8,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { IconAction } from '@/components/icon-action'
 import { PageHeader } from '@/components/page-header'
+import { ThemeToggle } from '@/components/theme-toggle'
 import { Button } from '@/components/ui/button'
 import {
   Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList,
@@ -66,11 +67,10 @@ export default function KitchenSink() {
   const [commandOpen, setCommandOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
-  const { resolvedTheme, setTheme, applyPreset } = useTheme()
+  const { setTheme, applyPreset } = useTheme()
   const path = usePath()
   const page = NAV.find((n) => `/${n.id}` === path) ?? NAV[0]
   const group = NAV_GROUPS.find((g) => g.items.some((i) => i.id === page.id))
-  const dark = resolvedTheme === 'dark'
   const pressedG = useRef(0)
 
   // One section per page, so each is rendered only when it is open.
@@ -208,14 +208,7 @@ export default function KitchenSink() {
                 <ThemeControls compact />
               </PopoverContent>
             </Popover>
-            <IconAction
-              label={dark ? 'Light mode' : 'Dark mode'}
-              size="icon"
-              className="text-foreground"
-              onClick={() => setTheme(dark ? 'light' : 'dark')}
-            >
-              <HugeiconsIcon icon={Sun03Icon} altIcon={Moon02Icon} showAlt={dark} strokeWidth={2} />
-            </IconAction>
+            <ThemeToggle />
             <Button size="sm" aria-label="New job" onClick={() => setCreateOpen(true)}>
               <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
               <span className="hidden sm:inline">New job</span>

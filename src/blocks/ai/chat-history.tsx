@@ -1,27 +1,46 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react'
-import { HugeiconsIcon } from '@hugeicons/react'
+import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, ArrowRight01Icon, Cancel01Icon, CopyPlusIcon, Delete02Icon, Download01Icon, Edit02Icon, Folder01Icon,
-  FolderOpenIcon, FolderRemoveIcon, FolderTransferIcon, MoreHorizontalIcon, PencilEdit02Icon, PinIcon, PinOffIcon,
-  Tick02Icon,
+  ArrowDown01Icon, ArrowRight01Icon, BubbleChatIcon, Add01Icon, Cancel01Icon, CopyPlusIcon, Delete02Icon,
+  Download01Icon, Edit02Icon, Folder01Icon, FolderAddIcon, FolderEditIcon, FolderOpenIcon, FolderRemoveIcon,
+  FolderTransferIcon, LibraryIcon, MessageAdd01Icon, MoreHorizontalIcon, PencilEdit02Icon, PinIcon, PinOffIcon,
+  Search01Icon, SlidersHorizontalIcon, Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import { startOfDay, subDays } from 'date-fns'
 import { cn } from 'cn'
 import { DeleteConfirm } from '@/components/delete-confirm'
+import { IconAction } from '@/components/icon-action'
+import { NavGroup, NavItem } from '@/components/nav-item'
 import { SearchField } from '@/components/search-field'
 import { CONTEXT_MENU_KIT, DROPDOWN_MENU_KIT, type MenuKit } from '@/components/menu-kit'
 import { Button } from '@/components/ui/button'
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Spinner } from '@/components/ui/spinner'
 import { relativeDay } from '@/lib/format'
 import { plural } from '@/lib/text'
 
-// The chat history: the sidebar of an AI chat app. From the top: New chat
-// (with its keys, if you pass them), a search over chat titles, projects
-// (folders that fold open on their chats, with a count), pinned chats, then
-// every other chat grouped by date: Today, Yesterday, Previous 7 days, Older
-// (or under each chat's own `group`). A row opens its chat; double-click
+// The chat history: the sidebar of an AI chat app, laid out like the big
+// chat apps, from the kit's sidebar parts (NavItem rows, NavGroup headings
+// that fold). From the top:
+//   New chat   the main action (its keys at the end, if you pass them)
+//   links      Search chats (a row that opens the search box), All chats
+//              (onViewAll) and your own `links`, such as an incognito chat;
+//              past four, the rest fold under More
+//   Projects   folders of chats, each folding open on its chats. + starts
+//              one: named in place (onCreateProject) or your own setup
+//              (onNewProject), such as a dialog with its instructions. A
+//              project's menu offers a new chat in it, edit and delete.
+//   Pinned     pinned chats
+//   Chats      the rest, under Today, Yesterday, Previous 7 days, Older (or
+//              a chat's own `group`). Its options button turns the dates
+//              off for one list (keep that choice with `groupByDate`) and,
+//              given `types`, shows one type of chat.
+// Every chat has an icon before its title: its `icon` (what it is about,
+// such as a module) or a chat bubble. A row opens its chat; double-click
 // renames it in place; its menu (the … button, or a right click) offers pin,
 // rename, move to project, duplicate, export and delete, which asks first.
 // Only the actions you pass a callback for are offered. `footer` sits at the
@@ -29,10 +48,18 @@ import { plural } from '@/lib/text'
 // (blocks/account-menu) are made for it.
 //
 // It fills its parent's height, so put it in a fixed-width column (an aside
-// or a sheet). The New chat keys are only shown; handle them yourself.
+// or a sheet) on the sidebar's colour. The New chat keys are only shown;
+// handle them yourself.
 //
 // ChatMenuItems, RenameInput and DeleteChatDialog are exported so a chat
 // header can offer the same menu, rename and confirm.
+
+// A kind of chat, for the Chats filter and the chat library's chips: a
+// module, a topic, an agent. An icon, or a dot in `colour`.
+export type ChatType = { value: string; label: string; icon?: IconSvgElement; colour?: string }
+
+// A row under New chat: a page (All chats, Library) or an action (Incognito chat).
+export type ChatLink = { id: string; label: string; icon: IconSvgElement; onSelect: () => void; active?: boolean }
 
 export type HistoryChat = {
   id: string
@@ -46,6 +73,13 @@ export type HistoryChat = {
   running?: boolean
   // A heading to list it under instead of its date group.
   group?: string
+  // Shown before the title, such as the icon of what the chat is about, in
+  // `iconColour` (a CSS colour from the theme) or muted. A chat bubble when
+  // left out.
+  icon?: IconSvgElement
+  iconColour?: string
+  // A ChatType's `value`, for the Chats filter.
+  type?: string
 }
 
 export type HistoryProject = {
@@ -226,6 +260,41 @@ export function DeleteChatDialog({ open, title, onClose, onConfirm, onDeleted }:
   )
 }
 
+// A project's actions, for its row's … menu and its right-click menu.
+function ProjectMenuItems({ kit, onNewChat, onEdit, onDelete }: {
+  kit: MenuKit
+  onNewChat?: () => void
+  onEdit?: () => void
+  onDelete?: () => void
+}) {
+  const K = kit
+  return (
+    <>
+      {onNewChat && (
+        <K.Item onSelect={onNewChat}>
+          <HugeiconsIcon icon={MessageAdd01Icon} strokeWidth={2} />
+          New chat in project
+        </K.Item>
+      )}
+      {onEdit && (
+        <K.Item onSelect={onEdit}>
+          <HugeiconsIcon icon={FolderEditIcon} strokeWidth={2} />
+          Edit project
+        </K.Item>
+      )}
+      {onDelete && (
+        <>
+          {(onNewChat || onEdit) && <K.Separator />}
+          <K.Item variant="destructive" onSelect={onDelete}>
+            <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
+            Delete project
+          </K.Item>
+        </>
+      )}
+    </>
+  )
+}
+
 type RowActions = {
   projects?: HistoryProject[]
   onRename?: (title: string) => void
@@ -275,7 +344,7 @@ function ChatRow({ chat, active, onOpen, actions }: {
     <div
       className={cn(
         'group/row relative flex h-7 min-w-0 items-center rounded-md transition-colors',
-        active ? 'bg-accent text-foreground' : 'text-foreground/85 hover:bg-accent/60',
+        active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent',
       )}
     >
       {renaming ? (
@@ -297,9 +366,15 @@ function ChatRow({ chat, active, onOpen, actions }: {
           onDoubleClick={onRename && startRename}
           aria-current={active ? 'page' : undefined}
           title={chat.title}
-          className="focus-visible:ring-ring/30 h-7 min-w-0 flex-1 truncate rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2"
+          className="focus-visible:ring-ring/30 flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md px-2 text-left text-xs outline-none focus-visible:ring-2"
         >
-          {chat.title}
+          <HugeiconsIcon
+            icon={chat.icon ?? BubbleChatIcon}
+            strokeWidth={2}
+            className={cn('size-3.5 shrink-0', !chat.iconColour && 'opacity-60')}
+            style={{ color: chat.iconColour }}
+          />
+          <span className="min-w-0 truncate">{chat.title}</span>
         </button>
       )}
       {chat.running && <Spinner className="text-muted-foreground mr-1 size-3" aria-label="Replying" />}
@@ -334,23 +409,32 @@ function ChatRow({ chat, active, onOpen, actions }: {
   )
 }
 
-function GroupLabel({ children, action }: { children: ReactNode; action?: ReactNode }) {
-  return (
-    <div className="flex h-7 items-center justify-between gap-2 pr-1 pl-2">
-      <span className="text-muted-foreground text-[11px] font-medium">{children}</span>
-      {action}
-    </div>
-  )
+// A date inside Chats (Today, Yesterday…): quieter than a section's heading.
+function DateLabel({ children }: { children: ReactNode }) {
+  return <div className="text-muted-foreground/70 flex h-6 items-end px-2 pb-0.5 text-[10.5px]">{children}</div>
 }
+
+// A type's icon, or a dot in its colour.
+function TypeMark({ type }: { type: ChatType }) {
+  return type.icon
+    ? <HugeiconsIcon icon={type.icon} strokeWidth={2} className="size-3.5" style={{ color: type.colour }} />
+    : <span aria-hidden className="bg-muted-foreground mx-1 size-1.5 rounded-full" style={{ background: type.colour }} />
+}
+
+// Links past this many fold under More.
+const MORE_AFTER = 4
 
 export function ChatHistory({
   chats, projects, activeChatId = null, activeProjectId = null, now, onNewChat, newChatLabel = 'New chat',
-  newChatShortcut, newChatRef, onOpenChat, onOpenProject, onCreateProject, onRenameChat, onPinChat, onMoveChat,
-  onDuplicateChat, onExportChat, onDeleteChat, onNavigate, onClose, searchPlaceholder = 'Search chats',
-  emptyText = 'No chats yet. Start one above.', footer, className,
+  newChatIcon = PencilEdit02Icon, newChatShortcut, newChatRef, links = [], onOpenChat, onOpenProject, onCreateProject,
+  onNewProject, onNewChatInProject, onEditProject, onDeleteProject, onRenameChat, onPinChat, onMoveChat,
+  onDuplicateChat, onExportChat, onDeleteChat, onNavigate, onClose, historyLabel = 'Chats', groupByDate,
+  onGroupByDateChange, types = [], onViewAll, viewAllLabel = 'All chats', viewAllActive = false,
+  searchLabel = 'Search chats', searchPlaceholder = 'Search chats', emptyText = 'No chats yet. Start one above.',
+  footer, className,
 }: {
   chats: HistoryChat[]
-  // Shows the Projects group (with New project, given onCreateProject).
+  // Shows the Projects group (with New project, given onCreateProject or onNewProject).
   projects?: HistoryProject[]
   activeChatId?: string | null
   activeProjectId?: string | null
@@ -358,12 +442,24 @@ export function ChatHistory({
   now?: number | (() => number)
   onNewChat?: () => void
   newChatLabel?: string
+  // The New chat icon: a pencil by default, Add01Icon for "+ New chat".
+  newChatIcon?: IconSvgElement
   // Shown at the end of New chat, such as <Shortcut keys={['mod', 'shift', 'O']} />.
   newChatShortcut?: ReactNode
   newChatRef?: Ref<HTMLButtonElement>
+  // Rows of your own under All chats, such as Incognito chat.
+  links?: ChatLink[]
   onOpenChat: (id: string) => void
   onOpenProject?: (id: string) => void
+  // New project: names one in place (onCreateProject), or opens your own
+  // setup instead (onNewProject), such as a dialog with its instructions.
   onCreateProject?: (name: string) => void
+  onNewProject?: () => void
+  // A project's menu: a new chat in it, editing it, deleting it (asks first;
+  // its chats should go back to the history).
+  onNewChatInProject?: (id: string) => void
+  onEditProject?: (id: string) => void
+  onDeleteProject?: (id: string) => void
   onRenameChat?: (id: string, title: string) => void
   onPinChat?: (id: string, pinned: boolean) => void
   onMoveChat?: (id: string, projectId: string | null) => void
@@ -375,15 +471,35 @@ export function ChatHistory({
   onNavigate?: () => void
   // Shows a close button beside New chat, for a sheet.
   onClose?: () => void
+  // The heading over the chats that are not pinned or in a project.
+  historyLabel?: string
+  // Chats by date, or one list. Leave out to let the options menu keep the
+  // choice itself (by date at first).
+  groupByDate?: boolean
+  onGroupByDateChange?: (groupByDate: boolean) => void
+  // The kinds of chat, for the options menu's Show filter (chat.type).
+  types?: ChatType[]
+  // Adds an All chats row under New chat, for a page of them all.
+  onViewAll?: () => void
+  viewAllLabel?: string
+  // That page is open.
+  viewAllActive?: boolean
+  searchLabel?: string
   searchPlaceholder?: string
   emptyText?: ReactNode
   footer?: ReactNode
   className?: string
 }) {
   const [query, setQuery] = useState('')
+  const [searching, setSearching] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
   const [collapsed, setCollapsed] = useState<string[]>([])
   const [creating, setCreating] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleteProjectId, setDeleteProjectId] = useState<string | null>(null)
+  const [byDateState, setByDateState] = useState(true)
+  const [show, setShow] = useState('all')
+  const byDate = groupByDate ?? byDateState
   const newChatButton = useRef<HTMLButtonElement | null>(null)
 
   const setNewChatRef = useCallback((el: HTMLButtonElement | null) => {
@@ -395,24 +511,43 @@ export function ChatHistory({
   const sorted = useMemo(() => [...chats].sort((a, b) => b.updatedAt - a.updatedAt), [chats])
   const pinned = sorted.filter((c) => c.pinned)
   const history = sorted.filter((c) => !c.pinned && !c.projectId)
+  // Only the types the history has; a chosen type that empties stays, to clear it.
+  const shownTypes = types.filter((t) => t.value === show || history.some((c) => c.type === t.value))
+  const filter = shownTypes.find((t) => t.value === show)
+  const listed = filter ? history.filter((c) => c.type === filter.value) : history
   const q = query.trim().toLowerCase()
   const results = q ? sorted.filter((c) => c.title.toLowerCase().includes(q)) : []
   const toDelete = chats.find((c) => c.id === deleteId)
+  const projectToDelete = projects?.find((p) => p.id === deleteProjectId)
+  // Keeps the project's name on screen while its dialog animates closed.
+  const deletingProject = useRef({ name: '', chats: 0 })
+  if (projectToDelete) {
+    deletingProject.current = { name: projectToDelete.name, chats: chats.filter((c) => c.projectId === projectToDelete.id).length }
+  }
   const time = typeof now === 'function' ? now() : now ?? Date.now()
 
   // Sorted newest first, so the date groups come out in order.
   const groups: { label: string; chats: HistoryChat[] }[] = []
-  for (const chat of history) {
+  for (const chat of listed) {
     const label = chat.group ?? dateGroup(chat.updatedAt, time)
     const group = groups.find((g) => g.label === label)
     if (group) group.chats.push(chat)
     else groups.push({ label, chats: [chat] })
   }
 
+  const allLinks: ChatLink[] = [
+    ...(onViewAll ? [{ id: 'all-chats', label: viewAllLabel, icon: LibraryIcon, onSelect: onViewAll, active: viewAllActive }] : []),
+    ...links,
+  ]
+  const folds = allLinks.length > MORE_AFTER
+  const shownLinks = folds && !moreOpen ? allLinks.slice(0, MORE_AFTER - 1) : allLinks
+  const canCreate = !!(onCreateProject || onNewProject)
+
   const go = (fn: () => void) => {
     fn()
     onNavigate?.()
   }
+  const startProject = () => (onNewProject ? onNewProject() : setCreating(true))
 
   const row = (chat: HistoryChat) => (
     <ChatRow
@@ -432,17 +567,146 @@ export function ChatHistory({
     />
   )
 
+  const projectRow = (project: HistoryProject) => {
+    const mine = sorted.filter((c) => c.projectId === project.id)
+    const open = !collapsed.includes(project.id)
+    const toggle = () => setCollapsed((c) => (open ? [...c, project.id] : c.filter((id) => id !== project.id)))
+    const hasMenu = !!(onNewChatInProject || onEditProject || onDeleteProject)
+    const menu = (kit: MenuKit) => (
+      <ProjectMenuItems
+        kit={kit}
+        onNewChat={onNewChatInProject && (() => go(() => onNewChatInProject(project.id)))}
+        onEdit={onEditProject && (() => onEditProject(project.id))}
+        onDelete={onDeleteProject && (() => setDeleteProjectId(project.id))}
+      />
+    )
+    // The folder turns into the fold chevron on hover.
+    const head = (
+      <div
+        data-active={project.id === activeProjectId}
+        className="group/row hover:bg-sidebar-accent data-[active=true]:bg-sidebar-accent flex h-7 min-w-0 items-center rounded-md"
+      >
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-label={`${open ? 'Collapse' : 'Expand'} ${project.name}`}
+          onClick={toggle}
+          className="focus-visible:ring-ring/40 grid size-7 shrink-0 place-items-center rounded-md outline-none focus-visible:ring-2"
+        >
+          <HugeiconsIcon
+            icon={open && mine.length ? FolderOpenIcon : Folder01Icon}
+            strokeWidth={2}
+            className="size-3.5 group-hover/row:hidden group-focus-within/row:hidden"
+            style={{ color: project.colour }}
+          />
+          <HugeiconsIcon
+            icon={ArrowRight01Icon}
+            strokeWidth={2}
+            className={cn('text-muted-foreground hidden size-3 transition-transform group-hover/row:block group-focus-within/row:block', open && 'rotate-90')}
+          />
+        </button>
+        <button
+          type="button"
+          onClick={onOpenProject ? () => go(() => onOpenProject(project.id)) : toggle}
+          aria-current={project.id === activeProjectId ? 'page' : undefined}
+          className={cn(
+            'focus-visible:ring-ring/40 flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md text-left text-xs outline-none focus-visible:ring-2',
+            hasMenu ? 'pr-1' : 'pr-2',
+          )}
+        >
+          <span className="min-w-0 flex-1 truncate">{project.name}</span>
+          <span className="text-muted-foreground text-[11px] tabular-nums" aria-label={plural(mine.length, 'chat')}>{mine.length}</span>
+        </button>
+        {hasMenu && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                aria-label={`Options for ${project.name}`}
+                className="text-muted-foreground mr-1 opacity-0 group-focus-within/row:opacity-100 group-hover/row:opacity-100 data-[state=open]:opacity-100 [@media(hover:none)]:opacity-100"
+              >
+                <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-52">{menu(DROPDOWN_MENU_KIT)}</DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    )
+    return (
+      <div key={project.id}>
+        {hasMenu ? (
+          <ContextMenu>
+            <ContextMenuTrigger asChild>{head}</ContextMenuTrigger>
+            <ContextMenuContent className="w-52">{menu(CONTEXT_MENU_KIT)}</ContextMenuContent>
+          </ContextMenu>
+        ) : head}
+        {open && mine.length > 0 && (
+          <div className="border-border ml-[13px] grid gap-px border-l pl-1.5">{mine.map(row)}</div>
+        )}
+      </div>
+    )
+  }
+
+  // The Chats options: by date or one list, and which type to show.
+  const options = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconAction
+          label="Chat list options"
+          icon={SlidersHorizontalIcon}
+          size="icon-xs"
+          className={cn(filter && 'text-primary')}
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuLabel>View</DropdownMenuLabel>
+        <DropdownMenuCheckboxItem
+          checked={byDate}
+          onCheckedChange={(on) => {
+            setByDateState(!!on)
+            onGroupByDateChange?.(!!on)
+          }}
+        >
+          Group by date
+        </DropdownMenuCheckboxItem>
+        {shownTypes.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>Show</DropdownMenuLabel>
+            <DropdownMenuRadioGroup value={filter ? show : 'all'} onValueChange={setShow}>
+              <DropdownMenuRadioItem value="all">
+                <HugeiconsIcon icon={BubbleChatIcon} strokeWidth={2} /> All chats
+              </DropdownMenuRadioItem>
+              {shownTypes.map((t) => (
+                <DropdownMenuRadioItem key={t.value} value={t.value}>
+                  <TypeMark type={t} /> {t.label}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+
   return (
     <div className={cn('flex h-full min-h-0 flex-col', className)}>
-      <div className="grid gap-2 p-2">
+      <div className="grid gap-px p-2">
         {(onNewChat || onClose) && (
-          <div className="flex items-center gap-1">
+          <div className="mb-1 flex items-center gap-1">
             {onNewChat && (
-              <Button ref={setNewChatRef} variant="outline" className="min-w-0 flex-1 justify-start" onClick={() => go(onNewChat)}>
-                <HugeiconsIcon icon={PencilEdit02Icon} strokeWidth={2} data-icon="inline-start" />
-                {newChatLabel}
+              <button
+                ref={setNewChatRef}
+                type="button"
+                onClick={() => go(onNewChat)}
+                className="bg-background/60 hover:bg-background focus-visible:ring-ring/40 flex h-8 min-w-0 flex-1 items-center gap-2 rounded-lg border px-2 text-left text-xs font-medium shadow-xs outline-none focus-visible:ring-2"
+              >
+                <HugeiconsIcon icon={newChatIcon} strokeWidth={2} className="size-3.5 shrink-0" />
+                <span className="truncate">{newChatLabel}</span>
                 {newChatShortcut && <span className="ml-auto flex items-center">{newChatShortcut}</span>}
-              </Button>
+              </button>
             )}
             {onClose && (
               <Button variant="ghost" size="icon" aria-label="Close sidebar" className={cn(!onNewChat && 'ml-auto')} onClick={onClose}>
@@ -451,91 +715,93 @@ export function ChatHistory({
             )}
           </div>
         )}
-        <SearchField value={query} onChange={setQuery} placeholder={searchPlaceholder} label="Search chats by title" className="text-xs" />
+        {searching || query ? (
+          // Leaving the box empty puts the row back.
+          <div onBlur={(e) => !query && !e.currentTarget.contains(e.relatedTarget) && setSearching(false)}>
+            <SearchField value={query} onChange={setQuery} placeholder={searchPlaceholder} label="Search chats by title" autoFocus className="text-xs" />
+          </div>
+        ) : (
+          <NavItem icon={Search01Icon} label={searchLabel} onClick={() => setSearching(true)} />
+        )}
+        {shownLinks.map((link) => (
+          <NavItem key={link.id} icon={link.icon} label={link.label} active={link.active} onClick={() => go(link.onSelect)} />
+        ))}
+        {folds && (
+          <NavItem
+            icon={moreOpen ? ArrowDown01Icon : ArrowRight01Icon}
+            label={moreOpen ? 'Less' : 'More'}
+            onClick={() => setMoreOpen((o) => !o)}
+            className="text-muted-foreground"
+          />
+        )}
       </div>
 
       <nav aria-label="Chats" className="min-h-0 flex-1 overflow-y-auto px-2 pb-2">
         {q ? (
           <section aria-label="Search results">
-            <GroupLabel>{results.length ? plural(results.length, 'result') : 'Results'}</GroupLabel>
-            {results.map(row)}
-            {!results.length && <p className="text-muted-foreground px-2 py-3 text-xs">No chats match “{query.trim()}”.</p>}
+            <NavGroup title={results.length ? plural(results.length, 'result') : 'Results'} foldable={false} className="mt-1">
+              {results.map(row)}
+              {!results.length && <p className="text-muted-foreground px-2 py-3 text-xs">No chats match “{query.trim()}”.</p>}
+            </NavGroup>
           </section>
         ) : (
           <>
-            {projects && (projects.length > 0 || onCreateProject) && (
+            {projects && (projects.length > 0 || canCreate) && (
               <section aria-label="Projects">
-                <GroupLabel
-                  action={onCreateProject && (
-                    <Button variant="ghost" size="icon-xs" aria-label="New project" className="text-muted-foreground" onClick={() => setCreating(true)}>
-                      <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />
-                    </Button>
-                  )}
+                <NavGroup
+                  title="Projects"
+                  className="mt-1"
+                  action={canCreate && <IconAction label="New project" icon={Add01Icon} size="icon-xs" onClick={startProject} />}
                 >
-                  Projects
-                </GroupLabel>
-                {creating && onCreateProject && (
-                  <div className="flex h-7 items-center gap-1.5 px-1">
-                    <HugeiconsIcon icon={Folder01Icon} strokeWidth={2} className="text-muted-foreground ml-1 size-3.5 shrink-0" />
-                    <RenameInput
-                      initial=""
-                      label="Project name"
-                      onDone={(name) => {
-                        setCreating(false)
-                        if (name) go(() => onCreateProject(name))
-                      }}
-                    />
-                  </div>
-                )}
-                {projects.map((project) => {
-                  const mine = sorted.filter((c) => c.projectId === project.id)
-                  const open = !collapsed.includes(project.id)
-                  const toggle = () => setCollapsed((c) => (open ? [...c, project.id] : c.filter((id) => id !== project.id)))
-                  return (
-                    <div key={project.id}>
-                      <div className={cn('flex h-7 min-w-0 items-center rounded-md', project.id === activeProjectId ? 'bg-accent' : 'hover:bg-accent/60')}>
-                        <button
-                          type="button"
-                          aria-expanded={open}
-                          aria-label={`${open ? 'Collapse' : 'Expand'} ${project.name}`}
-                          onClick={toggle}
-                          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/30 grid h-7 w-5 shrink-0 place-items-center rounded-md outline-none focus-visible:ring-2"
-                        >
-                          <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className={cn('size-3 transition-transform', open && 'rotate-90')} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={onOpenProject ? () => go(() => onOpenProject(project.id)) : toggle}
-                          aria-current={project.id === activeProjectId ? 'page' : undefined}
-                          className="focus-visible:ring-ring/30 flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md pr-2 text-left text-xs outline-none focus-visible:ring-2"
-                        >
-                          <HugeiconsIcon icon={open && mine.length ? FolderOpenIcon : Folder01Icon} strokeWidth={2} className="size-3.5 shrink-0" style={{ color: project.colour }} />
-                          <span className="min-w-0 flex-1 truncate font-medium">{project.name}</span>
-                          <span className="text-muted-foreground text-[11px] tabular-nums" aria-label={plural(mine.length, 'chat')}>{mine.length}</span>
-                        </button>
-                      </div>
-                      {open && mine.length > 0 && (
-                        <div className="border-border ml-[13px] border-l pl-1.5">{mine.map(row)}</div>
-                      )}
+                  {creating && onCreateProject && (
+                    <div className="flex h-7 items-center gap-1.5 px-1">
+                      <HugeiconsIcon icon={Folder01Icon} strokeWidth={2} className="text-muted-foreground ml-1 size-3.5 shrink-0" />
+                      <RenameInput
+                        initial=""
+                        label="Project name"
+                        onDone={(name) => {
+                          setCreating(false)
+                          if (name) go(() => onCreateProject(name))
+                        }}
+                      />
                     </div>
-                  )
-                })}
+                  )}
+                  {projects.map(projectRow)}
+                  {!projects.length && !creating && (
+                    <NavItem icon={FolderAddIcon} label="Group chats into a project" onClick={startProject} className="text-muted-foreground" />
+                  )}
+                </NavGroup>
               </section>
             )}
 
             {pinned.length > 0 && (
-              <section aria-label="Pinned" className="mt-3">
-                <GroupLabel>Pinned</GroupLabel>
-                {pinned.map(row)}
+              <section aria-label="Pinned">
+                <NavGroup title="Pinned" count={pinned.length}>{pinned.map(row)}</NavGroup>
               </section>
             )}
 
-            {groups.map((group) => (
-              <section key={group.label} aria-label={group.label} className="mt-3">
-                <GroupLabel>{group.label}</GroupLabel>
-                {group.chats.map(row)}
+            {history.length > 0 && (
+              <section aria-label={historyLabel}>
+                <NavGroup title={filter ? `${historyLabel} · ${filter.label}` : historyLabel} action={options}>
+                  {byDate
+                    ? groups.map((group) => (
+                      <div key={group.label} role="group" aria-label={group.label} className="grid gap-px">
+                        <DateLabel>{group.label}</DateLabel>
+                        {group.chats.map(row)}
+                      </div>
+                    ))
+                    : listed.map(row)}
+                  {!listed.length && (
+                    <p className="text-muted-foreground px-2 py-2 text-xs">
+                      No {filter?.label ?? ''} chats here.{' '}
+                      <button type="button" onClick={() => setShow('all')} className="text-foreground underline-offset-2 hover:underline">
+                        Show all
+                      </button>
+                    </p>
+                  )}
+                </NavGroup>
               </section>
-            ))}
+            )}
             {!chats.length && <p className="text-muted-foreground px-2 py-3 text-xs">{emptyText}</p>}
           </>
         )}
@@ -550,6 +816,30 @@ export function ChatHistory({
           onClose={() => setDeleteId(null)}
           onConfirm={() => toDelete && onDeleteChat(toDelete.id)}
           onDeleted={() => newChatButton.current?.focus()}
+        />
+      )}
+      {onDeleteProject && (
+        <DeleteConfirm
+          open={!!projectToDelete}
+          onOpenChange={(next) => !next && setDeleteProjectId(null)}
+          title="Delete this project?"
+          description={(
+            <>
+              “{deletingProject.current.name}” and its instructions will be deleted.{' '}
+              {deletingProject.current.chats === 0
+                ? 'It has no chats.'
+                : deletingProject.current.chats === 1
+                  ? 'Its chat moves to your history.'
+                  : `Its ${deletingProject.current.chats} chats move to your history.`}
+            </>
+          )}
+          confirmLabel="Delete project"
+          icon={null}
+          onConfirm={() => {
+            if (projectToDelete) onDeleteProject(projectToDelete.id)
+            setDeleteProjectId(null)
+          }}
+          afterConfirm={() => newChatButton.current?.focus()}
         />
       )}
     </div>

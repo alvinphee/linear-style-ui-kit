@@ -70,9 +70,12 @@ export type ErpPage = {
   badge?: (data: Data) => number
   // Only in the ERP + AI edition (see edition.ts).
   assistant?: boolean
+  // Left out of the sidebar's page list, but still a route (All chats, which
+  // the Assistant's own part of the sidebar links to).
+  hidden?: boolean
   // The page's own part of the sidebar, under its module's pages, in place
-  // of Recent (the Assistant's chat history).
-  sidebar?: ComponentType<{ onNavigate?: () => void }>
+  // of Recent (the Assistant's chat history). Gets the open page's id.
+  sidebar?: ComponentType<{ onNavigate?: () => void; pageId?: string }>
 }
 
 export type ErpModule = {
