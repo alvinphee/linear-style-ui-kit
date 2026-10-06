@@ -1,6 +1,8 @@
 import {
-  Alert02Icon, DeliveryTruck01Icon, Door01Icon, ForkliftIcon, IdCardIcon, ReceiptIcon, SmileIcon, Store01Icon, UserCheck01Icon,
+  Alert02Icon, Building03Icon, Calendar03Icon, ClipboardCheckIcon, DeliveryTruck01Icon, Door01Icon, ForkliftIcon, IdCardIcon,
+  ReceiptIcon, Shield01Icon, SmileIcon, Store01Icon, UserCheck01Icon,
 } from '@hugeicons/core-free-icons'
+import type { FormIconOption } from '@/blocks/form-builder'
 import type { FormDefinition } from '@/blocks/form-renderer'
 import { erpHref } from '../route'
 
@@ -188,6 +190,15 @@ export const ERP_FORMS: ErpForm[] = [
 ]
 
 export const formById = (id: string | null | undefined) => ERP_FORMS.find((f) => f.id === id)
+
+// The icons the form builder offers.
+export const FORM_ICONS: FormIconOption[] = [
+  { id: 'clipboard', label: 'Checklist', icon: ClipboardCheckIcon }, { id: 'truck', label: 'Vehicle', icon: DeliveryTruck01Icon },
+  { id: 'forklift', label: 'Forklift', icon: ForkliftIcon }, { id: 'door', label: 'Site', icon: Door01Icon }, { id: 'store', label: 'Stock', icon: Store01Icon },
+  { id: 'receipt', label: 'Claim', icon: ReceiptIcon }, { id: 'smile', label: 'Survey', icon: SmileIcon }, { id: 'id', label: 'Visitor', icon: IdCardIcon },
+  { id: 'person', label: 'People', icon: UserCheck01Icon }, { id: 'alert', label: 'Incident', icon: Alert02Icon }, { id: 'shield', label: 'Safety', icon: Shield01Icon },
+  { id: 'building', label: 'Facilities', icon: Building03Icon }, { id: 'calendar', label: 'Schedule', icon: Calendar03Icon },
+]
 export const formsOf = (moduleId: string) => ERP_FORMS.filter((f) => f.module === moduleId)
 
 // Every form opens from the Forms module's catalogue, so one link works

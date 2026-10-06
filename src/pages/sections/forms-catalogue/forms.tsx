@@ -1,4 +1,8 @@
-import { DeliveryTruck01Icon, Door01Icon, IdCardIcon, ReceiptIcon, SmileIcon } from '@hugeicons/core-free-icons'
+import {
+  Alert02Icon, Building03Icon, Calendar03Icon, ClipboardCheckIcon, DeliveryTruck01Icon, Door01Icon, ForkliftIcon, IdCardIcon,
+  ReceiptIcon, Shield01Icon, SmileIcon, Store01Icon, UserCheck01Icon,
+} from '@hugeicons/core-free-icons'
+import type { FormIconOption } from '@/blocks/form-builder'
 import type { FormValues } from '@/blocks/form-fields'
 import { fieldsOf, isCheckField, resultOf, scoreOf, type FormDefinition, type FormSubmission } from '@/blocks/form-renderer'
 import { seededRandom } from '@/lib/random'
@@ -176,6 +180,15 @@ export const FORMS: FormDefinition[] = [
 ]
 
 export const formById = (id: string) => FORMS.find((f) => f.id === id)
+
+// The icons the form builder offers.
+export const FORM_ICONS: FormIconOption[] = [
+  { id: 'clipboard', label: 'Checklist', icon: ClipboardCheckIcon }, { id: 'truck', label: 'Vehicle', icon: DeliveryTruck01Icon },
+  { id: 'forklift', label: 'Forklift', icon: ForkliftIcon }, { id: 'door', label: 'Site', icon: Door01Icon }, { id: 'store', label: 'Stock', icon: Store01Icon },
+  { id: 'receipt', label: 'Claim', icon: ReceiptIcon }, { id: 'smile', label: 'Survey', icon: SmileIcon }, { id: 'id', label: 'Visitor', icon: IdCardIcon },
+  { id: 'person', label: 'People', icon: UserCheck01Icon }, { id: 'alert', label: 'Incident', icon: Alert02Icon }, { id: 'shield', label: 'Safety', icon: Shield01Icon },
+  { id: 'building', label: 'Facilities', icon: Building03Icon }, { id: 'calendar', label: 'Schedule', icon: Calendar03Icon },
+]
 
 /* ---------- Past submissions ---------- */
 

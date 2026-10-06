@@ -186,6 +186,11 @@ checklist, an expense claim and a survey are all forms to them.
 | Review step | The dialog before a submission goes: the score and the failed checks, then Submit |
 | Draft (form) | What has been entered so far, kept in this browser under the form and its context until submitted |
 | Sign-off | The last section of a form: a name and a signature |
+| Form builder | Where a form is made or edited: its details, sections and fields, with a live preview. The block is `form-builder` |
+| Field kind | What a field asks for: short text, number, date, dropdown, choice, tick box, check, yes / no, rating, photo, signature |
+| Form version | Each save of a form's definition. A submission keeps the version it was filled in against |
+| Submission feed | Submissions as cards grouped by day, newest first, instead of a table. The block is `submission-feed` |
+| Score bar | A submission's checks as one bar in three colours: passed, failed, N/A |
 
 ## ERP modules
 | Module | Covers |

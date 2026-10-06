@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { COMPANIES, SEED, type Company } from './data'
+import { ERP_FORMS, type ErpForm } from './forms/definitions'
 import { TODAY } from './format'
 import type { Data, EntityId, Role, Row, Value } from './types'
 
@@ -37,6 +38,8 @@ type ErpState = {
   session: Session | null
   company: Company | null
   data: Data
+  // The forms in the catalogue: the samples, plus any made or edited in the builder this visit.
+  forms: ErpForm[]
   favourites: string[]
   startPage: StartPage
   groupByDate: boolean
@@ -57,6 +60,7 @@ type ErpState = {
   add: (entity: EntityId, row: Row) => void
   update: (entity: EntityId, ids: string[], patch: Record<string, Value>) => void
   remove: (entity: EntityId, ids: string[]) => void
+  saveForm: (form: ErpForm) => void
   toggleFavourite: (moduleId: string) => void
   setStartPage: (page: StartPage) => void
   setGroupByDate: (byDate: boolean) => void
@@ -78,6 +82,7 @@ let events = 0
 export function ErpProvider({ children }: { children: ReactNode }) {
   const [saved, setSaved] = useState<Saved>(load)
   const [data, setData] = useState<Data>(SEED)
+  const [forms, setForms] = useState<ErpForm[]>(ERP_FORMS)
   const [recent, setRecent] = useState<Recent[]>([])
   const [peek, setPeek] = useState<ErpState['peek']>(null)
   const [creating, setCreating] = useState<ErpState['creating']>(null)
@@ -110,6 +115,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     session: saved.session,
     company,
     data,
+    forms,
     favourites: saved.favourites,
     startPage: saved.startPage,
     groupByDate: saved.groupByDate,
@@ -143,6 +149,10 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       setPeek((p) => (p && ids.includes(p.id) ? null : p))
       for (const id of ids) audit('deleted', id)
     },
+    saveForm: (form) => {
+      setForms((all) => (all.some((f) => f.id === form.id) ? all.map((f) => (f.id === form.id ? form : f)) : [...all, form]))
+      audit('saved form', form.name)
+    },
     toggleFavourite: (moduleId) => setSaved((s) => ({
       ...s,
       favourites: s.favourites.includes(moduleId) ? s.favourites.filter((m) => m !== moduleId) : [...s.favourites, moduleId],
@@ -164,7 +174,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     endCreate: () => setCreating(null),
     setPaletteOpen,
     setCopilotOpen,
-  }), [saved, company, data, recent, peek, creating, paletteOpen, copilotOpen, pageTitle, returnTo])
+  }), [saved, company, data, forms, recent, peek, creating, paletteOpen, copilotOpen, pageTitle, returnTo])
 
   return <ErpContext.Provider value={value}>{children}</ErpContext.Provider>
 }

@@ -88,6 +88,8 @@ linear-style-ui-kit/
     │   │                      heatmap, slot picker
     │   ├── filter-bar/        filter menu, filter chips, saved views
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
+    │   ├── form-builder.tsx   makes or edits a form definition: details, sections, a field of any
+    │   │                      kind with its settings, paste checks, a live phone preview
     │   ├── form-fields.tsx    the field schema and renderer shared by the form dialog and the
     │   │                      form renderer: text, select, radio… and check, yes-no, rating,
     │   │                      photo, signature
@@ -107,6 +109,8 @@ linear-style-ui-kit/
     │   ├── period-picker.tsx  period switch, compare, date range picker
     │   ├── record-sheet.tsx   record peek: one record in a centred modal (center peek) or a panel from the right (side peek)
     │   ├── sign-in.tsx        sign-in page parts: form, SSO, aside, footer
+    │   ├── submission-feed.tsx  submissions as cards by day (score bar, failed checks, who, when)
+    │   │                      and the day's numbers; the modern alternative to the records table
     │   └── workspace-switcher.tsx  workspace or company switcher
     ├── components/
     │   ├── ui/                shadcn components (ours to edit)
@@ -307,10 +311,14 @@ session, company and starred modules are kept in the browser.
 - Forms (`forms/`): every form in one catalogue (Forms › All forms), and
   each module's own on its Forms page (Inventory, Sales, HR,
   Administration). The kit's `FormsCatalogue` lists them; `FormRenderer`
-  fills one in; a submission is a record (Forms › Submissions, with Failed /
-  Passed / Today views) whose peek shows every answer. Each form's QR button
-  prints the code that opens it; the Scan button reads one. Ask AI answers
-  "Which checks failed this week?" from the submissions.
+  fills one in; a submission is a record whose peek shows every answer.
+  Forms › Submissions shows them as cards (`SubmissionFeed`, with the day's
+  numbers) or as the records table, switched in the header. Forms › New
+  form is the `FormBuilder` (`/forms/builder`, or `/forms/builder/<id>` to
+  edit one from the catalogue's pencil); saved forms live in the store for
+  the visit, and an edit makes a new version. Each form's QR button prints
+  the code that opens it; the Scan button reads one. Ask AI answers "Which
+  checks failed this week?" from the submissions.
 - Ask AI (`Copilot.tsx`, with its answers, chats and views in `assistant/`)
   answers from the live records: about 25 kinds of question, scripted, no
   model. Record numbers in answers open the record's peek, with Ask AI still
@@ -401,8 +409,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 124 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
-components, 30 blocks and 9 lib files. Which level becomes which item:
+needs. 126 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
+components, 32 blocks and 9 lib files. Which level becomes which item:
 `docs/architecture.md`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes

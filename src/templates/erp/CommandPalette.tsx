@@ -8,7 +8,6 @@ import {
 import { IconMark } from '@/components/mark'
 import { useTheme } from '@/lib/theme'
 import { DEMO_USERS, ROLE_LABEL } from './data'
-import { ERP_FORMS } from './forms/definitions'
 import { useAssistant } from './assistant/store'
 import { edition } from './edition'
 import { pageFor, pagesOf, specFor } from './modules'
@@ -39,7 +38,7 @@ const CREATE: { entity: EntityId; label: string }[] = [
 // create something, change a setting, or ask AI what you typed, without
 // leaving the keyboard.
 export function CommandPalette({ module }: { module: ErpModule }) {
-  const { paletteOpen, setPaletteOpen, session, data, openPeek, startCreate, setRole, signOut, setCopilotOpen } = useErp()
+  const { paletteOpen, setPaletteOpen, session, data, forms: allForms, openPeek, startCreate, setRole, signOut, setCopilotOpen } = useErp()
   const { setTheme } = useTheme()
   const { send } = useAssistant()
   const [query, setQuery] = useState('')
@@ -82,7 +81,7 @@ export function CommandPalette({ module }: { module: ErpModule }) {
   // Forms, by name or category: open one to fill it in.
   const q = query.trim().toLowerCase()
   const forms = q.length >= 2 && allowed.has('forms')
-    ? ERP_FORMS.filter((f) => f.name.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q)).slice(0, 5)
+    ? allForms.filter((f) => f.name.toLowerCase().includes(q) || f.category?.toLowerCase().includes(q)).slice(0, 5)
     : []
 
   const creates = CREATE.filter((c) => {

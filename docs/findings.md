@@ -646,3 +646,25 @@ polished) and be resizable, and for the other side slide-outs to be modals.
 - **Radix toggle items re-render on every answer,** so element refs taken
   before a click are stale after it. When driving the page from a script,
   answer in one pass or re-find after each click.
+
+## Form builder and the submission feed (added 2026-10-07)
+- **A builder is an editor for the definition, nothing more.** FormBuilder
+  takes a `FormDefinition`, edits it, and hands it back on Save. It never
+  touches storage, so the kit page keeps forms in React state and the ERP
+  keeps them in its store; a real app would POST the same object.
+- **Keys are made once and kept.** New fields get a temporary `new-…` key
+  while they are edited and a slug of their label on Save, unique within
+  the form. Fields that already have a key keep it, so an edited form still
+  reads its old submissions. Editing bumps the version instead.
+- **A component declared inside a component remounts on every render.**
+  The renderer's field control did this and lost focus after one letter
+  (fixed the day before); the builder's rows are plain functions and
+  separate components from the start.
+- **Container queries, not breakpoints, for anything that can sit in a
+  frame.** The radio grid and the builder's two panes switch on `@sm` /
+  `@3xl`, so the same form reads right in a 375px frame, a dialog and a
+  wide page.
+- **The feed is the glanceable view, the table the working one.** Cards
+  carry the result, a three-colour score bar, the failed checks as chips
+  and who and when; the table keeps sorting, filters, bulk actions and CSV.
+  A view switch in the page header offers both.

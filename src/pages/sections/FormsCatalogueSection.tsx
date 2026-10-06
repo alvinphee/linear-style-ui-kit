@@ -1,14 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowLeft01Icon, ArrowRight01Icon, QrCodeIcon } from '@hugeicons/core-free-icons'
+import { Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, LayoutGridIcon, LeftToRightListBulletIcon, QrCodeIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { FormBuilder, blankForm } from '@/blocks/form-builder'
 import {
   FormRenderer, FormSubmissionView, FormSubmitted, RESULT_LABEL, RESULT_TONE, summarise, type FormDefinition, type FormSubmission,
 } from '@/blocks/form-renderer'
 import { FormsCatalogue } from '@/blocks/forms-catalogue'
 import { RecordSheet, RecordSheetContent } from '@/blocks/record-sheet'
+import { SubmissionFeed, SubmissionStats, type FeedSubmission } from '@/blocks/submission-feed'
+import { Panel } from '@/components/panel'
 import { StatusBadge } from '@/components/status-badge'
+import { ViewSwitch, type ViewOption } from '@/components/view-switch'
 import { Button } from '@/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Label } from '@/components/ui/label'
@@ -17,20 +21,27 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { formatRelativeDate, formatShortDate, formatTime } from '@/lib/format'
 import { navigate, usePath } from '@/lib/router'
 import { plural } from '@/lib/text'
-import { Panel } from '@/components/panel'
 import { Section } from './shared'
-import { FORMS, formById, sampleSubmissions } from './forms-catalogue/forms'
+import { FORMS, FORM_ICONS, sampleSubmissions } from './forms-catalogue/forms'
 
 // Forms a business fills in on the spot, from one catalogue: pick a form (or
 // scan its QR code, which carries a link straight to it), fill it in, submit
-// it, and read it back later. Three blocks: the catalogue, the renderer and
-// the submission view; the sample forms are in forms-catalogue/forms.tsx.
-// The page's address carries the open form (#/forms-catalogue/vehicle-check
-// ?context=SGX%204821), so a QR code can open it.
+// it, and read it back later. New forms are made in the builder. Four
+// blocks: the catalogue, the renderer, the builder and the submission feed;
+// the sample forms are in forms-catalogue/forms.tsx. The page's address
+// carries what is open: a form to fill in (#/forms-catalogue/vehicle-check
+// ?context=SGX%204821, what a QR code holds), the builder (…/new) or a form
+// in the builder (…/edit/vehicle-check).
 
 const PAGE = '/forms-catalogue'
 
-type View = 'all' | 'failed' | 'today'
+type Filter = 'all' | 'failed' | 'today'
+type Layout = 'cards' | 'list'
+
+const LAYOUTS: ViewOption<Layout>[] = [
+  { value: 'cards', label: 'Cards', icon: LayoutGridIcon },
+  { value: 'list', label: 'List', icon: LeftToRightListBulletIcon },
+]
 
 const formPath = (form: FormDefinition, context?: string) => `${PAGE}/${form.id}${context ? `?context=${encodeURIComponent(context)}` : ''}`
 const formLink = (form: FormDefinition, context?: string) => `${window.location.origin}${window.location.pathname}#${formPath(form, context)}`
@@ -38,15 +49,21 @@ const formLink = (form: FormDefinition, context?: string) => `${window.location.
 export default function FormsCatalogueSection() {
   const path = usePath()
   const [route, query = ''] = path.split('?')
-  const formId = route.split('/')[2]
-  const form = formId ? formById(decodeURIComponent(formId)) : undefined
+  const [, , first, second] = route.split('/')
+  const [forms, setForms] = useState<FormDefinition[]>(FORMS)
+  const formsById = useMemo(() => Object.fromEntries(forms.map((f) => [f.id, f])), [forms])
+
+  const building = first === 'new' || first === 'edit'
+  const editing = first === 'edit' && second ? formsById[decodeURIComponent(second)] : undefined
+  const form = !building && first ? formsById[decodeURIComponent(first)] : undefined
   const context = new URLSearchParams(query).get('context') ?? undefined
 
-  const [submissions, setSubmissions] = useState(sampleSubmissions)
+  const [submissions, setSubmissions] = useState<FeedSubmission[]>(() => sampleSubmissions().map((s) => ({ ...s, id: s.id! })))
   const [done, setDone] = useState<FormSubmission | null>(null)
-  const [peek, setPeek] = useState<FormSubmission | null>(null)
+  const [peek, setPeek] = useState<FeedSubmission | null>(null)
   const [phone, setPhone] = useState(false)
-  const [view, setView] = useState<View>('all')
+  const [filter, setFilter] = useState<Filter>('all')
+  const [layout, setLayout] = useState<Layout>('cards')
 
   // A new form opened: the success screen of the last one goes.
   useEffect(() => setDone(null), [form, context])
@@ -62,7 +79,7 @@ export default function FormsCatalogueSection() {
   }, [submissions])
 
   const today = new Date().toDateString()
-  const shown = submissions.filter((s) => (view === 'failed' ? s.result === 'failed' : view === 'today' ? new Date(s.submittedAt).toDateString() === today : true))
+  const shown = submissions.filter((s) => (filter === 'failed' ? s.result === 'failed' : filter === 'today' ? new Date(s.submittedAt).toDateString() === today : true))
 
   function scanned(value: string) {
     const at = value.indexOf('#/')
@@ -75,27 +92,67 @@ export default function FormsCatalogueSection() {
   }
 
   function submit(submission: FormSubmission) {
-    const next = Math.max(1000, ...submissions.map((s) => Number(s.id?.replace(/\D/g, '')) || 0)) + 1
-    const saved = { ...submission, id: `SUB-${next}` }
+    const next = Math.max(1000, ...submissions.map((s) => Number(s.id.replace(/\D/g, '')) || 0)) + 1
+    const saved: FeedSubmission = { ...submission, id: `SUB-${next}` }
     setSubmissions((all) => [saved, ...all])
     setDone(saved)
     toast.success(`Submitted ${saved.id}`, { description: summarise(form!, saved) })
   }
 
+  function saveForm(saved: FormDefinition) {
+    const exists = forms.some((f) => f.id === saved.id)
+    setForms((all) => (exists ? all.map((f) => (f.id === saved.id ? { ...saved, version: (f.version ?? 1) + 1 } : f)) : [...all, saved]))
+    toast.success(exists ? `Saved ${saved.name}` : `Created ${saved.name}`, {
+      description: exists ? 'A new version. Old submissions keep the fields they were filled in with.' : 'It is in the catalogue, with its own QR code.',
+      action: { label: 'Fill it in', onClick: () => navigate(formPath(saved)) },
+    })
+    navigate(PAGE)
+  }
+
   const catalogue = (
-    <Panel key="catalogue" title="Forms catalogue" note="FormsCatalogue: search, QR codes, a scanner" className="lg:col-span-2">
+    <Panel key="catalogue" title="Forms catalogue" note="FormsCatalogue: search, QR codes, a scanner, New form" className="lg:col-span-2">
       <FormsCatalogue
-        forms={FORMS}
+        forms={forms}
         meta={meta}
         onOpen={(f) => navigate(formPath(f))}
+        onEdit={(f) => navigate(`${PAGE}/edit/${f.id}`)}
         href={formLink}
         brand={{ company: 'Northwind Trading', mark: 'initials' }}
         onScan={scanned}
+        actions={
+          <Button onClick={() => navigate(`${PAGE}/new`)}>
+            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> New form
+          </Button>
+        }
       />
     </Panel>
   )
 
-  const fill = (
+  const builder = building && (
+    <Panel
+      key="builder"
+      title={editing ? `Edit ${editing.name}` : 'New form'}
+      note="FormBuilder: details, sections, fields, a live preview"
+      action={
+        <Button variant="ghost" size="xs" onClick={() => navigate(PAGE)}>
+          <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} data-icon="inline-start" /> Catalogue
+        </Button>
+      }
+      className="lg:col-span-2"
+    >
+      <FormBuilder
+        key={editing?.id ?? 'new'}
+        initial={editing ?? blankForm()}
+        icons={FORM_ICONS}
+        categories={[...new Set(forms.map((f) => f.category).filter((c): c is string => !!c))]}
+        onSave={saveForm}
+        onCancel={() => navigate(PAGE)}
+        saveLabel={editing ? 'Save changes' : 'Create form'}
+      />
+    </Panel>
+  )
+
+  const fill = !building && (
     <Panel
       key="fill"
       title={form ? form.name : 'Fill in a form'}
@@ -118,7 +175,7 @@ export default function FormsCatalogueSection() {
           <div className={cn('@container relative overflow-y-auto', phone ? 'bg-background mx-auto h-[640px] w-[375px] max-w-full rounded-xl border shadow-sm' : 'max-h-[70vh] rounded-b-lg')}>
             {done ? (
               <FormSubmitted form={form} submission={done} className="h-full">
-                <Button size="sm" onClick={() => setPeek(done)}>Open {done.id}</Button>
+                <Button size="sm" onClick={() => setPeek(done as FeedSubmission)}>Open {done.id}</Button>
                 <Button size="sm" variant="outline" onClick={() => setDone(null)}>Fill in another</Button>
                 <Button size="sm" variant="ghost" onClick={() => navigate(PAGE)}>Back to the catalogue</Button>
               </FormSubmitted>
@@ -159,21 +216,29 @@ export default function FormsCatalogueSection() {
     <Panel
       key="submissions"
       title="Submissions"
-      note={`${plural(shown.length, 'submission')}`}
+      note={layout === 'cards' ? 'SubmissionStats and SubmissionFeed' : plural(shown.length, 'submission')}
       action={
-        <ToggleGroup type="single" size="sm" variant="outline" value={view} onValueChange={(v) => v && setView(v as View)} aria-label="Show">
-          <ToggleGroupItem value="all">All</ToggleGroupItem>
-          <ToggleGroupItem value="failed">Failed</ToggleGroupItem>
-          <ToggleGroupItem value="today">Today</ToggleGroupItem>
-        </ToggleGroup>
+        <div className="flex items-center gap-2">
+          <ToggleGroup type="single" size="sm" variant="outline" value={filter} onValueChange={(v) => v && setFilter(v as Filter)} aria-label="Show">
+            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="failed">Failed</ToggleGroupItem>
+            <ToggleGroupItem value="today">Today</ToggleGroupItem>
+          </ToggleGroup>
+          <ViewSwitch views={LAYOUTS} value={layout} onChange={setLayout} label="Layout" />
+        </div>
       }
-      bodyClassName="p-0"
+      bodyClassName={layout === 'list' ? 'p-0' : undefined}
       className="lg:col-span-2"
     >
-      {shown.length ? (
+      {layout === 'cards' ? (
+        <div className="grid gap-4">
+          <SubmissionStats submissions={submissions} forms={formsById} />
+          <SubmissionFeed submissions={shown} forms={formsById} onOpen={setPeek} empty={filter === 'all' ? undefined : `Nothing ${filter === 'failed' ? 'failed' : 'today'}.`} />
+        </div>
+      ) : shown.length ? (
         <ul className="divide-y">
           {shown.map((s) => {
-            const f = formById(s.formId)
+            const f = formsById[s.formId]
             return (
               <li key={s.id}>
                 <button
@@ -197,21 +262,21 @@ export default function FormsCatalogueSection() {
         </ul>
       ) : (
         <Empty className="py-8">
-          <EmptyDescription>Nothing {view === 'failed' ? 'failed' : 'today'}.</EmptyDescription>
+          <EmptyDescription>Nothing {filter === 'failed' ? 'failed' : 'today'}.</EmptyDescription>
         </Empty>
       )}
     </Panel>
   )
 
-  const peekForm = peek ? formById(peek.formId) : undefined
+  const peekForm = peek ? formsById[peek.formId] : undefined
 
   return (
     <Section
       id="forms-catalogue"
       title="Forms catalogue"
-      description="Pick a form or scan its QR code, fill it in on a phone or a desk, and read every submission back"
+      description="Pick a form or scan its QR code, fill it in on a phone or a desk, read every submission back, and build new forms"
     >
-      {form ? [fill, catalogue, list] : [catalogue, fill, list]}
+      {building ? [builder, catalogue, list] : form ? [fill, catalogue, list] : [catalogue, fill, list]}
 
       <RecordSheet open={!!peek} onOpenChange={(open) => !open && setPeek(null)}>
         {peek && peekForm && (

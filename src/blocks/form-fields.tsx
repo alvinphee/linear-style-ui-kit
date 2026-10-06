@@ -122,7 +122,10 @@ export function fieldError(field: FormField, value: FormValue | undefined, value
     if (field.noteRequired && field.noteOnFail !== false && isBadOutcome(field, check) && !check.note?.trim()) return 'Add a note about what is wrong.'
     return field.validate?.(check, values)
   }
-  if (field.type === 'checkbox' || typeof value === 'boolean') return field.validate?.(value ?? false, values)
+  if (field.type === 'checkbox' || typeof value === 'boolean') {
+    if (field.required && value !== true) return field.requiredMessage ?? 'Tick this to continue.'
+    return field.validate?.(value ?? false, values)
+  }
   const over = overBy(field, value)
   if (over > 0) return `That is ${plural(over, 'character')} too long.`
   const text = (value ?? '').trim()

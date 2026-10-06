@@ -13,6 +13,9 @@ Status: built, 6 October 2026. What changed from the proposal:
   satisfaction survey (ratings).
 - The Components page is "Check, rating and signature" (`#/check-item`);
   the Blocks page is "Forms catalogue" (`#/forms-catalogue`).
+- Added on 7 October: the form builder (`form-builder`, New form and the
+  catalogue's Edit in both apps) and the submission feed (`submission-feed`,
+  cards with a score bar and the day's numbers, switched with the table).
 
 ## The idea
 

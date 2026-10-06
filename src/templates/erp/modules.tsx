@@ -5,6 +5,7 @@ import {
   Settings01Icon, Shield01Icon, ShoppingCart01Icon, Store01Icon, Tag01Icon, Target02Icon, UserGroupIcon,
   UserLock01Icon, UserMultipleIcon, Wallet01Icon, WarehouseIcon, Home01Icon, Calculator01Icon, PipelineIcon,
   Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon, BubbleChatIcon, ClipboardCheckIcon, ClipboardListIcon, FileValidationIcon,
+  Add01Icon,
 } from '@hugeicons/core-free-icons'
 import { CUSTOMERS, PEOPLE, VENDORS, WAREHOUSES } from './data'
 import { TODAY, addDays } from './format'
@@ -15,7 +16,7 @@ import { ModuleOverview } from './pages/Overview'
 import { OpportunityPipeline } from './pages/Pipeline'
 import { FinancialReports } from './pages/Reports'
 import { CompanySettings, Integrations, RolesPermissions } from './pages/Admin'
-import { FormsCataloguePage } from './forms/FormsPages'
+import { FormBuilderPage, FormsCataloguePage, SubmissionsPage } from './forms/FormsPages'
 import type { Data, ErpModule, ListSpec, Row } from './types'
 
 // Every module, its pages, and how each list looks. Names follow the
@@ -587,7 +588,8 @@ export const MODULES: ErpModule[] = [
     metric: (d) => `${today(d.submissions).length} submitted today · ${today(d.submissions).filter((r) => r.result === 'Failed').length} failed`,
     pages: [
       { id: 'catalogue', label: 'All forms', icon: ClipboardListIcon, render: () => <FormsCataloguePage /> },
-      { id: 'submissions', label: 'Submissions', icon: FileValidationIcon, list: list('submissions'), badge: (d) => today(d.submissions).filter((r) => r.result === 'Failed').length },
+      { id: 'submissions', label: 'Submissions', icon: FileValidationIcon, list: list('submissions'), render: () => <SubmissionsPage spec={list('submissions')} />, badge: (d) => today(d.submissions).filter((r) => r.result === 'Failed').length },
+      { id: 'builder', label: 'New form', icon: Add01Icon, render: () => <FormBuilderPage /> },
     ],
   },
   {

@@ -1,6 +1,8 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight01Icon, ClipboardCheckIcon, Link01Icon, LinkSquare02Icon, PrinterIcon, QrCodeIcon, QrCodeScanIcon } from '@hugeicons/core-free-icons'
+import {
+  ArrowRight01Icon, ClipboardCheckIcon, Link01Icon, LinkSquare02Icon, PencilEdit02Icon, PrinterIcon, QrCodeIcon, QrCodeScanIcon,
+} from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { fieldsOf, isCheckField, type FormDefinition } from '@/blocks/form-renderer'
 import { IconAction } from '@/components/icon-action'
@@ -30,10 +32,12 @@ export type FormMeta = { submissions?: number; lastAt?: string }
 export type FormQrBrand = { company?: string; mark?: QrCodeMark; logo?: ReactNode }
 
 export function FormsCatalogue({
-  forms, onOpen, href, brand, onScan, meta, search = true, actions, emptyText = 'No forms match', className,
+  forms, onOpen, onEdit, href, brand, onScan, meta, search = true, actions, emptyText = 'No forms match', className,
 }: {
   forms: FormDefinition[]
   onOpen: (form: FormDefinition) => void
+  // Opens the form in a builder. Turns the Edit buttons on.
+  onEdit?: (form: FormDefinition) => void
   // The link that opens a form, for one thing when given. Turns the QR buttons on.
   href?: (form: FormDefinition, context?: string) => string
   brand?: FormQrBrand
@@ -96,7 +100,7 @@ export function FormsCatalogue({
             {headings && <h3 className="text-muted-foreground px-0.5 text-[11px] font-medium">{g.title}</h3>}
             <ul className="bg-card divide-y rounded-lg border">
               {g.forms.map((form) => (
-                <FormRow key={form.id} form={form} meta={meta?.[form.id]} onOpen={() => onOpen(form)} onQr={href ? () => setQrFor(form) : undefined} />
+                <FormRow key={form.id} form={form} meta={meta?.[form.id]} onOpen={() => onOpen(form)} onEdit={onEdit && (() => onEdit(form))} onQr={href ? () => setQrFor(form) : undefined} />
               ))}
             </ul>
           </section>
@@ -129,7 +133,7 @@ export function FormsCatalogue({
   )
 }
 
-function FormRow({ form, meta, onOpen, onQr }: { form: FormDefinition; meta?: FormMeta; onOpen: () => void; onQr?: () => void }) {
+function FormRow({ form, meta, onOpen, onEdit, onQr }: { form: FormDefinition; meta?: FormMeta; onOpen: () => void; onEdit?: () => void; onQr?: () => void }) {
   const fields = fieldsOf(form)
   const checks = fields.filter(isCheckField).length
   const others = fields.length - checks
@@ -159,6 +163,7 @@ function FormRow({ form, meta, onOpen, onQr }: { form: FormDefinition; meta?: Fo
         <p className="text-muted-foreground truncate text-[11px] tabular-nums">{about}</p>
       </div>
       <div className="relative z-[1] flex shrink-0 items-center gap-1">
+        {onEdit && <IconAction label={`Edit ${form.name}`} icon={PencilEdit02Icon} size="icon-sm" className="text-muted-foreground hidden @md:inline-flex" onClick={onEdit} />}
         {onQr && <IconAction label={`QR code for ${form.name}`} icon={QrCodeIcon} size="icon-sm" className="text-muted-foreground" onClick={onQr} />}
         <Button variant="outline" size="sm" className="hidden @md:inline-flex" onClick={onOpen}>Open</Button>
         <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="text-muted-foreground size-3.5 @md:hidden" aria-hidden="true" />
