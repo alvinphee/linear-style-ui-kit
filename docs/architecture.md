@@ -96,9 +96,28 @@ To check again, look for: a part defined in `src/pages` or `src/templates`
 and imported by another file, markup that re-draws a kit part, and a
 function written twice.
 
-## The shadcn registry (planned)
+`npm run check` (`scripts/check-rules.mjs`) checks the level rule on every
+build: a level that imports from a level above it fails, apart from the
+known exceptions above, which are listed in the script.
 
-Components and blocks are what the registry will publish: each becomes a
-registry item with its dependencies, so another project can install it with
-`npx shadcn add`. This is why parts must live at their level, take data as
-props and import only from the levels below.
+## The shadcn registry
+
+Every level is published as registry items, so another project can install a
+part with `npx shadcn add @kit/<name>` and get everything it needs with it:
+
+| Level | Registry item | Installs to |
+|---|---|---|
+| Tokens (`styles.css`) | `tokens` (registry:theme) | the project's CSS file |
+| `src/components/ui/` | one registry:ui per file | its ui folder |
+| `src/components/` | one registry:component per file | its components folder |
+| `src/blocks/` | one registry:block per file, or per folder (`data-table/`) | `components/blocks/` |
+| `src/lib/` | one registry:lib per file | its lib folder |
+
+`scripts/build-registry.mjs` reads each part's imports to list its npm
+packages and the other items it needs, so the registry follows the code.
+Pages, templates and sample data are never published, and neither are
+three kit-only lib files (`utils`, `router`, `random`).
+
+This is why parts must live at their level, take data as props and import
+only from the levels below: a part that imported a page could not be
+installed anywhere else. The build stops if one does.

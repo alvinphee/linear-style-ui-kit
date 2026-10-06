@@ -1,12 +1,12 @@
 import type { IconSvgElement } from '@hugeicons/react'
 import { navigate } from '@/lib/router'
 import {
-  ChartAreaIcon, Compass01Icon, CursorPointer02Icon, FileUploadIcon, GridViewIcon, InboxIcon,
+  ChartAreaIcon, Compass01Icon, GitCompareIcon, CursorPointer02Icon, FileUploadIcon, GridViewIcon, InboxIcon,
   InformationCircleIcon, Money03Icon, DashboardSquare01Icon, Calendar03Icon, FormIcon, Table01Icon,
   Audit01Icon, SparklesIcon, AiBrain01Icon, AiChat02Icon, AiMagicIcon, Building06Icon,
   InputTextIcon, KanbanIcon, LayoutGridIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
   PaintBoardIcon, Rocket01Icon, Search01Icon, Settings01Icon, Settings02Icon, SlidersHorizontalIcon,
-  SidebarLeftIcon, Tag01Icon, Task01Icon, TimelineIcon,
+  SidebarLeftIcon, Tag01Icon, Task01Icon, TimelineIcon, WarehouseIcon,
 } from '@hugeicons/core-free-icons'
 
 export type NavItem = { id: string; label: string; icon: IconSvgElement }
@@ -20,6 +20,8 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
     items: [
       { id: 'overview', label: 'All components', icon: LayoutGridIcon },
       { id: 'theme', label: 'Theme', icon: PaintBoardIcon },
+      // Full page, outside the kit's shell (ThemeCompare.tsx, routed in App.tsx).
+      { id: 'compare', label: 'Theme comparison', icon: GitCompareIcon },
     ],
   },
   {
@@ -50,6 +52,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'dashboard', label: 'Dashboard', icon: DashboardSquare01Icon },
       { id: 'calendar', label: 'Calendar', icon: Calendar03Icon },
       { id: 'roadmap', label: 'Roadmap', icon: TimelineIcon },
+      { id: 'dock-schedule', label: 'Dock schedule', icon: WarehouseIcon },
       { id: 'settings', label: 'Settings', icon: Settings01Icon },
       { id: 'audit-log', label: 'Audit log', icon: Audit01Icon },
       { id: 'pricing', label: 'Pricing', icon: Money03Icon },

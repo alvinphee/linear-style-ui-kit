@@ -30,6 +30,15 @@ export function formatDuration(ms: number) {
   return `${Math.floor(s / 60)}m ${s % 60}s`
 }
 
+// A length of time given in minutes: "45 min", "1 h", "1 h 30 min". For a
+// booking or a meeting; formatDuration is for something measured as it ran.
+export function formatMinutes(minutes: number) {
+  if (minutes < 60) return `${minutes} min`
+  const h = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return rest ? `${h} h ${rest} min` : `${h} h`
+}
+
 // A running timer in minutes and seconds: "0:05", "12:30". For a recording
 // or a job that is still going; seconds are rounded down.
 export function formatTimer(seconds: number) {
@@ -60,6 +69,13 @@ export function formatShortDate(value: DateInput, { year = false, utc = false }:
 // The time of day on a 24-hour clock: "09:05", or "09:05:42" with `seconds`.
 export function formatTime(value: DateInput, { seconds = false }: { seconds?: boolean } = {}) {
   return format(value, seconds ? 'HH:mm:ss' : 'HH:mm')
+}
+
+// A time of day kept as minutes after midnight, on a 24-hour clock: 570 →
+// "09:30". For schedules that store times without a date; 1440 is "24:00".
+export function formatTimeOfDay(minutes: number) {
+  const m = Math.round(minutes)
+  return `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 }
 
 // "Today" or "Yesterday" counted in calendar days from `now`, or undefined for

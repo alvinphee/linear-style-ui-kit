@@ -44,7 +44,7 @@ export default function StatusSection() {
         </div>
       </Panel>
 
-      <Panel title="Job status and priority" note="Linear-style, all Hugeicons">
+      <Panel title="Job status and priority" note="all Hugeicons">
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
           {(Object.keys(STATUS) as Status[]).map((s) => (
             <span key={s} className="flex items-center gap-2 text-xs">

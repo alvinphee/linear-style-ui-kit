@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && node scripts/check-rules.mjs && vite build",
+    "check": "node scripts/check-rules.mjs",
+    "registry": "node scripts/build-registry.mjs && shadcn build",
     "preview": "vite preview"
   },
   "devDependencies": {

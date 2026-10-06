@@ -122,7 +122,7 @@ function QuickCreatePanel() {
   const recent = created.map((id) => jobs.find((j) => j.id === id)).filter((j): j is Job => !!j)
 
   return (
-    <Panel title="Quick create" note="Linear-style new job dialog" wide>
+    <Panel title="Quick create" note="new job dialog with property pills" wide>
       <Intro>
         A borderless title and description, property pills that each open their own picker, and Create
         more for entering several jobs in a row. New jobs go straight into the list, the board and the

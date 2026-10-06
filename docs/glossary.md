@@ -15,12 +15,19 @@ used by most design systems).
 | Term | Meaning | In this kit |
 |---|---|---|
 | Design tokens | Named values for colour, radius, type and spacing that everything else reads | `styles.css`, the Theme page |
+| Theme | One set of values for the design tokens. A preset is a saved theme | The Theme page and its 12 presets |
+| Default theme (shadcn) | The token values shadcn ships before you change anything: neutral greys, solid borders, black or white buttons, 10px corners | `shadcn-default.css`, the right side of the theme comparison |
+| Theme comparison | The same screen shown side by side in two themes, to see what the tokens alone change | Theme comparison (`#/compare/<page>`) |
+| Style preset (shadcn) | shadcn's starting set of component styles, icons and font, chosen at `shadcn init` (Nova, Mira…). Not the same as a theme preset | `radix-mira` in `components.json` |
+| Type scale | The fixed set of text sizes a design uses | 13px body text in `styles.css`, and the sizes in the components |
 | Components | Single building blocks with props and variants | shadcn primitives in `src/components/ui` (Button, Input, Badge…), our own small ones in `src/components/` (status badge, person chip…) |
 | Blocks | A section or screen built from components that does one task | `src/blocks/`: board, data table, folding breadcrumb… |
 | Layouts | The frame pages sit in: navigation, header, content area. Also called the app shell | App shells |
 | Templates | A whole app: a layout, blocks and data, ready to run | ERP app, AI chat app |
 | Kitchen sink | One page that shows every component, to check they look right together | All components |
-| Registry | shadcn's list of installable blocks, served as JSON | Planned |
+| Registry | shadcn's list of installable parts, served as JSON, so another project can copy them in with `npx shadcn add` | `registry.json`, built to `public/r/` by `npm run registry` |
+| Registry item | One installable entry in a registry: its files, the npm packages it needs, and the other items it needs (its registry dependencies) | One per component, block and lib file, plus `tokens` |
+| Registry namespace | The short prefix a project uses to name a registry, set once in its `components.json` | `@kit`, as in `@kit/kanban-board` |
 
 ## Interface patterns
 | Term | Meaning |
@@ -38,6 +45,18 @@ used by most design systems).
 | Progress ring | A circle that fills to show progress, with the number in the middle |
 | Chart legend | The key under a chart: a short line or swatch in each series' colour, and its name |
 | Bar list | A ranked breakdown: each row's name with a bar sized by its value (top customers, spend by vendor) |
+| Gantt chart | Items as bars on a timeline, one row each, from start to end, with progress, milestones and a today line |
+| Roadmap | Where projects stand over the coming months, shown as a Gantt chart |
+| Gantt bar | One item on a Gantt chart: a bar from its first day to its last, filled in as far as it has got |
+| Milestone | A key date in a project, such as a beta or a release. Shown as a diamond, the standard symbol for a single date |
+| Time marker (today line) | A line across a timeline at one moment, today or now, with its label at the top |
+| Timescale | The header over a timeline: months, with the weeks (or hours) under them |
+| Zoom (timeline) | How much time a timeline shows at once: weeks (scrolls sideways) or months (fits the whole range) |
+| Resource schedule (resource timeline) | A timeline with one row per resource (a dock, a room, a vehicle) and each booking as a bar in its row. The dock schedule's horizontal layout |
+| Resource calendar | The same turned on its side: a column per resource and time running down, like a calendar's day view. The dock schedule's vertical layout |
+| Heatmap | A grid whose cells are shaded by a value, darker for more, such as how booked each dock is each day |
+| Slot picker | The grid of start times to book from, each showing how much is still free, as in a booking portal |
+| Double booking | Two bookings on one resource at the same time. The dock schedule stacks them in lanes and marks them |
 | View switch | The icon toggle between ways of showing the same items: list, board, calendar |
 | Nav group | A sidebar heading that folds its rows away (Teams, Favourites) |
 | Search field | A text box with a search icon, a clear button, and room for a shortcut hint |
@@ -174,3 +193,30 @@ used by most design systems).
 | Role | A set of permissions given to users, such as Finance or Sales | |
 | Audit trail | Who changed what, and when | |
 | Multi-company | One system holding several legal companies (entities), each with its own books | |
+
+## Yard management
+The vocabulary of the dock schedule block (`src/blocks/dock-schedule/`), as
+yard management systems (YMS) and dock appointment scheduling tools use it.
+
+| Term | Meaning | Number |
+|---|---|---|
+| Yard management system (YMS) | Software that runs a site's gate, yard and dock doors: who is booked, who has arrived, which door they use | |
+| Dock door (dock, loading bay) | A door where a trailer backs up to load or unload. Each takes inbound, outbound or both | Dock 01 |
+| Dock schedule | Every dock door by time of day, with each dock appointment as a bar in its dock's row | |
+| Dock appointment (booking) | A carrier's booked time slot at a dock door, for one trailer | APT-1001 |
+| Time slot | A fixed block of time (15, 30 or 60 minutes) that appointments are booked in | |
+| Inbound (receiving) / outbound (shipping) | Goods coming in against a purchase order, or going out against a delivery order | |
+| Carrier | The haulage company that brings or collects the trailer | |
+| Trailer | The unit that docks; identified by its trailer number | TRL-4821 |
+| Gate check-in | Recording a trailer's arrival at the gate; it then waits in the yard | |
+| Yard queue | Trailers checked in and waiting for a door, oldest first | |
+| Appointment status | Scheduled → Checked in → At door (loading or unloading) → Completed; or Late (past its start, not arrived) and No-show (never came; frees the dock) | |
+| Live load / live unload | The driver waits while the trailer is loaded or unloaded | |
+| Drop trailer | The trailer is left at the dock (or in the yard) and collected later | |
+| Reefer | A refrigerated trailer, which needs a dock that can keep the cold chain | |
+| Dock leveller | The plate that bridges the dock and the trailer bed, so forklifts can drive on | |
+| Dock closure (blocked time) | Time a dock can't be booked: maintenance, cleaning, a shift change | |
+| Out of service | A dock taken out of use for a while, such as for a repair | |
+| Dock utilisation | The share of a dock's open time that is booked | |
+| Dwell time | How long a trailer stays on site, from check-in to departure. Long waits can bring detention charges from the carrier | |
+| Carrier booking portal | Where carriers book their own appointments from the free time slots | |

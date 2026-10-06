@@ -27,6 +27,17 @@ Add a shadcn component (it arrives with Hugeicons already):
 npx shadcn@latest add <name>
 ```
 
+Check the kit's rules (also run by `npm run build`):
+```bash
+npm run check
+```
+
+Rebuild the shadcn registry after adding or changing a part (see "The
+registry"):
+```bash
+npm run registry
+```
+
 ## Layout
 ```
 linear-style-ui-kit/
@@ -38,16 +49,27 @@ linear-style-ui-kit/
 ├── .mcp.json                  the Hugeicons MCP server
 ├── CLAUDE.md
 ├── components.json            shadcn settings (style, icon library, paths)
+├── registry.json              the shadcn registry: one item per part (made by the script below)
+├── public/
+│   └── r/                     the built registry, one JSON per item (not in git; npm run registry)
+├── scripts/
+│   ├── check-rules.mjs        npm run check: the rules below, checked on every file
+│   └── build-registry.mjs     npm run registry: writes registry.json from each part's imports
 ├── docs/
 │   ├── architecture.md        atomic design: the levels, where each part goes
 │   ├── agent-brief.md         the rules given to each helper
 │   ├── refactor/              notes from the one-home-per-part refactor
 │   ├── findings.md            what we have learned so far
+│   ├── ui-comparison.md  why this kit's UI is polished and the another app app's is not
+│   ├── brief-vs-setup-study/  test: what the brief, the setup and the model each add
+│   │                          (paper.md and figures/); the same folder is kept with the
+│   │                          test materials in Desktop\ui-brief-test\docs
 │   └── glossary.md            the industry terms we use
 └── src/
     ├── main.tsx
     ├── App.tsx                theme, tooltip and toast providers
     ├── styles.css             Tailwind + the Linear-style colour tokens
+    ├── shadcn-default.css     shadcn's default theme, used only by the theme comparison
     ├── blocks/                reusable blocks: props in, no sample data
     │   ├── ai/                prompt box, chat history, artifact panel, thinking
     │   │                      trail, chat message, markdown, chat thread (with
@@ -57,9 +79,13 @@ linear-style-ui-kit/
     │   ├── account-menu.tsx   avatar and name at a sidebar's foot, with its menu
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
+    │   ├── dock-schedule/     yard dock schedule: day by dock and time slot, docks
+    │   │                      as rows or as columns (drag, book a free slot), week
+    │   │                      heatmap, slot picker
     │   ├── filter-bar/        filter menu, filter chips, saved views
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
     │   ├── form-dialog.tsx    field-driven dialog, quick create, property pills
+    │   ├── gantt-chart.tsx    Gantt chart: timescale, bars, milestones, today line, Weeks / Months
     │   ├── grouped-list.tsx   list in folding groups, row shell, selection
     │   ├── kanban-board.tsx   columns, drag and drop, "Move to…" menu, card shell
     │   ├── kpi-card.tsx       KPI card, delta badge, sparkline, grid
@@ -93,6 +119,9 @@ linear-style-ui-kit/
     │   ├── progress-ring.tsx  circular progress
     │   ├── chart-legend.tsx   LegendLine, LegendRow
     │   ├── bar-list.tsx       ranked bars (top customers, spend)
+    │   ├── gantt-bar.tsx      one item's bar on a Gantt chart: progress, name, %
+    │   ├── milestone-marker.tsx  the milestone diamond
+    │   ├── time-marker.tsx    today or now on a timeline: a line and its label, down or across
     │   ├── view-switch.tsx    list / board toggle
     │   ├── search-field.tsx   search box with clear and a shortcut hint
     │   ├── delete-confirm.tsx confirm before deleting
@@ -122,6 +151,7 @@ linear-style-ui-kit/
         │   └── buttons.tsx …    the reference page; others follow its shape
         ├── ShowcaseSidebar.tsx  workspace switcher, folding nav groups
         ├── ShortcutsSheet.tsx   the "?" keyboard shortcuts sheet
+        ├── ThemeCompare.tsx     theme comparison: kit theme beside shadcn's default
         ├── nav.ts               nav groups, section ids, G-then shortcuts
         ├── data.ts              icon groups, statuses, labels, sample jobs, job constants
         ├── jobs-store.tsx       shared job state (list, board, issue page)
@@ -152,6 +182,8 @@ linear-style-ui-kit/
             ├── DashboardSection.tsx  KPI cards, sparklines, range switch
             ├── CalendarSection.tsx   month and week views
             ├── RoadmapSection.tsx
+            ├── DockScheduleSection.tsx  yard: KPIs, day / week schedule, yard queue, exceptions
+            ├── dock-schedule/         its made-up yard, side panel and booking dialog
             ├── SettingsSection.tsx
             ├── AuditLogSection.tsx   filterable event log
             ├── PricingSection.tsx    plans, yearly switch, comparison table
@@ -168,13 +200,14 @@ linear-style-ui-kit/
 One page per section, like Storybook. The sidebar follows the kit's five
 levels, smallest first (definitions in `docs/glossary.md`):
 - **Get started:** All components (every component on one long page, the
-  quick look) and Theme (the design tokens)
+  quick look), Theme (the design tokens) and Theme comparison (full page,
+  see "Themes")
 - **Components:** single building blocks (button, input, badge…, and the
   small AI parts), restyled, each with its playground and variants. Every
   part a block uses has its own demo here.
 - **Blocks:** whole screens built from components, as shadcn calls them
-  (list, board, issue detail, inbox, roadmap, settings, onboarding, sign-in,
-  the AI workspace, AI in the product…)
+  (list, board, issue detail, inbox, roadmap, dock schedule, settings,
+  onboarding, sign-in, the AI workspace, AI in the product…)
 - **Layouts:** the frame pages sit in (App shells)
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
@@ -252,13 +285,20 @@ Shortcuts: `Ctrl+K` command menu, `?` shortcut list, `C` new job, and
 Section ids and shortcut letters live in `src/pages/nav.ts`.
 
 ## The Linear look, and where it lives
-All of it is in `src/styles.css`, so it can be moved as one piece:
+The colour scheme, text size and corners are in `src/styles.css`, so they
+can be moved as one piece:
 - Near-neutral greys with a faint cool tint, and one indigo accent (`--brand`)
 - Borders drawn at 7–9% opacity instead of solid greys
-- 13px Inter body text, 28px controls, 8px corner radius
-- Dark by default. The switch in the header (or Ctrl+K) changes it.
+- 13px Inter body text (with Inter's alternate letters), 8px corner radius
 - Status colours as tokens: `--status-todo`, `--status-progress`,
   `--status-done`, `--status-blocked`
+
+The rest of the look is not in `styles.css`, and it carries most of the
+polish (the theme comparison shows this):
+- 28px controls: shadcn's Mira preset, in `src/components/ui/`
+- Layouts, spacing and details: the components and blocks
+- Dark by default: `defaultTheme` in `App.tsx`. The switch in the header
+  (or Ctrl+K) changes it.
 
 ## Themes
 Every colour is worked out from five variables on `<html>`:
@@ -275,11 +315,47 @@ holds the 12 presets and saves the viewer's mix in their browser. The Theme
 section (and the Theme button in the header) is the mixer. "Copy as CSS"
 gives the five variables for the current mix.
 
+The theme comparison (`#/compare/<page>`, `src/pages/ThemeCompare.tsx`)
+shows any kit page or template twice, in two frames: the kit's theme on the
+left, shadcn's default theme on the right. Same components, blocks and
+data, so only the tokens differ. The right frame's address carries
+`?shadcn-default=colours,text,radius,details`; `main.tsx` puts the words on
+`<html>` as `data-shadcn-default`, and `src/shadcn-default.css` swaps each
+named part for shadcn's stock value (Mira preset, neutral base colour).
+Each part can be switched on its own, to see what it adds. The frames
+follow each other's page, scroll and light/dark mode. Leave
+`styles.css` alone for this: the comparison only adds to it.
+
 Do not name `--brand-*` / `--grey-*` after shadcn's tokens: shadcn already
 uses `--accent` for hover backgrounds.
 
 This copies Linear's *style*, not its code or brand. Keep it that way: no
 Linear name, logo or assets in the app.
+
+## The registry
+The kit is a shadcn registry: another project can install any part with
+`npx shadcn add`, and gets the files, npm packages and other kit parts it
+needs. 110 items: `tokens` (the whole theme from `styles.css`), 47 ui, 30
+components, 24 blocks and 8 lib files. Which level becomes which item:
+`docs/architecture.md`.
+- `npm run registry` runs `scripts/build-registry.mjs` (writes
+  `registry.json` from each part's imports), then `shadcn build` (writes
+  `public/r/<name>.json`). The dev server serves them at
+  http://localhost:5180/r/. Run it after adding or changing a part, and
+  commit `registry.json`; `public/r/` is not in git.
+- Another project names the registry once in its `components.json`:
+  ```json
+  "registries": { "@kit": "http://localhost:5180/r/{name}.json" }
+  ```
+  then installs parts, the theme first:
+  ```bash
+  npx shadcn add @kit/tokens @kit/kanban-board
+  ```
+  Kit items depend on each other as `@kit/<name>`, so this line is needed.
+- Blocks install into `components/blocks/`; shadcn rewrites their
+  `@/blocks/…` imports to match.
+- Not published: pages, templates, sample data, and the kit-only lib files
+  `utils`, `router` and `random`. The script stops if a part imports one.
 
 ## Tools in this folder
 - **Hugeicons MCP server** (`.mcp.json`): search for an icon with
@@ -303,7 +379,19 @@ Linear name, logo or assets in the app.
 - A block used in more than one place lives in `src/blocks/`, takes its
   data as props and holds no sample data. Kit pages and templates import it
   from there instead of keeping their own copy. These are what the shadcn
-  registry will publish.
+  registry publishes (see "The registry").
+- Colours only through tokens: `bg-card`, `bg-muted`, `bg-accent`,
+  `bg-subtle`, `text-muted-foreground`, `border`, `text-brand` / `bg-brand`,
+  `text-status-todo|progress|done|blocked`, `text-destructive`,
+  `var(--chart-1..5)`. Never a Tailwind palette class such as
+  `text-amber-600`.
+- Before calling UI work done, check it in light and dark mode, and at
+  375px wide with no sideways scrolling (`min-w-0`, `flex-wrap`, and
+  `grid-cols-1` before any `sm:`/`lg:` columns).
+- `npm run check` (`scripts/check-rules.mjs`, also run by `npm run build`)
+  fails on: Lucide or paid Hugeicons imports, palette colour classes, a level
+  importing from a level above it, and the Linear name on screen. Known
+  exceptions are listed in the script, matching `docs/architecture.md`.
 - Free icons only. Do not install `@hugeicons-pro/*`; we have no licence.
 - Leave out props that match the defaults (`size` 24, `strokeWidth` 1.5,
   `color` currentColor). One exception: `absoluteStrokeWidth` does nothing

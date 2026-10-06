@@ -238,3 +238,157 @@ Hugeicons names for 145 common Lucide icons, checked on 2026-09-30.
 - `tableFeatures({ columnMeta })` types each column's `meta` without global
   declaration merging, so a block can carry its own column options (label,
   alignment, hide below a container width).
+
+## shadcn's default theme, next to the kit's (added 2026-10-05)
+- **The stock Mira preset is already Hugeicons and Inter.** shadcn's preset
+  list reads `mira: { iconLibrary: "hugeicons", font: "inter",
+  baseColor: "neutral", radius: "default" }`. So the kit's font and icons
+  are shadcn's own choice for Mira, and so are the 28px controls (`h-7` in
+  `components/ui`). What `styles.css` adds is the colours, 13px body text,
+  Inter's alternate letters (`cv01`, `ss03`), 8px corners, thin scrollbars
+  and a tinted text selection, plus the brand, subtle and status tokens.
+- **Stock values** (registry `ui.shadcn.com/r/colors/neutral.json`): pure
+  greys, light-mode borders a solid `oklch(0.922 0 0)`, dark-mode borders
+  10% white, black (light) or near-white (dark) primary, `--radius`
+  0.625rem, and charts in five greys (no colours any more).
+- **The stock base layer sets no body text size**, only
+  `bg-background text-foreground`. Text that doesn't set its own size is the
+  browser's 16px.
+- **The theme comparison** (`#/compare/<page>`) shows both side by side,
+  and each part can be switched back on its own.
+
+## Roadmap (Gantt chart) (added 2026-10-05)
+The chart is the `gantt-chart` block, built from the GanttBar,
+MilestoneMarker and TimeMarker components (split out 2026-10-06).
+- **A bar's name can stick to the view's edge only if the bar clips with
+  `overflow: clip`, not `hidden`.** `overflow: hidden` makes the bar a
+  scroll container, so a `position: sticky` name inside it sticks to the
+  bar and never moves. `overflow-clip` clips the same (rounded corners
+  included) without being a scroll container, so the name sticks to the
+  timeline's scroll area instead (GanttBar reads `--gantt-sticky-left`,
+  which the block sets just past its names column). A sticky element can
+  only move inside its parent, so the name sits in a `flex-1` wrapper and
+  is `w-fit` itself.
+- **Anything absolutely placed in a scroller widens it, even by a few
+  pixels.** A Monday's date on the last day or two, or the Today pill on
+  the last day, gave Months a scrollbar. The block drops week dates without
+  room for them, and clips the today line to the timeline.
+- **Fitting a whole range into any width needs the labels to adapt too.**
+  Months has no minimum day width now, so on a phone a day is under 2px.
+  Week dates and lines drop out below 20px a week, month names shorten to
+  "Sep" (sliced from the long name, since Intl's short en-GB form is
+  "Sept"), and a name beside a bar goes before it when the timeline ends
+  first, so it never widens the chart.
+
+## Dock schedule (added 2026-10-06)
+The `dock-schedule` block: DockSchedule (one day, a row per dock door),
+DockWeek (a heatmap of docks by day) and DockSlotPicker (free docks per
+start time), sharing the maths in `schedule.ts`.
+- **A click handler can't trust state set on mousemove.** Clicking a free
+  slot first read the slot from hover state, and a quick click (or a
+  scripted one) ran before that state had rendered, so nothing happened.
+  The click now works the slot out again from the pointer.
+- **To refuse a drop and still say why, skip `preventDefault` in dragover
+  but keep drawing.** The browser then shows the no-drop cursor and never
+  fires `drop`, while the ghost under the pointer turns red with the
+  reason ("Taken by…", "Outbound only", "Maintenance"). Synthetic mouse
+  drags in the preview browser don't fire HTML5 drag events; test drops by
+  dispatching `DragEvent`s with a `DataTransfer`, or through the
+  Shift + arrow keys, which share the same check.
+- **"No free dock" has two causes.** A slot where every dock is closed (a
+  shift change) reads "Closed", not "Full", in the free docks row.
+- **FormDialog's children can be a function of the values**, for a control
+  of its own that depends on them, such as the slot picker (which needs the
+  direction and length). Added for the booking dialog rather than
+  hand-building a second dialog.
+- **The kit's TimeMarker draws the now line.** The schedule first drew its
+  own line and pill; it uses the component now, as the Gantt chart does.
+
+## Dock schedule, docks as columns (added 2026-10-06)
+`DockSchedule` takes `orientation="vertical"`: a column per dock and time
+down the side, like a calendar's day view. One component, not a copy: the
+drag, keyboard, booking and closure logic is shared, and only the frame and
+where things sit (top and height instead of left and width) change. Shift
+and the arrow keys follow the axes: up and down move the time, left and
+right the dock.
+- **A short bar can drop whole lines.** A vertical bar's lines sit in a
+  column flexbox that wraps (`flex-col flex-wrap`) inside a box that clips.
+  A line that doesn't fit wraps into a second column, outside the bar, so a
+  15-minute bar shows only the carrier and never half of the time line.
+  The column gap must be wider than the side padding, or the start of the
+  wrapped column shows through the padding.
+- **Switching layout reuses the scroll area.** React keeps the same scroll
+  element when the layout changes, so the vertical layout opened scrolled
+  sideways by where the horizontal one had been. The schedule now resets
+  the other axis when it scrolls to now.
+- **TimeMarker got `orientation="horizontal"`** (a line across with its
+  pill at the left) for the vertical layout's now line. The pill sits in the
+  sticky time column, so it stays in view when the docks scroll sideways.
+
+## Brief vs setup test (added 2026-10-06)
+The same task list page was built four times by fresh Claude Code sessions
+(Opus 5.5, effort xhigh), each in its own folder outside the kit, so none
+saw this kit's CLAUDE.md. Same sample data and the same 28 shadcn
+components; the builders could not open a browser. The test folder is
+`Desktop\ui-brief-test` (README, prompts, side-by-side page). Full
+write-up: `docs/brief-vs-setup-study/paper.md`, with the same folder kept
+in the test folder's `docs\`.
+
+| | 1 stock, short brief | 2 stock, Linear brief | 3 kit setup, short brief | 4 kit setup, Linear brief |
+|---|---|---|---|---|
+| Font, row text | Geist, 14px | Geist, 13px | Inter, 13px | Inter, 13px |
+| Row height | 44px | 40px | 40px | 40px |
+| Main button | black | black | indigo | indigo |
+| Row borders | solid grey | grey at 60% | 6%, tinted | 5%, tinted |
+| Ctrl+K menu, toasts | no | yes | no | yes |
+| Lines written | 2,106 | 3,647 | 2,368 | 3,570 |
+
+- **The model already knows the pattern.** With no style words at all
+  (version 1), it built a list grouped by status with status and priority
+  icons, task IDs, label chips, due dates and avatars. The layout comes
+  from the model, not from the brief or the setup.
+- **The setup sets the look.** Mira plus the kit's tokens gave versions 3
+  and 4 the kit's type, colours, faint borders and density, without being
+  asked. It did not change what was built.
+- **The brief adds features, not looks.** "Linear-style" brought denser
+  rows, Linear's words ("issues", view tabs) and power features (Ctrl+K
+  menu, keyboard shortcuts, toasts): 51–73% more code. Neither builder
+  touched the colours or the font.
+- **Looking at the result still matters.** In version 4, 9 of the 18 task
+  IDs wrap onto two lines (a 64px column). The builder never saw the page.
+  The kit avoids this by checking each part on its playground.
+
+## The shadcn registry (added 2026-10-06)
+`npm run registry` writes `registry.json` from the code
+(`scripts/build-registry.mjs`), then `shadcn build` turns it into one JSON
+file per item in `public/r/`. 110 items: 47 ui, 30 components, 24 blocks,
+8 lib and the `tokens` theme. What we learned from shadcn 4.21's own code:
+
+- **Imports are rewritten on install.** `@/x` becomes the project's alias for
+  it: `@/components/ui/…` → its ui alias, `@/lib/…` → its lib alias, and
+  anything else (`@/blocks/kanban-board`) → `@/components/blocks/kanban-board`.
+  So blocks must be installed into `components/blocks/`, which each block
+  file's `target` (`@components/blocks/…`) does. Relative imports are kept,
+  so a folder block (data table) keeps working.
+- **Without a target, the folder comes from the type** (ui, lib, components)
+  and the file name from the path after that folder's name. That is right
+  for ui, components and lib, and wrong for blocks, hence the targets.
+- **Kit items depend on each other as `@kit/<name>`**, and that only works
+  when the installing project names the registry in its `components.json`
+  (`"registries": { "@kit": "http://localhost:5180/r/{name}.json" }`).
+  Without it, shadcn stops with "Unknown registry".
+- **`cn` comes from the `cn` package**, not `@/lib/utils`, so no item needs
+  the project's utils file; `cn` is just an npm dependency.
+- **The tokens item is the whole theme**, read from `styles.css`: the
+  `@theme inline` block, `:root`, `.dark`, the mono buttons, the base layer
+  and the Inter import. shadcn also writes `--x: var(--x)` lines into
+  `@theme inline` for tokens whose value is a `var()` or a number. Tailwind
+  outputs them inside its `theme` layer, but the real values in `:root` and
+  `.dark` sit outside any layer, so they win: the test page looked right.
+  Noise, not a bug.
+- **Tested end to end:** a new Vite project with an empty theme installed all
+  110 items with one `npx shadcn add`. `tsc` and `vite build` passed, and a
+  page made of installed parts looked like the kit (screenshot checked).
+- Limits: one run each, one screen, one model. It says nothing about
+  keeping 50 screens consistent, which is what the kit's shared parts are
+  for.

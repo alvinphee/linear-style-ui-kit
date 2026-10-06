@@ -1,0 +1,117 @@
+/*
+  shadcn's default theme, for the theme comparison page (#/compare) only.
+  Nothing changes unless <html> has data-shadcn-default, which main.tsx sets
+  from a frame's "?shadcn-default=" address. Each word swaps one part of the
+  kit's look (styles.css) for what shadcn ships with the Mira preset
+  (neutral base colour, Inter, Hugeicons, default radius):
+
+    colours   neutral greys, solid light-mode borders, black or white
+              buttons, grey charts
+    text      body text at the browser's 16px instead of 13px
+    radius    shadcn's 0.625rem (10px) corners instead of the kit's 8px
+    details   Inter's standard letters, normal scrollbars, the browser's
+              selection colour
+
+  Values from shadcn's registry (ui.shadcn.com/r/colors/neutral.json),
+  October 2026. ":root" plus the attribute outranks styles.css's :root,
+  .dark and html[data-mono], whatever order the files load in.
+*/
+
+:root[data-shadcn-default~="colours"] {
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
+    --destructive: oklch(0.577 0.245 27.325);
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+
+    /* The kit's own tokens have no shadcn equivalent. A stock app reaches
+       for the primary colour, bg-muted/50 and Tailwind's palette instead. */
+    --brand: var(--primary);
+    --subtle: color-mix(in oklch, var(--muted) 50%, var(--background));
+    --status-todo: var(--muted-foreground);
+    --status-progress: oklch(0.769 0.188 70.08); /* amber-500 */
+    --status-done: oklch(0.627 0.194 149.214); /* green-600 */
+    --status-blocked: var(--destructive);
+}
+
+:root.dark[data-shadcn-default~="colours"] {
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: oklch(0.922 0 0);
+    --primary-foreground: oklch(0.205 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
+    --destructive: oklch(0.704 0.191 22.216);
+    --border: oklch(1 0 0 / 10%);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+    --status-done: oklch(0.723 0.219 149.579); /* green-500 */
+}
+
+/* shadcn sets no body size, so text that doesn't set its own is 16px. */
+:root[data-shadcn-default~="text"] body {
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* !important: the theme provider writes the kit's --radius inline on <html>. */
+:root[data-shadcn-default~="radius"] {
+    --radius: 0.625rem !important;
+}
+
+:root[data-shadcn-default~="details"] {
+    font-feature-settings: normal;
+    -webkit-font-smoothing: auto;
+}
+
+:root[data-shadcn-default~="details"] * {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+}
+
+:root[data-shadcn-default~="details"] ::selection {
+    background: Highlight;
+    color: HighlightText;
+}

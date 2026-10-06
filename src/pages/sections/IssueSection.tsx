@@ -63,7 +63,7 @@ export default function IssueSection() {
   }
 
   return (
-    <Section id="issue" title="Issue detail" description="Linear-style detail page. Edit anything in place.">
+    <Section id="issue" title="Issue detail" description="Detail page with a properties panel. Edit anything in place.">
       <article
         tabIndex={-1}
         onKeyDown={onKeyDown}

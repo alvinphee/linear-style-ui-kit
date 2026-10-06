@@ -1,0 +1,2346 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "kit",
+  "homepage": "http://localhost:5180",
+  "items": [
+    {
+      "name": "tokens",
+      "type": "registry:theme",
+      "title": "Design tokens",
+      "description": "The kit's colours, tinted greys, accent, status colours, radius and Inter type, for light and dark mode",
+      "dependencies": [
+        "@fontsource-variable/inter@^5.3.0"
+      ],
+      "cssVars": {
+        "theme": {
+          "font-heading": "var(--font-sans)",
+          "font-sans": "'Inter Variable', sans-serif",
+          "color-sidebar-ring": "var(--sidebar-ring)",
+          "color-sidebar-border": "var(--sidebar-border)",
+          "color-sidebar-accent-foreground": "var(--sidebar-accent-foreground)",
+          "color-sidebar-accent": "var(--sidebar-accent)",
+          "color-sidebar-primary-foreground": "var(--sidebar-primary-foreground)",
+          "color-sidebar-primary": "var(--sidebar-primary)",
+          "color-sidebar-foreground": "var(--sidebar-foreground)",
+          "color-sidebar": "var(--sidebar)",
+          "color-chart-5": "var(--chart-5)",
+          "color-chart-4": "var(--chart-4)",
+          "color-chart-3": "var(--chart-3)",
+          "color-chart-2": "var(--chart-2)",
+          "color-chart-1": "var(--chart-1)",
+          "color-ring": "var(--ring)",
+          "color-input": "var(--input)",
+          "color-border": "var(--border)",
+          "color-destructive": "var(--destructive)",
+          "color-accent-foreground": "var(--accent-foreground)",
+          "color-accent": "var(--accent)",
+          "color-muted-foreground": "var(--muted-foreground)",
+          "color-muted": "var(--muted)",
+          "color-secondary-foreground": "var(--secondary-foreground)",
+          "color-secondary": "var(--secondary)",
+          "color-primary-foreground": "var(--primary-foreground)",
+          "color-primary": "var(--primary)",
+          "color-popover-foreground": "var(--popover-foreground)",
+          "color-popover": "var(--popover)",
+          "color-card-foreground": "var(--card-foreground)",
+          "color-card": "var(--card)",
+          "color-foreground": "var(--foreground)",
+          "color-background": "var(--background)",
+          "color-brand": "var(--brand)",
+          "color-subtle": "var(--subtle)",
+          "color-status-todo": "var(--status-todo)",
+          "color-status-progress": "var(--status-progress)",
+          "color-status-done": "var(--status-done)",
+          "color-status-blocked": "var(--status-blocked)",
+          "radius-sm": "calc(var(--radius) * 0.6)",
+          "radius-md": "calc(var(--radius) * 0.8)",
+          "radius-lg": "var(--radius)",
+          "radius-xl": "calc(var(--radius) * 1.4)",
+          "radius-2xl": "calc(var(--radius) * 1.8)",
+          "radius-3xl": "calc(var(--radius) * 2.2)",
+          "radius-4xl": "calc(var(--radius) * 2.6)"
+        },
+        "light": {
+          "brand-h": "276",
+          "brand-c": "0.15",
+          "grey-h": "286",
+          "grey-t": "1",
+          "grey-c": "calc(0.0035 * var(--grey-t))",
+          "radius": "0.5rem",
+          "background": "oklch(0.992 calc(var(--grey-c) * 0.3) var(--grey-h))",
+          "foreground": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "card": "oklch(1 calc(var(--grey-c) * 0.15) var(--grey-h))",
+          "card-foreground": "var(--foreground)",
+          "popover": "oklch(1 calc(var(--grey-c) * 0.15) var(--grey-h))",
+          "popover-foreground": "var(--foreground)",
+          "primary": "oklch(0.56 var(--brand-c) var(--brand-h))",
+          "primary-foreground": "oklch(0.99 0 0)",
+          "secondary": "oklch(0.965 calc(var(--grey-c) * 0.6) var(--grey-h))",
+          "secondary-foreground": "oklch(0.3 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "muted": "oklch(0.965 calc(var(--grey-c) * 0.6) var(--grey-h))",
+          "muted-foreground": "oklch(0.52 calc(var(--grey-c) * 3) var(--grey-h))",
+          "accent": "oklch(0.955 calc(var(--grey-c) * 1.1) var(--grey-h))",
+          "accent-foreground": "var(--foreground)",
+          "destructive": "oklch(0.6 0.2 25)",
+          "border": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h) / 9%)",
+          "input": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h) / 13%)",
+          "ring": "var(--primary)",
+          "brand": "oklch(0.56 var(--brand-c) var(--brand-h))",
+          "subtle": "oklch(0.975 calc(var(--grey-c) * 0.6) var(--grey-h))",
+          "status-todo": "oklch(0.62 calc(var(--grey-c) * 3) var(--grey-h))",
+          "status-progress": "oklch(0.72 0.15 75)",
+          "status-done": "var(--brand)",
+          "status-blocked": "oklch(0.6 0.2 25)",
+          "chart-1": "var(--brand)",
+          "chart-2": "oklch(0.65 0.13 200)",
+          "chart-3": "oklch(0.72 0.15 75)",
+          "chart-4": "oklch(0.62 0.17 150)",
+          "chart-5": "oklch(0.6 0.2 25)",
+          "sidebar": "oklch(0.975 calc(var(--grey-c) * 0.6) var(--grey-h))",
+          "sidebar-foreground": "oklch(0.3 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "sidebar-primary": "var(--primary)",
+          "sidebar-primary-foreground": "var(--primary-foreground)",
+          "sidebar-accent": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h) / 6%)",
+          "sidebar-accent-foreground": "var(--foreground)",
+          "sidebar-border": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h) / 8%)",
+          "sidebar-ring": "var(--primary)"
+        },
+        "dark": {
+          "background": "oklch(0.17 calc(var(--grey-c) * 1.15) var(--grey-h))",
+          "foreground": "oklch(0.96 calc(var(--grey-c) * 0.6) var(--grey-h))",
+          "card": "oklch(0.2 calc(var(--grey-c) * 1.4) var(--grey-h))",
+          "popover": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "primary": "oklch(0.6 var(--brand-c) var(--brand-h))",
+          "secondary": "oklch(0.25 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "secondary-foreground": "oklch(0.9 calc(var(--grey-c) * 1.1) var(--grey-h))",
+          "muted": "oklch(0.23 calc(var(--grey-c) * 1.4) var(--grey-h))",
+          "muted-foreground": "oklch(0.66 calc(var(--grey-c) * 3) var(--grey-h))",
+          "accent": "oklch(1 0 0 / 6%)",
+          "destructive": "oklch(0.66 0.19 25)",
+          "border": "oklch(1 0 0 / 7%)",
+          "input": "oklch(1 0 0 / 10%)",
+          "brand": "oklch(0.66 calc(var(--brand-c) * 0.93) var(--brand-h))",
+          "subtle": "oklch(0.19 calc(var(--grey-c) * 1.15) var(--grey-h))",
+          "status-progress": "oklch(0.78 0.14 80)",
+          "status-blocked": "oklch(0.66 0.19 25)",
+          "chart-2": "oklch(0.7 0.12 200)",
+          "chart-3": "oklch(0.78 0.14 80)",
+          "chart-4": "oklch(0.7 0.15 150)",
+          "chart-5": "oklch(0.66 0.19 25)",
+          "sidebar": "oklch(0.155 calc(var(--grey-c) * 1.15) var(--grey-h))",
+          "sidebar-foreground": "oklch(0.82 calc(var(--grey-c) * 1.4) var(--grey-h))",
+          "sidebar-accent": "oklch(1 0 0 / 6%)",
+          "sidebar-border": "oklch(1 0 0 / 6%)"
+        }
+      },
+      "css": {
+        "@import \"@fontsource-variable/inter\"": {},
+        "html[data-mono]": {
+          "--primary": "var(--foreground)",
+          "--primary-foreground": "var(--background)",
+          "--brand": "var(--foreground)",
+          "--ring": "var(--muted-foreground)"
+        },
+        "@layer base": {
+          "*": {
+            "@apply border-border outline-ring/50": {},
+            "scrollbar-width": "thin",
+            "scrollbar-color": "var(--input) transparent"
+          },
+          "html": {
+            "@apply font-sans": {},
+            "font-feature-settings": "\"cv01\", \"ss03\"",
+            "-webkit-font-smoothing": "antialiased"
+          },
+          "body": {
+            "@apply bg-background text-foreground text-[13px] leading-5": {}
+          },
+          "::selection": {
+            "background": "color-mix(in oklch, var(--brand) 30%, transparent)"
+          }
+        }
+      }
+    },
+    {
+      "name": "clipboard",
+      "type": "registry:lib",
+      "title": "Clipboard",
+      "description": "copyText, useCopied",
+      "dependencies": [
+        "sonner@^2.0.8"
+      ],
+      "files": [
+        {
+          "path": "src/lib/clipboard.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "download",
+      "type": "registry:lib",
+      "title": "Download",
+      "description": "downloadText",
+      "files": [
+        {
+          "path": "src/lib/download.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "format",
+      "type": "registry:lib",
+      "title": "Format",
+      "description": "numbers, money, dates, times, sizes, durations",
+      "dependencies": [
+        "date-fns@^4.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/lib/format.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "keyboard",
+      "type": "registry:lib",
+      "title": "Keyboard",
+      "description": "isTyping (when single-key shortcuts must not fire)",
+      "files": [
+        {
+          "path": "src/lib/keyboard.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "text",
+      "type": "registry:lib",
+      "title": "Text",
+      "description": "plural, slug, greeting",
+      "files": [
+        {
+          "path": "src/lib/text.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "theme",
+      "type": "registry:lib",
+      "title": "Theme",
+      "description": "light / dark / system switch",
+      "files": [
+        {
+          "path": "src/lib/theme.tsx",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-svg-id",
+      "type": "registry:lib",
+      "title": "Use SVG id",
+      "description": "A unique id that is safe in SVG gradient and clip path references",
+      "files": [
+        {
+          "path": "src/lib/use-svg-id.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "use-timers",
+      "type": "registry:lib",
+      "title": "Use timers",
+      "description": "setTimeout that is cleared when the component unmounts",
+      "files": [
+        {
+          "path": "src/lib/use-timers.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
+      "name": "accordion",
+      "type": "registry:ui",
+      "title": "Accordion",
+      "description": "shadcn/ui accordion, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/accordion.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "alert",
+      "type": "registry:ui",
+      "title": "Alert",
+      "description": "shadcn/ui alert, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/alert.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "alert-dialog",
+      "type": "registry:ui",
+      "title": "Alert dialog",
+      "description": "shadcn/ui alert dialog, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/button"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/alert-dialog.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "avatar",
+      "type": "registry:ui",
+      "title": "Avatar",
+      "description": "shadcn/ui avatar, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/avatar.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "badge",
+      "type": "registry:ui",
+      "title": "Badge",
+      "description": "shadcn/ui badge, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/badge.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "breadcrumb",
+      "type": "registry:ui",
+      "title": "Breadcrumb",
+      "description": "shadcn/ui breadcrumb, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/breadcrumb.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "button",
+      "type": "registry:ui",
+      "title": "Button",
+      "description": "shadcn/ui button, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/button.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "button-group",
+      "type": "registry:ui",
+      "title": "Button group",
+      "description": "shadcn/ui button group, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/separator"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/button-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "calendar",
+      "type": "registry:ui",
+      "title": "Calendar",
+      "description": "shadcn/ui calendar, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "react-day-picker@^10.0.2"
+      ],
+      "registryDependencies": [
+        "@kit/button"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/calendar.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "card",
+      "type": "registry:ui",
+      "title": "Card",
+      "description": "shadcn/ui card, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/card.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "chart",
+      "type": "registry:ui",
+      "title": "Chart",
+      "description": "shadcn/ui chart, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "recharts@^3.8.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/chart.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "checkbox",
+      "type": "registry:ui",
+      "title": "Checkbox",
+      "description": "shadcn/ui checkbox, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/checkbox.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "collapsible",
+      "type": "registry:ui",
+      "title": "Collapsible",
+      "description": "shadcn/ui collapsible, in the kit's compact style",
+      "dependencies": [
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/collapsible.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "command",
+      "type": "registry:ui",
+      "title": "Command",
+      "description": "shadcn/ui command, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cmdk@^1.1.1",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/dialog",
+        "@kit/input-group"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/command.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "context-menu",
+      "type": "registry:ui",
+      "title": "Context menu",
+      "description": "shadcn/ui context menu, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/context-menu.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dialog",
+      "type": "registry:ui",
+      "title": "Dialog",
+      "description": "shadcn/ui dialog, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/button"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/dialog.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "drawer",
+      "type": "registry:ui",
+      "title": "Drawer",
+      "description": "shadcn/ui drawer, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "vaul@^1.1.2"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/drawer.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "dropdown-menu",
+      "type": "registry:ui",
+      "title": "Dropdown menu",
+      "description": "shadcn/ui dropdown menu, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/dropdown-menu.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "empty",
+      "type": "registry:ui",
+      "title": "Empty",
+      "description": "shadcn/ui empty, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/empty.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "field",
+      "type": "registry:ui",
+      "title": "Field",
+      "description": "shadcn/ui field, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/label",
+        "@kit/separator"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/field.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "hover-card",
+      "type": "registry:ui",
+      "title": "Hover card",
+      "description": "shadcn/ui hover card, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/hover-card.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input",
+      "type": "registry:ui",
+      "title": "Input",
+      "description": "shadcn/ui input, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/input.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input-group",
+      "type": "registry:ui",
+      "title": "Input group",
+      "description": "shadcn/ui input group, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/input",
+        "@kit/textarea"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/input-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "input-otp",
+      "type": "registry:ui",
+      "title": "Input OTP",
+      "description": "shadcn/ui input otp, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "input-otp@^1.5.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/input-otp.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "kbd",
+      "type": "registry:ui",
+      "title": "Kbd",
+      "description": "shadcn/ui kbd, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/kbd.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "label",
+      "type": "registry:ui",
+      "title": "Label",
+      "description": "shadcn/ui label, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/label.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "navigation-menu",
+      "type": "registry:ui",
+      "title": "Navigation menu",
+      "description": "shadcn/ui navigation menu, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/navigation-menu.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "pagination",
+      "type": "registry:ui",
+      "title": "Pagination",
+      "description": "shadcn/ui pagination, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/pagination.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "popover",
+      "type": "registry:ui",
+      "title": "Popover",
+      "description": "shadcn/ui popover, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/popover.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "progress",
+      "type": "registry:ui",
+      "title": "Progress",
+      "description": "shadcn/ui progress, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/progress.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "radio-group",
+      "type": "registry:ui",
+      "title": "Radio group",
+      "description": "shadcn/ui radio group, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/radio-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "resizable",
+      "type": "registry:ui",
+      "title": "Resizable",
+      "description": "shadcn/ui resizable, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "react-resizable-panels@^4.14.1"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/resizable.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "scroll-area",
+      "type": "registry:ui",
+      "title": "Scroll area",
+      "description": "shadcn/ui scroll area, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/scroll-area.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "select",
+      "type": "registry:ui",
+      "title": "Select",
+      "description": "shadcn/ui select, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/select.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "separator",
+      "type": "registry:ui",
+      "title": "Separator",
+      "description": "shadcn/ui separator, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/separator.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "sheet",
+      "type": "registry:ui",
+      "title": "Sheet",
+      "description": "shadcn/ui sheet, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/button"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/sheet.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "skeleton",
+      "type": "registry:ui",
+      "title": "Skeleton",
+      "description": "shadcn/ui skeleton, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/skeleton.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "slider",
+      "type": "registry:ui",
+      "title": "Slider",
+      "description": "shadcn/ui slider, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/slider.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "sonner",
+      "type": "registry:ui",
+      "title": "Sonner",
+      "description": "shadcn/ui sonner, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "sonner@^2.0.8"
+      ],
+      "registryDependencies": [
+        "@kit/theme"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/sonner.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "spinner",
+      "type": "registry:ui",
+      "title": "Spinner",
+      "description": "shadcn/ui spinner, in the kit's compact style",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/spinner.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "switch",
+      "type": "registry:ui",
+      "title": "Switch",
+      "description": "shadcn/ui switch, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/switch.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "table",
+      "type": "registry:ui",
+      "title": "Table",
+      "description": "shadcn/ui table, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/table.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tabs",
+      "type": "registry:ui",
+      "title": "Tabs",
+      "description": "shadcn/ui tabs, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/tabs.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "textarea",
+      "type": "registry:ui",
+      "title": "Textarea",
+      "description": "shadcn/ui textarea, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/textarea.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "toggle",
+      "type": "registry:ui",
+      "title": "Toggle",
+      "description": "shadcn/ui toggle, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/toggle.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "toggle-group",
+      "type": "registry:ui",
+      "title": "Toggle group",
+      "description": "shadcn/ui toggle group, in the kit's compact style",
+      "dependencies": [
+        "class-variance-authority@^0.7.1",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/toggle"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/toggle-group.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tooltip",
+      "type": "registry:ui",
+      "title": "Tooltip",
+      "description": "shadcn/ui tooltip, in the kit's compact style",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "files": [
+        {
+          "path": "src/components/ui/tooltip.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "ai-label",
+      "type": "registry:component",
+      "title": "AI label",
+      "description": "\"AI\" tag for AI-made content",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/ai-label.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "bar-list",
+      "type": "registry:component",
+      "title": "Bar list",
+      "description": "ranked bars (top customers, spend)",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/bar-list.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "chart-legend",
+      "type": "registry:component",
+      "title": "Chart legend",
+      "description": "LegendLine, LegendRow",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/chart-legend.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "comment-box",
+      "type": "registry:component",
+      "title": "Comment box",
+      "description": "write a comment, Ctrl/⌘ Enter to send",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/shortcut",
+        "@kit/textarea"
+      ],
+      "files": [
+        {
+          "path": "src/components/comment-box.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "delete-confirm",
+      "type": "registry:component",
+      "title": "Delete confirm",
+      "description": "Delete confirm",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/alert-dialog"
+      ],
+      "files": [
+        {
+          "path": "src/components/delete-confirm.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "delta-badge",
+      "type": "registry:component",
+      "title": "Delta badge",
+      "description": "the change on the period before",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/delta-badge.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "file-chip",
+      "type": "registry:component",
+      "title": "File chip",
+      "description": "attached file: icon, name, size, remove",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/format"
+      ],
+      "files": [
+        {
+          "path": "src/components/file-chip.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "gantt-bar",
+      "type": "registry:component",
+      "title": "Gantt bar",
+      "description": "one item's bar on a Gantt chart: progress, name, %",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/gantt-bar.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "icon-action",
+      "type": "registry:component",
+      "title": "Icon action",
+      "description": "icon button with a tooltip and shortcut (copy, retry…)",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/shortcut",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/components/icon-action.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "label-dot",
+      "type": "registry:component",
+      "title": "Label dot",
+      "description": "a label's colour dot",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/label-dot.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "mark",
+      "type": "registry:component",
+      "title": "Mark",
+      "description": "LetterMark, IconMark",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/mark.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "mention",
+      "type": "registry:component",
+      "title": "Mention",
+      "description": "@mention pill",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/mention.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "menu-kit",
+      "type": "registry:component",
+      "title": "Menu kit",
+      "description": "one menu's items as dropdown or context menu",
+      "registryDependencies": [
+        "@kit/context-menu",
+        "@kit/dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "src/components/menu-kit.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "milestone-marker",
+      "type": "registry:component",
+      "title": "Milestone marker",
+      "description": "the milestone diamond",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/milestone-marker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "nav-item",
+      "type": "registry:component",
+      "title": "Nav item",
+      "description": "sidebar row (also rail), NavHeading, NavGroup",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/components/nav-item.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "page-header",
+      "type": "registry:component",
+      "title": "Page header",
+      "description": "title, description, actions",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/page-header.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "panel",
+      "type": "registry:component",
+      "title": "Panel",
+      "description": "the kit's titled card",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "files": [
+        {
+          "path": "src/components/panel.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "person",
+      "type": "registry:component",
+      "title": "Person",
+      "description": "UserAvatar (initials), Person (avatar and name), NoAssignee",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/avatar"
+      ],
+      "files": [
+        {
+          "path": "src/components/person.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "priority-icon",
+      "type": "registry:component",
+      "title": "Priority icon",
+      "description": "priority icon (no priority, low… urgent)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/priority-icon.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "progress-ring",
+      "type": "registry:component",
+      "title": "Progress ring",
+      "description": "circular progress",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/progress-ring.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "search-field",
+      "type": "registry:component",
+      "title": "Search field",
+      "description": "search box with clear and a shortcut hint",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/input-group"
+      ],
+      "files": [
+        {
+          "path": "src/components/search-field.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "search-trigger",
+      "type": "registry:component",
+      "title": "Search trigger",
+      "description": "Search trigger",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/shortcut"
+      ],
+      "files": [
+        {
+          "path": "src/components/search-trigger.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "shortcut",
+      "type": "registry:component",
+      "title": "Shortcut",
+      "description": "keyboard keys, ⌘ or Ctrl by platform",
+      "registryDependencies": [
+        "@kit/kbd"
+      ],
+      "files": [
+        {
+          "path": "src/components/shortcut.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "sparkline",
+      "type": "registry:component",
+      "title": "Sparkline",
+      "description": "tiny line chart",
+      "dependencies": [
+        "cn@^0.4.0",
+        "recharts@^3.8.0"
+      ],
+      "registryDependencies": [
+        "@kit/chart",
+        "@kit/delta-badge"
+      ],
+      "files": [
+        {
+          "path": "src/components/sparkline.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-badge",
+      "type": "registry:component",
+      "title": "Status badge",
+      "description": "status pill with a tone and a dot",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/status-badge.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "status-icon",
+      "type": "registry:component",
+      "title": "Status icon",
+      "description": "workflow status icon (backlog, todo, in progress, done…)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/status-icon.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "thinking-indicator",
+      "type": "registry:component",
+      "title": "Thinking indicator",
+      "description": "Thinking…, shimmer, typing dots, caret, timer",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/format",
+        "@kit/spinner",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/thinking-indicator.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "time-marker",
+      "type": "registry:component",
+      "title": "Time marker",
+      "description": "today or now on a timeline: a line and its label, down or across",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/time-marker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "usage-meter",
+      "type": "registry:component",
+      "title": "Usage meter",
+      "description": "allowance used, with warning colours",
+      "dependencies": [
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/progress",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/usage-meter.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "view-switch",
+      "type": "registry:component",
+      "title": "View switch",
+      "description": "list / board toggle",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/toggle-group"
+      ],
+      "files": [
+        {
+          "path": "src/components/view-switch.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "account-menu",
+      "type": "registry:block",
+      "title": "Account menu",
+      "description": "avatar and name at a sidebar's foot, with its menu",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/dropdown-menu",
+        "@kit/person"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/account-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/account-menu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "ai-summary-card",
+      "type": "registry:block",
+      "title": "AI summary card",
+      "description": "AI summary card: a few points the AI wrote about a record or a day, labelled as AI",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/ai-label",
+        "@kit/button",
+        "@kit/chat-message",
+        "@kit/icon-action",
+        "@kit/skeleton",
+        "@kit/thinking-indicator",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/ai-summary-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/ai-summary-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "artifact-panel",
+      "type": "registry:block",
+      "title": "Artifact panel",
+      "description": "Artifact panel: a document, table or code the assistant made, opened beside the chat",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "sonner@^2.0.8"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/download",
+        "@kit/dropdown-menu",
+        "@kit/icon-action",
+        "@kit/tabs",
+        "@kit/text"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/artifact-panel.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/artifact-panel.tsx"
+        }
+      ]
+    },
+    {
+      "name": "chat-history",
+      "type": "registry:block",
+      "title": "Chat history",
+      "description": "Chat history: the sidebar of an AI chat app, with search, projects and pinned chats",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "date-fns@^4.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/context-menu",
+        "@kit/delete-confirm",
+        "@kit/dropdown-menu",
+        "@kit/format",
+        "@kit/menu-kit",
+        "@kit/search-field",
+        "@kit/spinner",
+        "@kit/text"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat-history.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat-history.tsx"
+        }
+      ]
+    },
+    {
+      "name": "chat-message",
+      "type": "registry:block",
+      "title": "Chat message",
+      "description": "Chat message: the person's message, the assistant's reply and its actions bar",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/dialog",
+        "@kit/file-chip",
+        "@kit/icon-action",
+        "@kit/markdown",
+        "@kit/mention",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat-message.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat-message.tsx"
+        }
+      ]
+    },
+    {
+      "name": "chat-thread",
+      "type": "registry:block",
+      "title": "Chat thread",
+      "description": "Chat thread: the scrolling messages, and the welcome screen with prompt starters",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat-thread.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat-thread.tsx"
+        }
+      ]
+    },
+    {
+      "name": "data-table",
+      "type": "registry:block",
+      "title": "Data table",
+      "description": "TanStack table: toolbar, facets, views, bulk bar, CSV",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "@tanstack/react-table@^9.2.4",
+        "cn@^0.4.0",
+        "date-fns@^4.4.0",
+        "sonner@^2.0.8"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/command",
+        "@kit/context-menu",
+        "@kit/delete-confirm",
+        "@kit/download",
+        "@kit/dropdown-menu",
+        "@kit/filter-bar",
+        "@kit/label",
+        "@kit/popover",
+        "@kit/search-field",
+        "@kit/select",
+        "@kit/separator",
+        "@kit/slider",
+        "@kit/table",
+        "@kit/text",
+        "@kit/toggle-group",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/data-table/csv.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/data-table/csv.ts"
+        },
+        {
+          "path": "src/blocks/data-table/data-table.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/data-table/data-table.tsx"
+        },
+        {
+          "path": "src/blocks/data-table/features.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/data-table/features.ts"
+        },
+        {
+          "path": "src/blocks/data-table/index.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/data-table/index.ts"
+        },
+        {
+          "path": "src/blocks/data-table/parts.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/data-table/parts.tsx"
+        }
+      ]
+    },
+    {
+      "name": "display-menu",
+      "type": "registry:block",
+      "title": "Display menu",
+      "description": "Display options: layout, grouping, ordering, properties",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/label",
+        "@kit/popover",
+        "@kit/select",
+        "@kit/switch",
+        "@kit/toggle"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/display-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/display-menu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "dock-schedule",
+      "type": "registry:block",
+      "title": "Dock schedule",
+      "description": "yard dock schedule: day by dock and time slot, docks",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "date-fns@^4.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/chart-legend",
+        "@kit/format",
+        "@kit/progress-ring",
+        "@kit/status-badge",
+        "@kit/text",
+        "@kit/time-marker",
+        "@kit/toggle-group",
+        "@kit/tokens",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/dock-schedule/dock-schedule.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dock-schedule/dock-schedule.tsx"
+        },
+        {
+          "path": "src/blocks/dock-schedule/dock-week.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dock-schedule/dock-week.tsx"
+        },
+        {
+          "path": "src/blocks/dock-schedule/index.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/dock-schedule/index.ts"
+        },
+        {
+          "path": "src/blocks/dock-schedule/schedule.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/dock-schedule/schedule.ts"
+        },
+        {
+          "path": "src/blocks/dock-schedule/slot-picker.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/dock-schedule/slot-picker.tsx"
+        }
+      ]
+    },
+    {
+      "name": "filter-bar",
+      "type": "registry:block",
+      "title": "Filter bar",
+      "description": "filter menu, filter chips, saved views",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/command",
+        "@kit/dropdown-menu",
+        "@kit/popover",
+        "@kit/search-field",
+        "@kit/text"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/filter-bar/filter-bar.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/filter-bar/filter-bar.tsx"
+        },
+        {
+          "path": "src/blocks/filter-bar/filter-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/filter-bar/filter-menu.tsx"
+        },
+        {
+          "path": "src/blocks/filter-bar/filters.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/filter-bar/filters.ts"
+        },
+        {
+          "path": "src/blocks/filter-bar/index.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/filter-bar/index.ts"
+        }
+      ]
+    },
+    {
+      "name": "folding-breadcrumb",
+      "type": "registry:block",
+      "title": "Folding breadcrumb",
+      "description": "breadcrumb that folds to fit",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dropdown-menu"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/folding-breadcrumb.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/folding-breadcrumb.tsx"
+        }
+      ]
+    },
+    {
+      "name": "form-dialog",
+      "type": "registry:block",
+      "title": "Form dialog",
+      "description": "field-driven dialog, quick create, property pills",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/command",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/field",
+        "@kit/input",
+        "@kit/input-group",
+        "@kit/kbd",
+        "@kit/label",
+        "@kit/popover",
+        "@kit/radio-group",
+        "@kit/select",
+        "@kit/shortcut",
+        "@kit/spinner",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/form-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/form-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "gantt-chart",
+      "type": "registry:block",
+      "title": "Gantt chart",
+      "description": "Gantt chart: timescale, bars, milestones, today line, Weeks / Months",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/format",
+        "@kit/gantt-bar",
+        "@kit/milestone-marker",
+        "@kit/time-marker",
+        "@kit/toggle-group",
+        "@kit/tokens",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/gantt-chart.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/gantt-chart.tsx"
+        }
+      ]
+    },
+    {
+      "name": "grouped-list",
+      "type": "registry:block",
+      "title": "Grouped list",
+      "description": "list in folding groups, row shell, selection",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/grouped-list.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/grouped-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "kanban-board",
+      "type": "registry:block",
+      "title": "Kanban board",
+      "description": "columns, drag and drop, \"Move to…\" menu, card shell",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dropdown-menu",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/kanban-board.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/kanban-board.tsx"
+        }
+      ]
+    },
+    {
+      "name": "kpi-card",
+      "type": "registry:block",
+      "title": "KPI card",
+      "description": "KPI card, delta badge, sparkline, grid",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/delta-badge",
+        "@kit/sparkline",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/kpi-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/kpi-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "markdown",
+      "type": "registry:block",
+      "title": "Markdown",
+      "description": "Markdown renderer (chat replies, artifacts, previews)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/thinking-indicator",
+        "@kit/tokens",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/markdown.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/markdown.tsx"
+        }
+      ]
+    },
+    {
+      "name": "notifications-menu",
+      "type": "registry:block",
+      "title": "Notifications menu",
+      "description": "the bell's popover",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/person",
+        "@kit/popover"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/notifications-menu.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/notifications-menu.tsx"
+        }
+      ]
+    },
+    {
+      "name": "period-picker",
+      "type": "registry:block",
+      "title": "Period picker",
+      "description": "period switch, compare, date range picker",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "date-fns@^4.4.0",
+        "react-day-picker@^10.0.2"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/calendar",
+        "@kit/format",
+        "@kit/label",
+        "@kit/popover",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/toggle-group"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/period-picker.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/period-picker.tsx"
+        }
+      ]
+    },
+    {
+      "name": "prompt-box",
+      "type": "registry:block",
+      "title": "Prompt box",
+      "description": "Prompt box (composer): growing text area, attached files, toolbar and send",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "sonner@^2.0.8"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/command",
+        "@kit/dropdown-menu",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/icon-action",
+        "@kit/kbd",
+        "@kit/person",
+        "@kit/text",
+        "@kit/thinking-indicator",
+        "@kit/tokens",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/prompt-box.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/prompt-box.tsx"
+        }
+      ]
+    },
+    {
+      "name": "record-sheet",
+      "type": "registry:block",
+      "title": "Record sheet",
+      "description": "side panel (peek) for one record",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/comment-box",
+        "@kit/delete-confirm",
+        "@kit/person",
+        "@kit/sheet"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/record-sheet.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/record-sheet.tsx"
+        }
+      ]
+    },
+    {
+      "name": "sign-in",
+      "type": "registry:block",
+      "title": "Sign in",
+      "description": "sign-in page parts: form, SSO, aside, footer",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/field",
+        "@kit/input-group",
+        "@kit/label",
+        "@kit/mark",
+        "@kit/person",
+        "@kit/spinner",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/sign-in.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/sign-in.tsx"
+        }
+      ]
+    },
+    {
+      "name": "thinking-trail",
+      "type": "registry:block",
+      "title": "Thinking trail",
+      "description": "Thinking trail: what an agent did on the way to its answer, in one quiet line",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/collapsible",
+        "@kit/format",
+        "@kit/text",
+        "@kit/thinking-indicator",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/thinking-trail.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/thinking-trail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "workspace-switcher",
+      "type": "registry:block",
+      "title": "Workspace switcher",
+      "description": "workspace or company switcher",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/dropdown-menu",
+        "@kit/mark",
+        "@kit/tooltip"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/workspace-switcher.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/workspace-switcher.tsx"
+        }
+      ]
+    }
+  ]
+}

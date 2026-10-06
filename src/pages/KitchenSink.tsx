@@ -32,6 +32,7 @@ import ContentSection from './sections/ContentSection'
 import DashboardSection from './sections/DashboardSection'
 import DataTableSection from './sections/DataTableSection'
 import DisplaySection from './sections/DisplaySection'
+import DockScheduleSection from './sections/DockScheduleSection'
 import FormModalsSection, { QuickCreateDialog } from './sections/FormModalsSection'
 import FormsSection from './sections/FormsSection'
 import IconsSection from './sections/IconsSection'
@@ -97,6 +98,7 @@ export default function KitchenSink() {
     dashboard: () => <DashboardSection />,
     calendar: () => <CalendarSection />,
     roadmap: () => <RoadmapSection />,
+    'dock-schedule': () => <DockScheduleSection />,
     settings: () => <SettingsSection />,
     'audit-log': () => <AuditLogSection />,
     pricing: () => <PricingSection />,
@@ -130,7 +132,7 @@ export default function KitchenSink() {
   }
 
   useEffect(() => {
-    document.title = `${page.label} · Linear-style UI Kit`
+    document.title = `${page.label} · UI Kit`
   }, [page.label])
 
   // Ctrl+K command menu, ? shortcuts, C new job, and Linear-style "G then …" jumps.

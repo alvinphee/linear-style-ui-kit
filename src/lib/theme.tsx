@@ -110,6 +110,17 @@ export function ThemeProvider({ defaultTheme = 'system', children }: { defaultTh
     return () => query.removeEventListener('change', onChange)
   }, [])
 
+  // Another tab or frame changed the theme (the theme comparison shows the
+  // app in two frames): follow it, so every copy stays in the same mode.
+  useEffect(() => {
+    function onStorage(event: StorageEvent) {
+      if (event.key === THEME_KEY) setThemeState(readTheme(defaultTheme))
+      if (event.key === PALETTE_KEY) setPaletteState(readJson(PALETTE_KEY, DEFAULT_PALETTE))
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [defaultTheme])
+
   useEffect(() => {
     const root = document.documentElement
     root.classList.toggle('dark', resolvedTheme === 'dark')

@@ -105,7 +105,7 @@ export default function JobListSection() {
   }, [picked.length])
 
   return (
-    <Section id="list" title="Job list" description="A Linear-style list: grouped, dense, keyboard-first">
+    <Section id="list" title="Job list" description="A grouped list: dense and keyboard-first">
       {/* overflow-clip, not hidden, so the bulk toolbar can stick to the bottom of the viewport.
           @container: the rows show more cells as the card widens. */}
       <article ref={card} className="bg-card @container relative overflow-clip rounded-lg border lg:col-span-2">

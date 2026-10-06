@@ -184,8 +184,9 @@ export function FormDialog({
   createMore?: boolean
   // Ctrl/⌘+Enter submits, with the hint on the button.
   shortcut?: boolean
-  // More content under the fields.
-  children?: ReactNode
+  // More content under the fields. As a function it gets the current values,
+  // for a control of your own that depends on them (a slot picker).
+  children?: ReactNode | ((values: FormValues) => ReactNode)
   // On the dialog panel, for a width such as sm:max-w-lg.
   className?: string
 }) {
@@ -274,7 +275,7 @@ export function FormDialog({
                   onBlur={(value) => errors.blur(f.key, value)}
                 />
               ))}
-              {children}
+              {typeof children === 'function' ? children(values) : children}
             </FieldGroup>
           </div>
           <DialogFooter className="border-t px-4 py-3">
