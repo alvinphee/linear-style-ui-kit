@@ -389,6 +389,18 @@ file per item in `public/r/`. 110 items: 47 ui, 30 components, 24 blocks,
 - **Tested end to end:** a new Vite project with an empty theme installed all
   110 items with one `npx shadcn add`. `tsc` and `vite build` passed, and a
   page made of installed parts looked like the kit (screenshot checked).
+- **Keeping it current** (`vite.config.ts`, `npm run check`). Tested: a new
+  component appeared in `public/r/` about 15 seconds after it was saved, an
+  edit to Panel showed in `panel.json`, and a deleted part's JSON was
+  removed. Two snags on the way:
+  - `shadcn build` only writes files, so a deleted part stayed installable.
+    The script now removes JSON that no item owns.
+  - Every rebuild reloaded the open page. Tailwind reads every file that is
+    not in `.gitignore` for class names, `registry.json` included, and
+    reloads the page when one changes. `@source not "../registry.json"` in
+    `styles.css` stops that, and the script only rewrites `registry.json`
+    when its content changes. `public/r/` is in `.gitignore`, so Tailwind
+    never read it.
 - Limits: one run each, one screen, one model. It says nothing about
   keeping 50 screens consistent, which is what the kit's shared parts are
   for.

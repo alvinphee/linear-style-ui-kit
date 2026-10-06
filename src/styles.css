@@ -3,6 +3,10 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/inter";
 
+/* The registry's list holds no classes, and Tailwind reloads the page when a
+   file it reads changes. */
+@source not "../registry.json";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

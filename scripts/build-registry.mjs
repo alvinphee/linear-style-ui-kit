@@ -3,6 +3,8 @@
 // npm dependencies and kit dependencies are read from its imports, so the
 // registry cannot drift from the code. `npm run registry` runs this, then
 // `shadcn build`, which writes public/r/<name>.json (served at /r/ by Vite).
+// The dev server reruns both when a part changes (vite.config.ts), and
+// `--check` (part of `npm run check`) fails if registry.json is out of date.
 //
 //   src/components/ui/*   registry:ui         one item per file
 //   src/components/*      registry:component  one item per file
@@ -13,7 +15,7 @@
 //
 // Blocks install into components/blocks/, where the shadcn CLI points their
 // `@/blocks/…` imports.
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 
 const NAMESPACE = '@kit'
@@ -211,10 +213,28 @@ const registry = {
       })),
   ],
 }
-writeFileSync(join(root, 'registry.json'), JSON.stringify(registry, null, 2) + '\n')
+const json = JSON.stringify(registry, null, 2) + '\n'
+const file = join(root, 'registry.json')
 
-const count = (type) => registry.items.filter((i) => i.type === type).length
-console.log(
-  `Registry: ${registry.items.length} items (${count('registry:ui')} ui, ${count('registry:component')} components, ` +
-    `${count('registry:block')} blocks, ${count('registry:lib')} lib, 1 theme) → registry.json`,
-)
+// Git may have checked the file out with CRLF line endings.
+const saved = existsSync(file) ? readFileSync(file, 'utf8').replace(/\r\n/g, '\n') : ''
+
+if (process.argv.includes('--check')) {
+  if (saved !== json) fail('registry.json is out of date with the code. Run `npm run registry` and commit it.')
+  console.log(`Registry: registry.json is up to date (${registry.items.length} items).`)
+} else {
+  // Only when it changed, so editing a part does not touch the file at all.
+  if (saved !== json) writeFileSync(file, json)
+  // shadcn build only writes files, so a deleted part's JSON would stay
+  // installable. Remove it (public/r/registry.json is the build's own index).
+  const built = join(root, 'public', 'r')
+  const names = new Set([...registry.items.map((i) => i.name), 'registry'])
+  if (existsSync(built)) {
+    for (const f of readdirSync(built)) if (f.endsWith('.json') && !names.has(f.slice(0, -5))) unlinkSync(join(built, f))
+  }
+  const count = (type) => registry.items.filter((i) => i.type === type).length
+  console.log(
+    `Registry: ${registry.items.length} items (${count('registry:ui')} ui, ${count('registry:component')} components, ` +
+      `${count('registry:block')} blocks, ${count('registry:lib')} lib, 1 theme) → registry.json`,
+  )
+}

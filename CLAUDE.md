@@ -32,8 +32,8 @@ Check the kit's rules (also run by `npm run build`):
 npm run check
 ```
 
-Rebuild the shadcn registry after adding or changing a part (see "The
-registry"):
+The dev server rebuilds the shadcn registry by itself when a part changes.
+To rebuild it without the dev server (see "The registry"):
 ```bash
 npm run registry
 ```
@@ -51,7 +51,7 @@ linear-style-ui-kit/
 ├── components.json            shadcn settings (style, icon library, paths)
 ├── registry.json              the shadcn registry: one item per part (made by the script below)
 ├── public/
-│   └── r/                     the built registry, one JSON per item (not in git; npm run registry)
+│   └── r/                     the built registry, one JSON per item (not in git; built by the dev server)
 ├── scripts/
 │   ├── check-rules.mjs        npm run check: the rules below, checked on every file
 │   └── build-registry.mjs     npm run registry: writes registry.json from each part's imports
@@ -341,8 +341,14 @@ components, 24 blocks and 8 lib files. Which level becomes which item:
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes
   `public/r/<name>.json`). The dev server serves them at
-  http://localhost:5180/r/. Run it after adding or changing a part, and
-  commit `registry.json`; `public/r/` is not in git.
+  http://localhost:5180/r/.
+- It keeps itself current. While `npm run dev` runs, `vite.config.ts` runs
+  both steps a moment after a part, `styles.css`, `CLAUDE.md` or
+  `package.json` changes, and drops the JSON of a deleted part. The open
+  page does not reload (`styles.css` tells Tailwind not to read
+  `registry.json`). `npm run check`, and so `npm run build`, fails if
+  `registry.json` is out of date: run `npm run registry` and commit it.
+  `public/r/` is not in git.
 - Another project names the registry once in its `components.json`:
   ```json
   "registries": { "@kit": "http://localhost:5180/r/{name}.json" }

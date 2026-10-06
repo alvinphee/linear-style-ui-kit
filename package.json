@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && node scripts/check-rules.mjs && vite build",
-    "check": "node scripts/check-rules.mjs",
+    "build": "tsc --noEmit && npm run check && vite build",
+    "check": "node scripts/check-rules.mjs && node scripts/build-registry.mjs --check",
     "registry": "node scripts/build-registry.mjs && shadcn build",
     "preview": "vite preview"
   },
