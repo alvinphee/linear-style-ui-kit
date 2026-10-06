@@ -20,9 +20,10 @@ function when(at: Value) {
   return time ? `${formatDate(date)}, ${time}` : formatDate(date)
 }
 
-// The side panel ("peek"): a record opened beside the list, from a row, the
-// command palette or the launchpad. Previous / next step through all of
-// that list's records in stored order, not the list's current filter or sort.
+// The record peek: a record opened over the list in a centred modal (the
+// kit's center peek), from a row, the command palette, the launchpad or an
+// Ask AI answer. Previous / next step through all of that list's records in
+// stored order, not the list's current filter or sort.
 export function RecordPeek() {
   const { peek, closePeek, openPeek, data, update, remove, session } = useErp()
   const spec = peek ? specFor(peek.entity) : undefined

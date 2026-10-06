@@ -2,11 +2,14 @@ import { useState, type MouseEvent } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Calendar03Icon, Copy01Icon, CursorPointer02Icon, Delete02Icon, FilterHorizontalIcon, LayoutBottomIcon,
-  LayoutLeftIcon, LayoutRightIcon, LayoutTopIcon, Link01Icon, PencilEdit02Icon,
+  LayoutLeftIcon, LayoutRightIcon, LayoutTopIcon, Link01Icon, PencilEdit02Icon, SparklesIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { DockedPanel } from '@/blocks/docked-panel'
+import { RecordSheet, RecordSheetContent, type PeekMode } from '@/blocks/record-sheet'
 import { Mention } from '@/components/mention'
+import { StatusBadge } from '@/components/status-badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
@@ -657,11 +660,187 @@ function ContextMenuDemos() {
   )
 }
 
+/* Docked panel */
+
+const PANEL_WIDTHS = ['320', '400', '480'] as const
+
+// A small app: a page, and the docked panel beside it, which narrows the page.
+function DockedPanelPreview({ side, defaultWidth, closeButton }: { side: 'left' | 'right'; defaultWidth: number; closeButton: boolean }) {
+  const [open, setOpen] = useState(true)
+  const panel = (
+    <DockedPanel
+      open={open}
+      onOpenChange={setOpen}
+      title="Ask AI"
+      side={side}
+      defaultWidth={defaultWidth}
+      minWidth={240}
+      showCloseButton={closeButton}
+      className="bg-subtle"
+    >
+      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-3 pr-10">
+        <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} className="text-brand size-3.5" />
+        <h4 className="text-xs font-medium">Ask AI</h4>
+      </header>
+      <div className="text-muted-foreground grid min-h-0 flex-1 content-start gap-2 overflow-y-auto p-3 text-xs">
+        <p>Drag the edge to resize, or focus it and use the arrow keys. Double-click it for the default width.</p>
+        <p>The page beside it narrows; nothing is covered.</p>
+      </div>
+    </DockedPanel>
+  )
+  return (
+    <div className="bg-background flex h-72 w-full min-w-0 overflow-hidden rounded-lg border">
+      {side === 'left' && panel}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-10 shrink-0 items-center justify-between gap-2 border-b px-3">
+          <span className="truncate text-xs font-medium">Invoices</span>
+          <Button variant="outline" size="sm" aria-pressed={open} onClick={() => setOpen(!open)} className="aria-pressed:bg-accent">
+            <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" />
+            Ask AI
+          </Button>
+        </header>
+        <ul className="divide-y overflow-y-auto">
+          {['INV-0431 · Northwind', 'INV-0430 · Bayview Foods', 'INV-0429 · Acme Retail', 'INV-0428 · Harbour Lines', 'INV-0427 · Summit Labs'].map((row) => (
+            <li key={row} className="truncate px-3 py-2 text-xs">{row}</li>
+          ))}
+        </ul>
+      </div>
+      {side === 'right' && panel}
+    </div>
+  )
+}
+
+function DockedPanelDemos() {
+  return (
+    <Playground
+      title="Docked panel"
+      description="A side panel beside the page that narrows it instead of covering it, and resizes from its edge. A sheet on a narrow screen"
+      controls={[
+        { kind: 'select', name: 'side', label: 'Side', options: ['right', 'left'], initial: 'right' },
+        { kind: 'select', name: 'width', label: 'Default width', options: PANEL_WIDTHS, initial: '400' },
+        { kind: 'switch', name: 'close', label: 'Close button', initial: true },
+      ]}
+      previewClassName="block"
+      render={(v) => (
+        <DockedPanelPreview
+          key={str(v, 'side')}
+          side={str(v, 'side') as 'left' | 'right'}
+          defaultWidth={Number(str(v, 'width'))}
+          closeButton={bool(v, 'close')}
+        />
+      )}
+      code={(v) => {
+        const side = str(v, 'side')
+        const panel = jsx('DockedPanel', {
+          open: '{open}',
+          onOpenChange: '{setOpen}',
+          title: 'Ask AI',
+          side: unless(side, 'right'),
+          defaultWidth: unless(str(v, 'width'), '400') ? `{${str(v, 'width')}}` : undefined,
+          onWidthChange: '{saveWidth}',
+          showCloseButton: bool(v, 'close') ? undefined : '{false}',
+        }, ['{/* a header, and a body that scrolls */}'])
+        const page = '<main className="min-w-0 flex-1">…</main>'
+        return [
+          imports({ '@/blocks/docked-panel': ['DockedPanel'] }),
+          '',
+          withState('Page', ['const [open, setOpen] = useState(false)'], jsx('div', { className: 'flex min-h-0 flex-1' }, side === 'left' ? [panel, page] : [page, panel])),
+        ].join('\n')
+      }}
+    />
+  )
+}
+
+/* Record peek */
+
+function RecordPeekPreview({ peek, navigation, comments }: { peek: PeekMode; navigation: boolean; comments: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [index, setIndex] = useState(0)
+  const invoices = [
+    { id: 'INV-0431', customer: 'Northwind Trading', amount: '$4,820.00', due: '14 Oct' },
+    { id: 'INV-0430', customer: 'Bayview Foods', amount: '$1,240.50', due: '9 Oct' },
+    { id: 'INV-0429', customer: 'Acme Retail', amount: '$12,075.00', due: '2 Oct' },
+  ]
+  const invoice = invoices[index]
+  return (
+    <>
+      <Button variant="outline" onClick={() => setOpen(true)}>Open {invoice.id}</Button>
+      <RecordSheet open={open} onOpenChange={setOpen} peek={peek}>
+        <RecordSheetContent
+          key={invoice.id}
+          number={invoice.id}
+          badge={<StatusBadge tone={index === 2 ? 'danger' : 'warning'}>{index === 2 ? 'Overdue' : 'Unpaid'}</StatusBadge>}
+          title={invoice.customer}
+          description={`Invoice ${invoice.id}: details and activity.`}
+          noun="invoice"
+          navigation={navigation ? {
+            index,
+            total: invoices.length,
+            onPrevious: index > 0 ? () => setIndex(index - 1) : undefined,
+            onNext: index < invoices.length - 1 ? () => setIndex(index + 1) : undefined,
+          } : undefined}
+          details={[
+            { label: 'Customer', value: invoice.customer },
+            { label: 'Amount', value: <span className="tabular-nums">{invoice.amount}</span> },
+            { label: 'Due', value: invoice.due },
+          ]}
+          activity={[
+            { id: 1, actor: 'Mei Ling', text: 'sent a payment reminder', at: '2h ago' },
+            { id: 2, actor: 'Ravi', text: 'created the invoice', at: '3 Oct' },
+          ]}
+          onComment={comments ? () => toast('Note added', { description: 'Demo only.' }) : undefined}
+          footer={<Button variant="outline" size="sm" onClick={() => toast.success('Payment recorded', { description: 'Demo only.' })}>Record payment</Button>}
+          onDelete={() => {
+            toast(`Deleted ${invoice.id}`, { description: 'Demo only.' })
+          }}
+        />
+      </RecordSheet>
+    </>
+  )
+}
+
+function RecordPeekDemos() {
+  return (
+    <Playground
+      title="Record peek"
+      description="One record opened over its list: a centred modal (center peek), or a panel from the right (side peek)"
+      controls={[
+        { kind: 'select', name: 'peek', label: 'Peek', options: ['center', 'side'], initial: 'center' },
+        { kind: 'switch', name: 'navigation', label: 'Previous / next', initial: true },
+        { kind: 'switch', name: 'comments', label: 'Comment box', initial: true },
+      ]}
+      render={(v) => <RecordPeekPreview peek={str(v, 'peek') as PeekMode} navigation={bool(v, 'navigation')} comments={bool(v, 'comments')} />}
+      code={(v) => [
+        imports({ '@/blocks/record-sheet': ['RecordSheet', 'RecordSheetContent'] }),
+        '',
+        jsx('RecordSheet', { open: '{!!invoice}', onOpenChange: '{close}', peek: unless(str(v, 'peek'), 'center') }, [
+          '{invoice && (',
+          jsx('RecordSheetContent', {
+            key: '{invoice.id}',
+            number: '{invoice.id}',
+            title: '{invoice.customer}',
+            description: 'Invoice details and activity.',
+            noun: 'invoice',
+            navigation: bool(v, 'navigation') ? '{{ index, total, onPrevious, onNext }}' : undefined,
+            details: '{details}',
+            activity: '{activity}',
+            onComment: bool(v, 'comments') ? '{addNote}' : undefined,
+            onDelete: '{remove}',
+          }),
+          ')}',
+        ]),
+      ].join('\n')}
+    />
+  )
+}
+
 export default function OverlaysMoreDemos() {
   return (
     <Demos>
       <SheetDemos />
       <DrawerDemos />
+      <DockedPanelDemos />
+      <RecordPeekDemos />
       <HoverCardDemos />
       <ContextMenuDemos />
     </Demos>

@@ -15,11 +15,15 @@ export type Recent = { entity: EntityId; id: string; label: string }
 export type StartPage = 'launchpad' | 'assistant'
 
 // groupByDate: the Assistant's chat history grouped by date, or one list (the default).
-type Saved = { session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean }
+// copilotWidth: the Ask AI panel's width, as you last left it.
+type Saved = {
+  session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean
+  copilotWidth: number
+}
 
 const KEY = 'linear-kit:erp:v1'
 
-const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false }
+const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false, copilotWidth: 400 }
 
 function load(): Saved {
   try {
@@ -36,6 +40,7 @@ type ErpState = {
   favourites: string[]
   startPage: StartPage
   groupByDate: boolean
+  copilotWidth: number
   // A page's own title for the end of the breadcrumb, such as a chat's.
   pageTitle: string | null
   recent: Recent[]
@@ -53,6 +58,7 @@ type ErpState = {
   toggleFavourite: (moduleId: string) => void
   setStartPage: (page: StartPage) => void
   setGroupByDate: (byDate: boolean) => void
+  setCopilotWidth: (width: number) => void
   setPageTitle: (title: string | null) => void
   openPeek: (entity: EntityId, id: string) => void
   closePeek: () => void
@@ -103,6 +109,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     favourites: saved.favourites,
     startPage: saved.startPage,
     groupByDate: saved.groupByDate,
+    copilotWidth: saved.copilotWidth,
     pageTitle,
     recent,
     peek,
@@ -137,6 +144,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     })),
     setStartPage: (startPage) => setSaved((s) => ({ ...s, startPage })),
     setGroupByDate: (groupByDate) => setSaved((s) => ({ ...s, groupByDate })),
+    setCopilotWidth: (copilotWidth) => setSaved((s) => ({ ...s, copilotWidth })),
     setPageTitle,
     openPeek: (entity, id) => {
       setPeek({ entity, id })

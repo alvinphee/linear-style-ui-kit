@@ -240,6 +240,18 @@
       ]
     },
     {
+      "name": "use-media-query",
+      "type": "registry:lib",
+      "title": "Use media query",
+      "description": "Use media query",
+      "files": [
+        {
+          "path": "src/lib/use-media-query.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-svg-id",
       "type": "registry:lib",
       "title": "Use SVG id",
@@ -1998,6 +2010,30 @@
       ]
     },
     {
+      "name": "docked-panel",
+      "type": "registry:block",
+      "title": "Docked panel",
+      "description": "side panel beside the page that narrows it (Ask AI): slides, resizes from its edge, a sheet on narrow screens",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/sheet",
+        "@kit/tokens",
+        "@kit/use-media-query"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/docked-panel.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/docked-panel.tsx"
+        }
+      ]
+    },
+    {
       "name": "filter-bar",
       "type": "registry:block",
       "title": "Filter bar",
@@ -2281,7 +2317,8 @@
         "@kit/popover",
         "@kit/switch",
         "@kit/text",
-        "@kit/toggle-group"
+        "@kit/toggle-group",
+        "@kit/use-media-query"
       ],
       "files": [
         {
@@ -2329,7 +2366,7 @@
       "name": "record-sheet",
       "type": "registry:block",
       "title": "Record sheet",
-      "description": "side panel (peek) for one record",
+      "description": "record peek: one record in a centred modal (center peek) or a panel from the right (side peek)",
       "dependencies": [
         "@hugeicons/core-free-icons@^4.3.5",
         "@hugeicons/react@^1.1.10",
@@ -2339,6 +2376,7 @@
         "@kit/button",
         "@kit/comment-box",
         "@kit/delete-confirm",
+        "@kit/dialog",
         "@kit/person",
         "@kit/sheet"
       ],

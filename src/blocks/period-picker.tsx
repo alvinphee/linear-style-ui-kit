@@ -1,4 +1,4 @@
-import { useCallback, useId, useState, useSyncExternalStore, type ComponentProps, type ReactNode } from 'react'
+import { useId, useState, type ComponentProps, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Calendar03Icon } from '@hugeicons/core-free-icons'
 import { differenceInCalendarDays, isSameDay, startOfMonth } from 'date-fns'
@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { formatDateRange } from '@/lib/format'
 import { plural } from '@/lib/text'
+import { useMediaQuery } from '@/lib/use-media-query'
 
 // Picks the period a dashboard reports on.
 //
@@ -40,15 +41,6 @@ export type DateRangePreset = {
   label: string
   // Leave it out for a button that clears the range.
   range?: DateRange
-}
-
-function useMediaQuery(query: string) {
-  const subscribe = useCallback((onChange: () => void) => {
-    const mq = window.matchMedia(query)
-    mq.addEventListener('change', onChange)
-    return () => mq.removeEventListener('change', onChange)
-  }, [query])
-  return useSyncExternalStore(subscribe, () => window.matchMedia(query).matches, () => false)
 }
 
 function rangeLabel(range: DateRange | undefined, placeholder = 'Pick a date range') {

@@ -20,7 +20,7 @@ import { ErpProvider, useErp } from './store'
 
 // The ERP template: #/templates/erp. A complete multi-module app made from
 // the kit: sign-in, company picker, launchpad, module pages, command
-// palette, side panels and an AI copilot. All data is made up.
+// palette, record peeks and a docked AI copilot. All data is made up.
 
 export default function ErpApp({ edition = CLASSIC }: { edition?: Edition }) {
   setEdition(edition)
@@ -36,7 +36,7 @@ export default function ErpApp({ edition = CLASSIC }: { edition?: Edition }) {
 function ErpRoutes() {
   const path = usePath()
   const route = parseRoute(path)
-  const { session, company, setPaletteOpen, setCopilotOpen, startCreate, peek, closePeek, startPage, pageTitle } = useErp()
+  const { session, company, setPaletteOpen, copilotOpen, setCopilotOpen, startCreate, peek, closePeek, startPage, pageTitle } = useErp()
   const { focusComposer } = useAssistant()
 
   // Guards: sign in first, then choose a company. Replace, so Back skips them.
@@ -68,11 +68,17 @@ function ErpRoutes() {
     if (open && pageFor(open.entity)?.page !== page) close()
   }, [page])
 
+  // The Assistant page is the same chat, full size: Ask AI makes way for it.
+  const onAssistant = module.id === 'home' && page.id === 'assistant'
+  useEffect(() => {
+    if (onAssistant) setCopilotOpen(false)
+  }, [onAssistant, setCopilotOpen])
+
   // Ctrl+K / ⌘K palette, Ctrl+J / ⌘J copilot, G then a letter to jump to a
   // module, C to create on a list page.
   const pressedG = useRef(0)
-  const state = useRef({ module, page, session, focusComposer })
-  state.current = { module, page, session, focusComposer }
+  const state = useRef({ module, page, session, focusComposer, copilotOpen })
+  state.current = { module, page, session, focusComposer, copilotOpen }
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       const mod = e.metaKey || e.ctrlKey
@@ -83,8 +89,8 @@ function ErpRoutes() {
       }
       if (mod && e.key.toLowerCase() === 'j') {
         e.preventDefault()
-        // On the Assistant page the chat is already open: go to its prompt box.
-        if (state.current.module.id === 'home' && state.current.page.id === 'assistant') state.current.focusComposer()
+        // With the chat already in view (the Assistant page, or Ask AI open), go to its prompt box.
+        if ((state.current.module.id === 'home' && state.current.page.id === 'assistant') || state.current.copilotOpen) state.current.focusComposer()
         else setCopilotOpen(true)
         return
       }
@@ -116,7 +122,7 @@ function ErpRoutes() {
   if (!company || route.screen === 'companies') return <Companies />
 
   return (
-    <Shell module={module} page={page}>
+    <Shell module={module} page={page} aside={<CopilotPanel />}>
       {allowed ? (
         page.render ? page.render() : page.list ? <ListPage key={`${module.id}/${page.id}`} spec={page.list} /> : null
       ) : (
@@ -136,7 +142,6 @@ function ErpRoutes() {
       <CommandPalette module={module} />
       <RecordPeek />
       <CreateDialog />
-      <CopilotPanel />
     </Shell>
   )
 }

@@ -8,8 +8,8 @@ import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import {
-  Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { ThinkingTrail, type TrailStep, type TrailStepStatus } from '@/blocks/ai/thinking-trail'
 import { AiLabel } from '@/components/ai-label'
@@ -178,7 +178,7 @@ const LOG_ICONS: Record<LogKind, { icon: IconSvgElement; className: string }> = 
 
 export function AgentRunsPanel() {
   const [runs, dispatch] = useReducer(reducer, undefined, () => initialRuns(Date.now()))
-  // The id outlives `logOpen` so the sheet keeps its content while it slides out.
+  // The id outlives `logOpen` so the dialog keeps its content while it fades out.
   const [logId, setLogId] = useState<string | null>(null)
   const [logOpen, setLogOpen] = useState(false)
   const [onScreen, setOnScreen] = useState(false)
@@ -237,9 +237,9 @@ export function AgentRunsPanel() {
         </ul>
       </div>
 
-      <Sheet open={logOpen && !!logRun} onOpenChange={setLogOpen}>
-        {logRun && <LogSheet run={logRun} onAct={(type) => act(type, logRun.id)} />}
-      </Sheet>
+      <Dialog open={logOpen && !!logRun} onOpenChange={setLogOpen}>
+        {logRun && <LogDialog run={logRun} onAct={(type) => act(type, logRun.id)} />}
+      </Dialog>
     </Panel>
   )
 }
@@ -404,7 +404,8 @@ function RunTrail({ run }: { run: Run }) {
   )
 }
 
-function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }) {
+// A run's log, as a modal: the steps so far, live while it runs.
+function LogDialog({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }) {
   const listRef = useRef<HTMLOListElement>(null)
   const meta = STATUS_META[run.status]
 
@@ -420,17 +421,17 @@ function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }
   }
 
   return (
-    <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md">
-      <SheetHeader className="border-b p-4 pr-12">
-        <SheetTitle>{run.title}</SheetTitle>
-        <SheetDescription className="flex flex-wrap items-center gap-x-1.5">
+    <DialogContent className="flex max-h-[min(85svh,44rem)] flex-col gap-0 p-0 sm:max-w-lg">
+      <DialogHeader className="border-b p-4 pr-12">
+        <DialogTitle>{run.title}</DialogTitle>
+        <DialogDescription className="flex flex-wrap items-center gap-x-1.5">
           <StatusGlyph status={run.status} className="size-3.5" />
           <span className={meta.className}>{meta.label}</span>
           <span>· {formatTimer(run.elapsed)} · attempt {run.attempt} · step {run.progress} of {run.total}</span>
-        </SheetDescription>
-      </SheetHeader>
+        </DialogDescription>
+      </DialogHeader>
 
-      <ol ref={listRef} aria-label="Run log" className="grid flex-1 content-start gap-2.5 overflow-y-auto p-4">
+      <ol ref={listRef} aria-label="Run log" className="grid min-h-0 flex-1 content-start gap-2.5 overflow-y-auto p-4">
         {run.log.map((entry, i) => {
           const icon = LOG_ICONS[entry.kind]
           return (
@@ -450,13 +451,13 @@ function LogSheet({ run, onAct }: { run: Run; onAct: (type: RunAction) => void }
         )}
       </ol>
 
-      <SheetFooter className="flex-row flex-wrap justify-end gap-1.5 border-t p-3">
+      <DialogFooter className="flex-row flex-wrap justify-end gap-1.5 border-t p-3">
         <Button variant="ghost" size="sm" className="mr-auto" onClick={copyLog}>
           <HugeiconsIcon icon={Copy01Icon} strokeWidth={2} data-icon="inline-start" />
           Copy log
         </Button>
         <RunActions run={run} onAct={onAct} />
-      </SheetFooter>
-    </SheetContent>
+      </DialogFooter>
+    </DialogContent>
   )
 }

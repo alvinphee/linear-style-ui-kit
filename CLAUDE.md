@@ -81,6 +81,7 @@ linear-style-ui-kit/
     │   ├── account-menu.tsx   who is signed in, with their menu: a row at a sidebar's foot, or the avatar in a header
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
+    │   ├── docked-panel.tsx   side panel beside the page that narrows it (Ask AI): slides, resizes from its edge, a sheet on narrow screens
     │   ├── dock-schedule/     yard dock schedule: day by dock and time slot, docks
     │   │                      as rows or as columns (drag, book a free slot), week
     │   │                      heatmap, slot picker
@@ -95,7 +96,7 @@ linear-style-ui-kit/
     │   ├── markdown.tsx       Markdown renderer (chat replies, artifacts, previews)
     │   ├── notifications-menu.tsx  the bell's popover
     │   ├── period-picker.tsx  period switch, compare, date range picker
-    │   ├── record-sheet.tsx   side panel (peek) for one record
+    │   ├── record-sheet.tsx   record peek: one record in a centred modal (center peek) or a panel from the right (side peek)
     │   ├── sign-in.tsx        sign-in page parts: form, SSO, aside, footer
     │   └── workspace-switcher.tsx  workspace or company switcher
     ├── components/
@@ -142,7 +143,7 @@ linear-style-ui-kit/
     │   ├── text.ts            plural, slug, greeting
     │   ├── keyboard.ts        isTyping (when single-key shortcuts must not fire)
     │   ├── random.ts          seededRandom for sample data
-    │   ├── use-timers.ts, use-svg-id.ts
+    │   ├── use-timers.ts, use-svg-id.ts, use-media-query.ts
     │   └── utils.ts
     ├── templates/             whole apps built from the kit (level 5)
     │   ├── ai-chat/AiChatApp.tsx   the AI workspace filling the window
@@ -155,7 +156,7 @@ linear-style-ui-kit/
         │   ├── Playground.tsx   Playground, Variants, Gallery, CodeBlock, jsx()
         │   └── buttons.tsx …    the reference page; others follow its shape
         ├── ShowcaseSidebar.tsx  workspace switcher, folding nav groups
-        ├── ShortcutsSheet.tsx   the "?" keyboard shortcuts sheet
+        ├── ShortcutsDialog.tsx  the "?" keyboard shortcuts, in a modal
         ├── ThemeCompare.tsx     theme comparison: kit theme beside shadcn's default
         ├── nav.ts               nav groups, section ids, G-then shortcuts
         ├── data.ts              icon groups, statuses, labels, sample jobs, job constants
@@ -262,13 +263,17 @@ session, company and starred modules are kept in the browser.
   notifications and the light / dark toggle) and the breadcrumb bar
   (company › module › section › page, folding to fit). With the sidebar
   hidden (`[`), the module switcher and the account move into the global
-  header. On a phone the sidebar is a sheet.
+  header. On a phone the sidebar is a sheet. Ask AI docks under the global
+  header, beside the breadcrumb and the page, which narrows to make room (the
+  kit's docked panel): the Ask AI button opens and closes it, Escape closes
+  it, its edge resizes it and the width is kept in the browser. Below 1024px
+  wide it is a sheet over the page.
 - Modules (`modules.tsx`): CRM, Sales, Inventory, Purchasing, Accounting,
   Human resources, Administration. Each lists its pages; a list page is a
   `ListSpec` (columns, saved views, create form, bulk actions) rendered by
   `ListPage.tsx`. Roles decide which modules a user sees.
-- Every record opens in a side panel (`Overlays.tsx`) and every list with a
-  create spec gets the same create dialog.
+- Every record opens in a centred modal (center peek, `Overlays.tsx`) and
+  every list with a create spec gets the same create dialog.
 - Shortcuts: `Ctrl+K` / `⌘K` command palette (modules, pages, records by
   number or name, create, switch role or company), `Ctrl+J` / `⌘J` Ask AI,
   `G` then a letter for a module (`G C` CRM, `G S` Sales, `G I`
@@ -279,7 +284,8 @@ session, company and starred modules are kept in the browser.
   `#/templates/erp/accounting/invoices`.
 - Ask AI (`Copilot.tsx`, with its answers, chats and views in `assistant/`)
   answers from the live records: about 25 kinds of question, scripted, no
-  model. Record numbers in answers open the record's side panel.
+  model. Record numbers in answers open the record's peek, with Ask AI still
+  open beside the page.
 
 ### Two editions, one codebase
 The ERP + AI template (`#/templates/erp-ai`, `src/templates/erp-ai/`) is
@@ -305,7 +311,7 @@ into it: switch features on with `edition().assistant` instead. It adds:
   you leave them. The scripted answers cannot follow a project's
   instructions; the views show them.
 - One set of chats (`assistant/store.tsx`) for the Assistant, the Ask AI
-  side panel ("Open full page" moves the chat across) and the launchpad.
+  panel ("Open full page" moves the chat across) and the launchpad.
   A new session starts with a few chats asked of today's data.
 - Ctrl+K: type a question and pick "Ask AI". Ctrl+J on the Assistant goes
   to its prompt box.
@@ -366,8 +372,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 114 items: `tokens` (the whole theme from `styles.css`), 47 ui, 32
-components, 26 blocks and 8 lib files. Which level becomes which item:
+needs. 116 items: `tokens` (the whole theme from `styles.css`), 47 ui, 32
+components, 27 blocks and 9 lib files. Which level becomes which item:
 `docs/architecture.md`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes

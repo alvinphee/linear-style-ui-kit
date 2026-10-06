@@ -45,9 +45,15 @@ const moduleDescription = (m: ErpModule) => (m.id === 'home' && edition().assist
 // The app frame: a full-height sidebar (company, module switcher, the
 // module's pages, recent records, and the account at the foot) beside the
 // page. Over the page, two rows: the global header (search, Ask AI,
-// notifications and light / dark) and the breadcrumb bar. On a phone the
-// sidebar opens as a sheet.
-export function Shell({ module, page, children }: { module: ErpModule; page: ErpPage; children: ReactNode }) {
+// notifications and light / dark) and the breadcrumb bar. Under the global
+// header, `aside` docks beside the breadcrumb and the page (Ask AI). On a
+// phone the sidebar opens as a sheet.
+export function Shell({ module, page, aside, children }: {
+  module: ErpModule
+  page: ErpPage
+  aside?: ReactNode
+  children: ReactNode
+}) {
   const [collapsed, setCollapsed] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -72,8 +78,13 @@ export function Shell({ module, page, children }: { module: ErpModule; page: Erp
 
       <div className="flex min-w-0 flex-1 flex-col">
         <TopRow module={module} page={page} collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} onMenu={() => setMenuOpen(true)} />
-        <BreadcrumbBar module={module} page={page} />
-        <main id="erp-main" className="@container min-h-0 flex-1 overflow-y-auto">{children}</main>
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-1 flex-col">
+            <BreadcrumbBar module={module} page={page} />
+            <main id="erp-main" className="@container min-h-0 flex-1 overflow-y-auto">{children}</main>
+          </div>
+          {aside}
+        </div>
       </div>
 
       <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
@@ -237,7 +248,7 @@ function TopRow({ module, page, collapsed, onToggle, onMenu }: {
   onToggle: () => void
   onMenu: () => void
 }) {
-  const { setPaletteOpen, setCopilotOpen } = useErp()
+  const { setPaletteOpen, copilotOpen, setCopilotOpen } = useErp()
   const onAssistant = module.id === 'home' && page.id === 'assistant'
 
   return (
@@ -285,12 +296,20 @@ function TopRow({ module, page, collapsed, onToggle, onMenu }: {
           {!onAssistant && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="outline" size="sm" onClick={() => setCopilotOpen(true)}>
+                {/* Opens and closes the panel; pressed while it is open. */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  aria-label="Ask AI"
+                  aria-pressed={copilotOpen}
+                  onClick={() => setCopilotOpen(!copilotOpen)}
+                  className="aria-pressed:bg-accent aria-pressed:text-foreground"
+                >
                   <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} data-icon="inline-start" />
                   <span className="hidden sm:inline">Ask AI</span>
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></TooltipContent>
+              <TooltipContent>{copilotOpen ? 'Close Ask AI' : <>Ask AI <Shortcut keys={['mod', 'J']} className="ml-1" /></>}</TooltipContent>
             </Tooltip>
           )}
           <Notifications />

@@ -515,3 +515,35 @@ and filters by type, and an incognito mode.
   setting was renamed from `chatsByDate` to `groupByDate` (the block's
   prop), so a browser that saved the old default starts on the new one.
 
+## Ask AI docks beside the page; records open as modals (added 2026-10-06)
+Alvin asked for Ask AI to slide out from the side (whichever is more
+polished) and be resizable, and for the other side slide-outs to be modals.
+- **Docked, not over the page.** The big products' assistants (Microsoft
+  Copilot, GitHub Copilot Chat, Notion AI) sit beside the page and narrow
+  it, because an answer is about what is on that page. An overlay covers the
+  very records it talks about. The new DockedPanel block does this: it docks
+  under the global header (the Ask AI button stays in reach, and its header
+  lines up with the breadcrumb bar), slides by animating its width with the
+  content pinned to the outer edge (so it slides rather than squeezes),
+  and resizes from its edge: drag, arrow keys, double-click to reset, never
+  over 60% of the row. Below 1024px there is no room, so it is a sheet.
+- **Docked, it stays open** when an answer's record or page opens, which a
+  sheet could not (it had to close to make way).
+- **Records open in a centred modal**, Notion's "center peek": the
+  RecordSheet block's new `peek` prop, `center` by default, `side` for the
+  old panel. One change moved the ERP's records and the kit's job, customer
+  and dock-appointment peeks. The same header, body and footer work in both,
+  since a Sheet is a Radix Dialog underneath.
+- **Also modals now:** the kit's "?" shortcuts (ShortcutsDialog, the groups
+  side by side) and an agent run's log. Left as sheets on purpose: the
+  sidebars on a phone (navigation slides from its own edge), the AI
+  workspace's sidebar and artifact panel on narrow screens (they are inline
+  when there is room), the Sheet and Drawer demos, and the "form in a
+  sheet" example.
+- **`useMediaQuery` moved to `lib/`** from the period picker, now that a
+  second block needs it.
+- **Testing in the Browser pane:** CSS transitions and animations stall
+  while the pane is not drawing, so a panel can look half open and a closed
+  dialog can stay in the page until a screenshot is taken. Check the state
+  (`aria-valuenow`, `data-state`, the saved width), not the frame.
+

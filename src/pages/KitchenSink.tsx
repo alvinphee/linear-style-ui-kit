@@ -18,7 +18,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { isTyping } from '@/lib/keyboard'
 import { PRESETS } from '@/lib/theme'
 import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, goTo } from './nav'
-import ShortcutsSheet from './ShortcutsSheet'
+import ShortcutsDialog from './ShortcutsDialog'
 import ShowcaseSidebar from './ShowcaseSidebar'
 import AiComponentsSection from './sections/AiComponentsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
@@ -265,7 +265,7 @@ export default function KitchenSink() {
         </main>
       </div>
 
-      <ShortcutsSheet open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <QuickCreateDialog open={createOpen} onOpenChange={setCreateOpen} />
 
       <CommandDialog open={commandOpen} onOpenChange={setCommandOpen}>

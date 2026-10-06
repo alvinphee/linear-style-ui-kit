@@ -94,7 +94,11 @@ used by most design systems).
 | Start page | The page you land on after signing in. The ERP + AI template lets each user pick the launchpad or the Assistant |
 | Edition | One app shipped in versions that share their code and differ in features: the ERP and ERP + AI templates |
 | KPI (key performance indicator) | A headline number on a dashboard, such as open pipeline or overdue receivables |
-| Side panel (peek, record sheet) | A record opened beside the list, without leaving it. The block is `record-sheet` |
+| Record peek (record sheet) | A record opened over its list, without leaving it. The block is `record-sheet` |
+| Center peek | A record peek in a centred modal over the list (the kit's default) |
+| Side peek (side panel) | A record peek that slides in from the right edge |
+| Docked panel (push panel) | A side panel that sits beside the page and narrows it instead of covering it, such as Ask AI. Resized by dragging its edge. The block is `docked-panel` |
+| Resize handle | The edge you drag to change a panel's width; it also takes the arrow keys |
 | Quick create | A light dialog for adding a record fast: a title, a description and property pills |
 | Property pill | A small button showing one field of a record (status, assignee, due date) that opens a picker to change it |
 | Notifications menu | The bell's popover: what needs you, newest first, with unread markers and "Mark all read" |

@@ -1,26 +1,30 @@
 import { createContext, useContext, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowDown01Icon, ArrowUp01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
+import { ArrowDown01Icon, ArrowUp01Icon, Cancel01Icon, Delete02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { CommentBox } from '@/components/comment-box'
 import { DeleteConfirm } from '@/components/delete-confirm'
 import { UserAvatar } from '@/components/person'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogClose, DialogContent } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 
-// The side panel ("peek"): one record opened beside a list or board, without
-// leaving it. A header with the record's number, a status badge, previous /
-// next through the list, the title (editable in place if you like) and a row
-// of property pills and actions; then details as label–value rows, your own
-// sections, and an activity timeline with an optional comment box; and a
-// footer whose Delete asks first.
+// The record peek: one record opened over a list or board, without leaving
+// it. As a centred modal (`peek="center"`, the default) or a panel that
+// slides in from the right (`peek="side"`). A header with the record's
+// number, a status badge, previous / next through the list, the title
+// (editable in place if you like) and a row of property pills and actions;
+// then details as label–value rows, your own sections, and an activity
+// timeline with an optional comment box; and a footer whose Delete asks first.
 //
-// Two parts, so the panel can slide out after its record is gone:
+// Two parts, so the peek can animate out after its record is gone:
 //   <RecordSheet open={!!record} onOpenChange={…}>
 //     {record && <RecordSheetContent number={…} title={…} … />}
 //   </RecordSheet>
 // Give RecordSheetContent a `key` per record to start each one with an
 // empty comment box.
+
+export type PeekMode = 'center' | 'side'
 
 export type RecordDetail = { label: string; value: ReactNode }
 
@@ -46,25 +50,46 @@ export type RecordNavigation = {
 
 const CloseContext = createContext<() => void>(() => {})
 
-export function RecordSheet({ open, onOpenChange, onCloseAutoFocus, className, children }: {
+export function RecordSheet({ open, onOpenChange, onCloseAutoFocus, peek = 'center', className, children }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   // Prevent it to stop focus going back to the row, e.g. when leaving for another page.
   onCloseAutoFocus?: (event: Event) => void
+  // A centred modal, or a panel from the right.
+  peek?: PeekMode
   className?: string
   children?: ReactNode
 }) {
   return (
     <CloseContext.Provider value={() => onOpenChange(false)}>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className={cn('gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md', className)}
-          onCloseAutoFocus={onCloseAutoFocus}
-        >
-          {children}
-        </SheetContent>
-      </Sheet>
+      {peek === 'side' ? (
+        <Sheet open={open} onOpenChange={onOpenChange}>
+          <SheetContent
+            side="right"
+            className={cn('gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md', className)}
+            onCloseAutoFocus={onCloseAutoFocus}
+          >
+            {children}
+          </SheetContent>
+        </Sheet>
+      ) : (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+          {/* The same header, body and footer as the side peek; its close button sits where the sheet's does. */}
+          <DialogContent
+            showCloseButton={false}
+            className="flex max-h-[min(88svh,52rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl"
+            onCloseAutoFocus={onCloseAutoFocus}
+          >
+            <div className={cn('flex min-h-0 flex-1 flex-col', className)}>{children}</div>
+            <DialogClose asChild>
+              <Button variant="ghost" size="icon-sm" className="absolute top-4 right-4">
+                <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+                <span className="sr-only">Close</span>
+              </Button>
+            </DialogClose>
+          </DialogContent>
+        </Dialog>
+      )}
     </CloseContext.Provider>
   )
 }
