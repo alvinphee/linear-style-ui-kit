@@ -170,7 +170,7 @@ export const ERP_FORMS: ErpForm[] = [
         fields: [
           { key: 'date', label: 'Date', type: 'date', required: true }, { key: 'where', label: 'Where', type: 'text', required: true, placeholder: 'Building, area, dock door…' },
           { key: 'type', label: 'Type', type: 'select', required: true, options: options('Injury', 'Near miss', 'Property damage', 'Spill or leak', 'Security') },
-          { key: 'severity', label: 'Severity', type: 'radio', required: true, options: options('Minor', 'Moderate', 'Serious'), optionsClassName: 'sm:grid-cols-3' },
+          { key: 'severity', label: 'Severity', type: 'radio', required: true, options: options('Minor', 'Moderate', 'Serious'), optionsClassName: '@sm:grid-cols-3' },
           { key: 'description', label: 'Describe it', type: 'textarea', required: true, rows: 4, maxLength: 1000 },
           { key: 'photos', label: 'Photos', type: 'photo', multiple: true },
         ],

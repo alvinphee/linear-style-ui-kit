@@ -160,7 +160,7 @@ export function FormDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <form ref={formRef} noValidate onSubmit={submit} className="flex min-h-0 flex-1 flex-col">
+        <form ref={formRef} noValidate onSubmit={submit} className="@container flex min-h-0 flex-1 flex-col">
           <div className={DIALOG_BODY}>
             <FieldGroup>
               {fields.map((f) => (

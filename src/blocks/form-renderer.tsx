@@ -288,13 +288,13 @@ export function FormRenderer({
                   <div key={i} className="divide-y border-b last:border-b-0">
                     {run.fields.map((f) => (
                       <div key={f.key} className="px-3.5 py-3">
-                        <Control field={f} />
+                        {control(f)}
                       </div>
                     ))}
                   </div>
                 ) : (
                   <FieldGroup key={i} className="border-b p-3.5 last:border-b-0">
-                    {run.fields.map((f) => <Control key={f.key} field={f} />)}
+                    {run.fields.map(control)}
                   </FieldGroup>
                 ),
               )}
@@ -352,9 +352,12 @@ export function FormRenderer({
     </form>
   )
 
-  function Control({ field }: { field: FormField }) {
+  // A helper, not a component: a component declared here would be a new
+  // type on every render, remounting its field and dropping focus as you type.
+  function control(field: FormField) {
     return (
       <FormControl
+        key={field.key}
         field={field}
         id={`${uid}-${field.key}`}
         value={values[field.key]}

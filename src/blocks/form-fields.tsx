@@ -307,7 +307,7 @@ export function FormControl({ field, id, value, error, tooLong = false, inputRef
           value={text}
           onValueChange={onChange}
           aria-describedby={describedBy}
-          className={cn('grid grid-cols-2 gap-2 sm:grid-cols-4', field.optionsClassName)}
+          className={cn('grid grid-cols-2 gap-2 @sm:grid-cols-4', field.optionsClassName)}
         >
           {field.options?.map((o, i) => (
             <FieldLabel key={o.value} htmlFor={`${id}-${i}`}>

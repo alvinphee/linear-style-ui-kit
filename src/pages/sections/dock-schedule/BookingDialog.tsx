@@ -30,7 +30,7 @@ const LENGTHS = [30, 45, 60, 90, 120]
 const FIELDS: FormField[] = [
   { key: 'carrier', label: 'Carrier', type: 'select', required: true, options: CARRIERS.map((c) => ({ value: c, label: c })) },
   {
-    key: 'direction', label: 'Direction', type: 'radio', required: true, optionsClassName: 'grid-cols-2 sm:grid-cols-2',
+    key: 'direction', label: 'Direction', type: 'radio', required: true, optionsClassName: '@sm:grid-cols-2',
     options: [{ value: 'inbound', label: 'Inbound' }, { value: 'outbound', label: 'Outbound' }],
   },
   {
@@ -39,7 +39,7 @@ const FIELDS: FormField[] = [
   },
   { key: 'length', label: 'Length', type: 'select', required: true, options: LENGTHS.map((m) => ({ value: String(m), label: formatMinutes(m) })) },
   {
-    key: 'loadType', label: 'Load type', type: 'radio', required: true, optionsClassName: 'grid-cols-2 sm:grid-cols-2',
+    key: 'loadType', label: 'Load type', type: 'radio', required: true, optionsClassName: '@sm:grid-cols-2',
     options: [{ value: 'live', label: 'Live' }, { value: 'drop', label: 'Drop trailer' }],
   },
   {
