@@ -357,6 +357,9 @@ in the test folder's `docs\`.
 - **Looking at the result still matters.** In version 4, 9 of the 18 task
   IDs wrap onto two lines (a 64px column). The builder never saw the page.
   The kit avoids this by checking each part on its playground.
+- Limits: one run each, one screen, one model. It says nothing about
+  keeping 50 screens consistent, which is what the kit's shared parts are
+  for.
 
 ## The shadcn registry (added 2026-10-06)
 `npm run registry` writes `registry.json` from the code
@@ -401,6 +404,28 @@ file per item in `public/r/`. 110 items: 47 ui, 30 components, 24 blocks,
     `styles.css` stops that, and the script only rewrites `registry.json`
     when its content changes. `public/r/` is in `.gitignore`, so Tailwind
     never read it.
-- Limits: one run each, one screen, one model. It says nothing about
-  keeping 50 screens consistent, which is what the kit's shared parts are
-  for.
+
+## App shells: the Two rows header (added 2026-10-06)
+A sixth header on the App shells page, tried before changing the ERP
+template's header. Row 1 is the global header: sidebar buttons on the left,
+search in the middle, Ask AI, notifications and the account on the right.
+Row 2 is the Breadcrumb header (path, favourite, people, Share, New issue).
+A switch, "Top row over the sidebar", sets where row 1 sits:
+- **Over the page only (the default).** The sidebar keeps its full height
+  and its workspace switcher; it only loses search and the account, which
+  moved up. When no sidebar is beside the page (hidden, or on a phone), row
+  1 shows the workspace switcher itself.
+- **Across the whole app,** over the sidebar, on the sidebar's colour, with
+  the workspace switcher in it. Each sidebar then also drops its switcher or
+  logo (and Teams its New issue button). With Top nav, the global header
+  replaces its first row, so it reads global header, tabs, breadcrumb.
+- **A second switch, "Account at the sidebar's foot",** keeps the account
+  in the sidebar instead: a row (name and email) in Teams and Inset, the
+  avatar alone in Rail and folded Icons, its menu opening to the right. The
+  top row's avatar then shows only when no sidebar is beside the page, so
+  the account is always one click away.
+- **The account menu got an avatar trigger** (`variant="avatar"`). Its name
+  is not on screen, so the menu starts with it. Light and dark mode live in
+  its Theme sub-menu, not in a header button of their own.
+- **On a phone** the search box becomes an icon that opens over the row and
+  Ask AI shows its icon only; the breadcrumb row folds as before.

@@ -76,7 +76,7 @@ linear-style-ui-kit/
     │   │                      the welcome screen and prompt starters), AI
     │   │                      summary card (the AI workspace, AI in the product
     │   │                      and both ERP templates share them)
-    │   ├── account-menu.tsx   avatar and name at a sidebar's foot, with its menu
+    │   ├── account-menu.tsx   who is signed in, with their menu: a row at a sidebar's foot, or the avatar in a header
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
     │   ├── dock-schedule/     yard dock schedule: day by dock and time slot, docks
@@ -172,7 +172,8 @@ linear-style-ui-kit/
             ├── ContentSection.tsx    file upload, Markdown editor, reorder list
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
             ├── AiComponentsSection.tsx  AI label, thinking indicator, icon actions, file chips
-            ├── AppShellSection.tsx   sidebar and header variations, mixed live
+            ├── AppShellSection.tsx   sidebar and header variations, mixed live (Two rows: a global
+            │                         header over the page or the whole app, the breadcrumb under it)
             ├── app-shell/             its grouped list and board, Display and notifications menus
             ├── JobListSection.tsx    grouped list with bulk select
             ├── FilterBar.tsx         filter chips, saved views, display options

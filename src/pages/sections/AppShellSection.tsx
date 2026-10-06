@@ -1,10 +1,10 @@
 import { useState, type ComponentProps, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, AiChat02Icon, ChartLineData01Icon, CubeIcon, HelpCircleIcon, Home01Icon, InboxIcon, Layers01Icon,
-  Menu01Icon, Message01Icon, MoreHorizontalIcon, PanelLeftCloseIcon, PanelLeftOpenIcon, PencilEdit02Icon,
-  RefreshIcon, Search01Icon, Settings01Icon, Share08Icon, SidebarLeftIcon, StarIcon, Task01Icon, Tick02Icon,
-  UnfoldMoreIcon, UserAdd01Icon, UserCircleIcon,
+  Add01Icon, AiChat02Icon, ChartLineData01Icon, ComputerIcon, CubeIcon, HelpCircleIcon, Home01Icon, InboxIcon,
+  Layers01Icon, Menu01Icon, Message01Icon, Moon02Icon, MoreHorizontalIcon, PaintBoardIcon, PanelLeftCloseIcon,
+  PanelLeftOpenIcon, PencilEdit02Icon, RefreshIcon, Search01Icon, Settings01Icon, Share08Icon, SidebarLeftIcon,
+  StarIcon, Sun03Icon, Task01Icon, Tick02Icon, UnfoldMoreIcon, UserAdd01Icon, UserCircleIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
@@ -25,13 +25,16 @@ import { LIST_BOARD_VIEWS, ViewSwitch } from '@/components/view-switch'
 import { AvatarGroup, AvatarGroupCount } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { useTheme, type Theme } from '@/lib/theme'
 import { PEOPLE, type Job, type Status } from '../data'
 import { useJobs } from '../jobs-store'
 import { DisplayMenu } from './app-shell/DisplayMenu'
@@ -44,7 +47,7 @@ import { JobPeek, openFullPage } from './JobActions'
 import { Section } from './shared'
 
 type SidebarStyle = 'teams' | 'rail' | 'inset' | 'icons' | 'top'
-type HeaderStyle = 'breadcrumb' | 'title' | 'toolbar' | 'search' | 'crumbs-search'
+type HeaderStyle = 'breadcrumb' | 'title' | 'toolbar' | 'search' | 'crumbs-search' | 'two-rows'
 type Tab = 'all' | 'active' | 'backlog'
 
 const SIDEBARS: { value: SidebarStyle; label: string; note: string }[] = [
@@ -61,6 +64,7 @@ const HEADERS: { value: HeaderStyle; label: string; note: string }[] = [
   { value: 'toolbar', label: 'Toolbar', note: 'View pills, then a filter row' },
   { value: 'search', label: 'Search', note: 'A search box in the middle' },
   { value: 'crumbs-search', label: 'Crumb + search', note: 'Breadcrumb on the left, search in the middle' },
+  { value: 'two-rows', label: 'Two rows', note: 'Search and account on a top row, the breadcrumb on a row under it' },
 ]
 
 // Made-up workspaces and teams. Pages are ids; team pages are "team:page".
@@ -149,6 +153,8 @@ export default function AppShellSection() {
   const [display, setDisplay] = useState<ListDisplay>(DEFAULT_LIST_DISPLAY)
   const [query, setQuery] = useState('')
   const [longTrail, setLongTrail] = useState(false)
+  const [overSidebar, setOverSidebar] = useState(false)
+  const [footAccount, setFootAccount] = useState(false)
   const [peekId, setPeekId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const notes = useNotifications()
@@ -193,7 +199,15 @@ export default function AppShellSection() {
   // toolbar), filters and display options (toolbar), search (the search ones).
   const hasTabs = header === 'title' || header === 'toolbar'
   const toolbar = header === 'toolbar'
-  const searching = header === 'search' || header === 'crumbs-search'
+  const twoRows = header === 'two-rows'
+  // Two rows: the top row sits over the page only, the sidebar keeping its
+  // full height (content), or across the whole app, over the sidebar (app).
+  const topRow = twoRows ? (overSidebar ? 'app' : 'content') : undefined
+  // A sidebar beside the page (from @2xl). Without one, the top row shows the
+  // workspace switcher, and the account when it is set to sit in the sidebar.
+  const sidebarShown = sidebar !== 'top' && (sidebar === 'icons' || !folded)
+  const accountInSidebar = twoRows && footAccount && sidebar !== 'top'
+  const searching = header === 'search' || header === 'crumbs-search' || twoRows
   const layout: Layout = hasTabs ? view : 'list'
   const shownDisplay = toolbar ? display : DEFAULT_LIST_DISPLAY
   const statuses = hasTabs ? TABS.find((t) => t.value === tab)?.statuses : null
@@ -232,7 +246,9 @@ export default function AppShellSection() {
   )
 
   const headerProps: HeaderProps = {
-    page, lead, tab, setTab, view, setView, filters, setFilters, display, setDisplay, query, setQuery,
+    page, tab, setTab, view, setView, filters, setFilters, display, setDisplay, query, setQuery,
+    // Two rows: the sidebar buttons sit in the global header instead.
+    lead: twoRows ? null : lead,
     topNav: sidebar === 'top',
     longTrail,
     onPage: nav.onPage,
@@ -242,12 +258,59 @@ export default function AppShellSection() {
     onNew: () => setCreateOpen(true),
   }
 
+  const topRowProps = {
+    ...ws, lead, query, setQuery, issues: showsIssues(page), notes, onOpenJob: setPeekId, onPage: nav.onPage,
+    account: accountInSidebar && sidebarShown ? ('narrow' as const) : ('always' as const),
+  }
+  // What the sidebars show at their foot: the account, when it sits there.
+  const foot: Foot = { topRow, footAccount: accountInSidebar }
+
   const main = (
     <div className="flex min-w-0 flex-1 flex-col">
-      {sidebar === 'top' && <TopNav {...nav} {...ws} notes={notes} onOpenJob={setPeekId} />}
-      <ContentHeader variant={header} {...headerProps} />
+      {topRow === 'content' && (
+        <GlobalHeader {...topRowProps} place="content" switcher={sidebarShown ? 'narrow' : 'always'} />
+      )}
+      {sidebar === 'top' && <TopNav {...nav} {...ws} notes={notes} onOpenJob={setPeekId} tabsOnly={twoRows} />}
+      {/* Two rows: the breadcrumb header is the second row, under the top row. */}
+      <ContentHeader variant={twoRows ? 'breadcrumb' : header} {...headerProps} />
       <div className="min-h-0 flex-1 overflow-y-auto">{content}</div>
     </div>
+  )
+
+  const shell = (
+    <>
+      {sidebar === 'teams' && !folded && (
+        <aside className="bg-sidebar text-sidebar-foreground hidden w-56 shrink-0 flex-col border-r @2xl:flex">
+          <TeamsSidebar {...nav} {...ws} onNew={() => setCreateOpen(true)} {...foot} />
+        </aside>
+      )}
+      {sidebar === 'rail' && !folded && (
+        <div className="hidden shrink-0 @2xl:flex">
+          <RailSidebar {...nav} {...foot} />
+        </div>
+      )}
+      {sidebar === 'inset' && !folded && (
+        <aside className="text-sidebar-foreground hidden w-56 shrink-0 flex-col @2xl:flex">
+          <InsetSidebar {...nav} {...ws} {...foot} />
+        </aside>
+      )}
+      {sidebar === 'icons' && (
+        <aside
+          className={cn(
+            'bg-sidebar text-sidebar-foreground hidden shrink-0 flex-col border-r transition-[width] duration-200 @2xl:flex',
+            folded ? 'w-12' : 'w-52',
+          )}
+        >
+          <IconsSidebar {...nav} iconOnly={folded} onToggle={() => setFolded((f) => !f)} {...foot} />
+        </aside>
+      )}
+
+      {sidebar === 'inset' ? (
+        <div className={cn('flex min-w-0 flex-1 p-2 @2xl:pl-0', topRow === 'app' && 'pt-0')}>
+          <div className="bg-background flex min-w-0 flex-1 overflow-hidden rounded-lg border shadow-sm">{main}</div>
+        </div>
+      ) : main}
+    </>
   )
 
   return (
@@ -271,48 +334,41 @@ export default function AppShellSection() {
             <Switch checked={longTrail} onCheckedChange={setLongTrail} />
             Long breadcrumb
           </label>
-          <span className="text-muted-foreground text-[11px]">Try it with Breadcrumb or Crumb + search</span>
+          <span className="text-muted-foreground text-[11px]">Try it with Breadcrumb, Crumb + search or Two rows</span>
         </div>
+        {twoRows && (
+          <div className="grid min-w-0 gap-1.5">
+            <span className="text-muted-foreground text-[11px]">Two rows</span>
+            <label className="flex h-6 items-center gap-2 text-xs">
+              <Switch checked={overSidebar} onCheckedChange={setOverSidebar} />
+              Top row over the sidebar
+            </label>
+            <label className="flex h-6 items-center gap-2 text-xs">
+              <Switch checked={footAccount} onCheckedChange={setFootAccount} />
+              Account at the sidebar's foot
+            </label>
+            <span className="text-muted-foreground text-[11px]">
+              {overSidebar ? 'Across the whole app' : 'Over the page only; the sidebar keeps its full height'}
+              {footAccount && sidebar !== 'top' && '. The avatar shows in the top row only when the sidebar is hidden'}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="@container lg:col-span-2">
         <div
           className={cn(
             'text-foreground relative flex h-[34rem] overflow-hidden rounded-lg border',
+            topRow === 'app' && 'flex-col',
             sidebar === 'inset' ? 'bg-sidebar' : 'bg-background',
           )}
         >
-          {sidebar === 'teams' && !folded && (
-            <aside className="bg-sidebar text-sidebar-foreground hidden w-56 shrink-0 flex-col border-r @2xl:flex">
-              <TeamsSidebar {...nav} {...ws} onNew={() => setCreateOpen(true)} />
-            </aside>
-          )}
-          {sidebar === 'rail' && !folded && (
-            <div className="hidden shrink-0 @2xl:flex">
-              <RailSidebar {...nav} />
-            </div>
-          )}
-          {sidebar === 'inset' && !folded && (
-            <aside className="text-sidebar-foreground hidden w-56 shrink-0 flex-col @2xl:flex">
-              <InsetSidebar {...nav} {...ws} />
-            </aside>
-          )}
-          {sidebar === 'icons' && (
-            <aside
-              className={cn(
-                'bg-sidebar text-sidebar-foreground hidden shrink-0 flex-col border-r transition-[width] duration-200 @2xl:flex',
-                folded ? 'w-12' : 'w-52',
-              )}
-            >
-              <IconsSidebar {...nav} iconOnly={folded} onToggle={() => setFolded((f) => !f)} />
-            </aside>
-          )}
-
-          {sidebar === 'inset' ? (
-            <div className="flex min-w-0 flex-1 p-2 @2xl:pl-0">
-              <div className="bg-background flex min-w-0 flex-1 overflow-hidden rounded-lg border shadow-sm">{main}</div>
-            </div>
-          ) : main}
+          {topRow === 'app' ? (
+            <>
+              <GlobalHeader {...topRowProps} place="app" switcher="always" inset={sidebar === 'inset'} />
+              <div className="flex min-h-0 flex-1">{shell}</div>
+            </>
+          ) : shell}
         </div>
       </div>
 
@@ -387,31 +443,184 @@ function WorkspaceMenu({ workspace, setWorkspace, ...props }: Ws & Pick<
   )
 }
 
+const EMAIL = 'ravi@example.com'
+
+const THEMES: { value: Theme; label: string; icon: IconSvgElement }[] = [
+  { value: 'light', label: 'Light', icon: Sun03Icon },
+  { value: 'dark', label: 'Dark', icon: Moon02Icon },
+  { value: 'system', label: 'System', icon: ComputerIcon },
+]
+
+// The account menu's items, in both of its places: the inset sidebar's foot
+// and the global header. Theme switches the kit's own light and dark mode.
+function AccountItems({ onPage }: { onPage: (id: string) => void }) {
+  const { theme, setTheme } = useTheme()
+  return (
+    <>
+      <DropdownMenuItem onSelect={() => onPage('settings')}>
+        <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
+      </DropdownMenuItem>
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <HugeiconsIcon icon={PaintBoardIcon} strokeWidth={2} /> Theme
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent className="w-36">
+          <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as Theme)}>
+            {THEMES.map((t) => (
+              <DropdownMenuRadioItem key={t.value} value={t.value}>
+                <HugeiconsIcon icon={t.icon} strokeWidth={2} /> {t.label}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => toast('Logged out', { description: 'Demo only.' })}>
+        <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} /> Switch account
+      </DropdownMenuItem>
+    </>
+  )
+}
+
+// The Two rows header's first row (the global header). Left: the menu and
+// sidebar buttons, and the workspace. Middle: search. Right: Ask AI,
+// notifications and the account (theme is in its menu). The page's
+// breadcrumb is the second row (the Breadcrumb header). It sits in one of
+// two places:
+//   content  over the page only, on the page's colour; the sidebar keeps its
+//            full height and its own workspace switcher, so the row shows the
+//            switcher only when no sidebar is beside it (switcher="narrow")
+//   app      across the whole app, over the sidebar, on the sidebar's colour
+// The account can sit at the sidebar's foot instead (account="narrow"): the
+// avatar then shows here only when no sidebar is beside the page.
+// From @3xl a three-column grid keeps search centred; on a phone the box
+// becomes an icon that opens over the row.
+function GlobalHeader({ place, switcher, account, inset, lead, query, setQuery, issues, notes, onOpenJob, onPage, ...ws }: Ws & {
+  place: 'content' | 'app'
+  // narrow: only below @2xl, where the sidebar is hidden (a menu button opens it).
+  switcher: 'always' | 'narrow'
+  account: 'always' | 'narrow'
+  // Across the app over the inset sidebar, the content card already sets the row apart: no border.
+  inset?: boolean
+  lead: ReactNode
+  query: string
+  setQuery: (q: string) => void
+  issues: boolean
+  notes: Notifications
+  onOpenJob: (id: string) => void
+  onPage: (id: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const surface = place === 'app' ? 'bg-sidebar text-sidebar-foreground' : 'bg-background'
+  return (
+    <div
+      className={cn(
+        'relative flex h-11 shrink-0 items-center gap-2 px-2',
+        '@3xl:grid @3xl:grid-cols-[minmax(0,1fr)_minmax(0,24rem)_minmax(0,1fr)]',
+        surface,
+        !(place === 'app' && inset) && 'border-b',
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-1">
+        {lead}
+        <WorkspaceMenu
+          {...ws}
+          variant="compact"
+          detail={ws.workspace.plan.replace(' plan', '')}
+          badgeClassName="hidden @md:inline"
+          className={cn(switcher === 'narrow' && '@2xl:hidden')}
+        />
+      </div>
+      <SearchBox query={query} setQuery={setQuery} issues={issues} className="hidden h-7 max-w-96 min-w-40 flex-1 @md:flex @3xl:max-w-none" />
+      <div className="flex shrink-0 items-center justify-end gap-1">
+        <Button variant="ghost" size="icon" className="relative @md:hidden" aria-label="Search" onClick={() => setOpen(true)}>
+          <HugeiconsIcon icon={Search01Icon} strokeWidth={2} />
+          {query && <span className="bg-primary absolute top-1 right-1 size-1.5 rounded-full" />}
+        </Button>
+        <Button variant="outline" size="sm" aria-label="Ask AI" onClick={() => onPage('ai')}>
+          <HugeiconsIcon icon={AiChat02Icon} strokeWidth={2} data-icon="inline-start" />
+          <span className="hidden @lg:inline">Ask AI</span>
+        </Button>
+        <NotificationsMenu notes={notes} onOpenJob={onOpenJob} />
+        <AccountMenu
+          variant="avatar"
+          name={PEOPLE[0]}
+          email={EMAIL}
+          menuClassName="w-52"
+          className={cn(account === 'narrow' && '@2xl:hidden')}
+        >
+          <AccountItems onPage={onPage} />
+        </AccountMenu>
+      </div>
+      {open && (
+        <div
+          className={cn('absolute inset-0 z-10 flex items-center gap-2 px-2 @md:hidden', surface)}
+          onKeyDown={(e) => e.key === 'Escape' && setOpen(false)}
+        >
+          <SearchBox query={query} setQuery={setQuery} issues={issues} autoFocus className="h-8 flex-1" />
+          <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>Done</Button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // 1. Teams: the classic layout
 
-function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => void }) {
+// With the Two rows header (`topRow`), search and the account are in its top
+// row. Across the whole app (app), so are the workspace and New issue, and
+// the sidebar starts with the pages. `footAccount` puts the account back at
+// the sidebar's foot.
+type TopRow = 'content' | 'app' | undefined
+type Foot = { topRow?: TopRow; footAccount?: boolean }
+
+// The account at a sidebar's foot: a row, or the avatar alone in a narrow
+// sidebar (rail, icons), its menu opening to the right.
+function SidebarAccount({ onPage, iconOnly }: { onPage: (id: string) => void; iconOnly?: boolean }) {
+  return iconOnly ? (
+    <AccountMenu variant="avatar" name={PEOPLE[0]} email={EMAIL} side="right" align="end" menuClassName="w-52" className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent">
+      <AccountItems onPage={onPage} />
+    </AccountMenu>
+  ) : (
+    <AccountMenu
+      name={PEOPLE[0]}
+      detail={EMAIL}
+      size="md"
+      menuClassName="w-52"
+      className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent"
+    >
+      <AccountItems onPage={onPage} />
+    </AccountMenu>
+  )
+}
+
+function TeamsSidebar({ page, onPage, onNew, topRow, footAccount, ...ws }: Nav & Ws & Foot & { onNew: () => void }) {
   const [closed, setClosed] = useState<Record<string, boolean>>({ design: true })
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex h-11 shrink-0 items-center gap-1 px-2">
-        <WorkspaceMenu {...ws} className="flex-1" />
-        <IconAction
-          label="New issue"
-          icon={PencilEdit02Icon}
-          shortcut={['C']}
-          variant="outline"
-          onClick={onNew}
-          className="text-foreground"
-        />
-      </div>
-      <div className="px-2">
-        <SearchTrigger
-          onClick={() => toast('Search', { description: `${MOD}+K opens the real command menu.` })}
-          className="hover:bg-sidebar-accent hover:text-muted-foreground"
-        />
-      </div>
+      {topRow !== 'app' && (
+        <div className="flex h-11 shrink-0 items-center gap-1 px-2">
+          <WorkspaceMenu {...ws} className="flex-1" />
+          <IconAction
+            label="New issue"
+            icon={PencilEdit02Icon}
+            shortcut={['C']}
+            variant="outline"
+            onClick={onNew}
+            className="text-foreground"
+          />
+        </div>
+      )}
+      {!topRow && (
+        <div className="px-2">
+          <SearchTrigger
+            onClick={() => toast('Search', { description: `${MOD}+K opens the real command menu.` })}
+            className="hover:bg-sidebar-accent hover:text-muted-foreground"
+          />
+        </div>
+      )}
 
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
+      <nav className={cn('min-h-0 flex-1 overflow-y-auto px-2 pb-3', topRow === 'app' && 'pt-0.5')}>
         <div className="mt-3 grid gap-px">
           <NavItem icon={InboxIcon} label="Inbox" count={INBOX_COUNT} active={page === 'inbox'} onClick={() => onPage('inbox')} />
           <NavItem icon={UserCircleIcon} label="My issues" active={page === 'my-issues'} onClick={() => onPage('my-issues')} />
@@ -458,13 +667,16 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
         </NavGroup>
       </nav>
 
-      <div className="flex items-center gap-1 border-t p-2">
-        <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => toast('Invite people', { description: 'Demo only.' })}>
-          <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" /> Invite
-        </Button>
-        <Button variant="ghost" size="icon-sm" className="text-muted-foreground ml-auto" aria-label="Help" onClick={() => toast('Help', { description: 'Demo only.' })}>
-          <HugeiconsIcon icon={HelpCircleIcon} strokeWidth={2} />
-        </Button>
+      <div className="grid gap-1 border-t p-2">
+        {footAccount && <SidebarAccount onPage={onPage} />}
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={() => toast('Invite people', { description: 'Demo only.' })}>
+            <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" /> Invite
+          </Button>
+          <Button variant="ghost" size="icon-sm" className="text-muted-foreground ml-auto" aria-label="Help" onClick={() => toast('Help', { description: 'Demo only.' })}>
+            <HugeiconsIcon icon={HelpCircleIcon} strokeWidth={2} />
+          </Button>
+        </div>
       </div>
     </div>
   )
@@ -472,7 +684,7 @@ function TeamsSidebar({ page, onPage, onNew, ...ws }: Nav & Ws & { onNew: () => 
 
 // 2. Rail and panel
 
-function RailSidebar({ page, onPage }: Nav) {
+function RailSidebar({ page, onPage, topRow, footAccount }: Nav & Foot) {
   const current = [...RAIL, RAIL_SETTINGS].find((m) => m.links.some((l) => l.id === page)) ?? RAIL[1]
 
   function railButton(m: (typeof RAIL)[number]) {
@@ -492,11 +704,12 @@ function RailSidebar({ page, onPage }: Nav) {
   return (
     <>
       <div className="bg-sidebar flex w-12 shrink-0 flex-col items-center gap-1 border-r py-2">
-        <LetterMark size="xs" text="A" colour="var(--primary)" className="mb-2 size-6 text-[10px]" />
+        {topRow !== 'app' && <LetterMark size="xs" text="A" colour="var(--primary)" className="mb-2 size-6 text-[10px]" />}
         {RAIL.map(railButton)}
         <div className="mt-auto grid gap-1">
           {railButton(RAIL_SETTINGS)}
-          <UserAvatar name={PEOPLE[0]} className="mt-1" />
+          {!topRow && <UserAvatar name={PEOPLE[0]} className="mt-1" />}
+          {footAccount && <SidebarAccount onPage={onPage} iconOnly />}
         </div>
       </div>
       <aside className="bg-sidebar/40 text-sidebar-foreground flex w-48 shrink-0 flex-col border-r">
@@ -534,13 +747,15 @@ function RailSidebar({ page, onPage }: Nav) {
 
 // 3. Inset: the content sits in a card on the sidebar's colour
 
-function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
+function InsetSidebar({ page, onPage, topRow, footAccount, ...ws }: Nav & Ws & Foot) {
   const items = ['home', 'inbox', 'my-issues', 'projects', 'analytics', 'ai']
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="p-2">
-        <WorkspaceMenu {...ws} detail={ws.workspace.plan} />
-      </div>
+      {topRow !== 'app' && (
+        <div className="p-2">
+          <WorkspaceMenu {...ws} detail={ws.workspace.plan} />
+        </div>
+      )}
 
       <nav className="min-h-0 flex-1 overflow-y-auto px-2">
         <NavGroup title="Platform">
@@ -582,20 +797,7 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
         >
           <Button size="sm" variant="outline" onClick={() => toast('Upgrade', { description: 'Demo only.' })}>Upgrade plan</Button>
         </UsageMeter>
-        <AccountMenu
-          name={PEOPLE[0]}
-          detail="ravi@example.com"
-          size="md"
-          menuClassName="w-52"
-          className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent"
-        >
-          <DropdownMenuItem onSelect={() => onPage('settings')}>
-            <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => toast('Logged out', { description: 'Demo only.' })}>
-            <HugeiconsIcon icon={UserCircleIcon} strokeWidth={2} /> Switch account
-          </DropdownMenuItem>
-        </AccountMenu>
+        {(!topRow || footAccount) && <SidebarAccount onPage={onPage} />}
       </div>
     </div>
   )
@@ -603,15 +805,20 @@ function InsetSidebar({ page, onPage, ...ws }: Nav & Ws) {
 
 // 4. Icons: folds down to a strip of icons
 
-function IconsSidebar({ page, onPage, iconOnly, onToggle }: Nav & { iconOnly: boolean; onToggle: () => void }) {
+function IconsSidebar({ page, onPage, iconOnly, onToggle, topRow, footAccount }: Nav & Foot & {
+  iconOnly: boolean
+  onToggle: () => void
+}) {
   const main = ['home', 'inbox', 'my-issues', 'ops:issues', 'ops:cycles', 'projects', 'analytics']
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className={cn('flex h-11 shrink-0 items-center gap-2', iconOnly ? 'justify-center' : 'px-3')}>
-        <LetterMark size="xs" text="A" colour="var(--primary)" className="size-6 text-[10px]" />
-        {!iconOnly && <span className="truncate text-[13px] font-medium">Acme</span>}
-      </div>
-      <nav className="grid min-h-0 flex-1 content-start gap-px overflow-y-auto px-2">
+      {topRow !== 'app' && (
+        <div className={cn('flex h-11 shrink-0 items-center gap-2', iconOnly ? 'justify-center' : 'px-3')}>
+          <LetterMark size="xs" text="A" colour="var(--primary)" className="size-6 text-[10px]" />
+          {!iconOnly && <span className="truncate text-[13px] font-medium">Acme</span>}
+        </div>
+      )}
+      <nav className={cn('grid min-h-0 flex-1 content-start gap-px overflow-y-auto px-2', topRow === 'app' && 'pt-2')}>
         {main.map((id) => {
           const info = pageInfo(id)
           return (
@@ -637,6 +844,11 @@ function IconsSidebar({ page, onPage, iconOnly, onToggle }: Nav & { iconOnly: bo
           iconOnly={iconOnly}
           onClick={onToggle}
         />
+        {footAccount && (
+          <div className={cn('mt-1', iconOnly && 'flex justify-center')}>
+            <SidebarAccount onPage={onPage} iconOnly={iconOnly} />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -644,7 +856,13 @@ function IconsSidebar({ page, onPage, iconOnly, onToggle }: Nav & { iconOnly: bo
 
 // 5. Top nav: no sidebar
 
-function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: Notifications; onOpenJob: (id: string) => void }) {
+// With the Two rows header, the global header takes the first row's place,
+// so only the tabs are left (`tabsOnly`).
+function TopNav({ page, onPage, notes, onOpenJob, tabsOnly, ...ws }: Nav & Ws & {
+  notes: Notifications
+  onOpenJob: (id: string) => void
+  tabsOnly?: boolean
+}) {
   const info = pageInfo(page)
   const team = info.team ?? TEAMS[0]
   const tabs = [
@@ -658,7 +876,7 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
   ]
   return (
     <div className="shrink-0 border-b">
-      <div className="flex h-11 items-center gap-1.5 px-3">
+      {!tabsOnly && <div className="flex h-11 items-center gap-1.5 px-3">
         <LetterMark size="xs" text="A" colour="var(--primary)" className="size-6 text-[10px]" />
         <span className="text-muted-foreground/40 px-0.5 text-base font-light">/</span>
         <WorkspaceMenu
@@ -694,7 +912,7 @@ function TopNav({ page, onPage, notes, onOpenJob, ...ws }: Nav & Ws & { notes: N
           <NotificationsMenu notes={notes} onOpenJob={onOpenJob} />
           <UserAvatar name={PEOPLE[0]} />
         </div>
-      </div>
+      </div>}
       <nav className="flex gap-1 overflow-x-auto px-2 [scrollbar-width:none]" aria-label="Sections">
         {tabs.map((t) => {
           const active = page === t.id

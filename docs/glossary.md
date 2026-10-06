@@ -63,7 +63,9 @@ used by most design systems).
 | Delete confirmation | The dialog that asks before something is removed for good |
 | Comment box | Where you write a comment on a record: text, attach, Send (Ctrl/⌘ Enter) |
 | Usage meter | How much of an allowance is used: a label, the count, a bar that turns amber then red |
-| Account menu | The avatar and name at the foot of a sidebar, opening your profile, settings and sign out |
+| Account menu | Who is signed in, opening your profile, settings, theme and sign out: the avatar and name at the foot of a sidebar, or just the avatar at the right of a header |
+| Global header | The top row for what belongs to the whole app, not the page: search, the assistant, notifications and the account. It sits over the page only, beside a full-height sidebar, or across the whole app with the workspace in it (SAP calls that the shell bar). The App shells page's Two rows header |
+| Breadcrumb bar | A row of its own for the breadcrumb, under the global header, with the page's own buttons at its right |
 | Workspace switcher | The control at the top of a sidebar that switches workspace or company |
 | Display menu (display options) | The popover that sets how items show: layout, grouping, ordering, which properties appear |
 | Display properties | The fields a list row or board card shows, switched on and off in the display menu |

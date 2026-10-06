@@ -134,13 +134,16 @@ function switcherCode(v: Values) {
 
 /* ---------- Account menu ---------- */
 
+const ACCOUNT_VARIANTS = ['row', 'avatar'] as const
 const ACCOUNT_SIZES = ['sm', 'md'] as const
 const ACCOUNT_HEADINGS = ['email', 'label', 'none'] as const
-const ACCOUNT_SIDES = ['top', 'right', 'bottom'] as const
+// "default": the row opens upwards, the avatar downwards.
+const ACCOUNT_SIDES = ['default', 'top', 'right', 'bottom'] as const
 
+type AccountVariant = (typeof ACCOUNT_VARIANTS)[number]
 type AccountSize = (typeof ACCOUNT_SIZES)[number]
 type AccountHeading = (typeof ACCOUNT_HEADINGS)[number]
-type AccountSide = (typeof ACCOUNT_SIDES)[number]
+type AccountSide = Exclude<(typeof ACCOUNT_SIDES)[number], 'default'>
 
 const THEMES = [
   { value: 'light', label: 'Light', icon: Sun03Icon },
@@ -191,6 +194,7 @@ function AccountItems({ theme = true }: { theme?: boolean }) {
 function accountCode(v: Values) {
   const heading = str(v, 'heading') as AccountHeading
   const detail = str(v, 'detail')
+  const avatar = str(v, 'variant') === 'avatar'
   const head = imports({
     '@hugeicons/react': ['HugeiconsIcon'],
     '@hugeicons/core-free-icons': ['Logout01Icon', 'Settings01Icon', 'UserIcon'],
@@ -202,9 +206,10 @@ function accountCode(v: Values) {
     detail && `detail="${detail}"`,
     heading === 'email' && `email="${PERSON.email}"`,
     heading === 'label' && `label="${PERSON.email}"`,
-    unless(str(v, 'size'), 'sm') && `size="${str(v, 'size')}"`,
-    unless(str(v, 'side'), 'top') && `side="${str(v, 'side')}"`,
-    'className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent"',
+    avatar && 'variant="avatar"',
+    !avatar && unless(str(v, 'size'), 'sm') && `size="${str(v, 'size')}"`,
+    unless(str(v, 'side'), 'default') && `side="${str(v, 'side')}"`,
+    !avatar && 'className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent"',
   ], [
     '<DropdownMenuItem onSelect={openProfile}>',
     '  <HugeiconsIcon icon={UserIcon} strokeWidth={2} /> Profile',
@@ -286,28 +291,39 @@ export default function AppShellDemos() {
 
       <Playground
         title="AccountMenu"
-        description="The foot of a sidebar: who is signed in, opening their menu"
+        description="Who is signed in, opening their menu: a row at a sidebar's foot, or the avatar in a header"
         controls={[
-          { kind: 'select', name: 'size', label: 'Size', options: ACCOUNT_SIZES, initial: 'md' },
+          { kind: 'select', name: 'variant', label: 'Variant', options: ACCOUNT_VARIANTS, initial: 'row' },
+          { kind: 'select', name: 'size', label: 'Size (row)', options: ACCOUNT_SIZES, initial: 'md' },
           { kind: 'text', name: 'detail', label: 'Detail (blank: none)', initial: PERSON.title },
           { kind: 'select', name: 'heading', label: 'Menu heading', options: ACCOUNT_HEADINGS, initial: 'email' },
-          { kind: 'select', name: 'side', label: 'Opens to (side)', options: ACCOUNT_SIDES, initial: 'top' },
+          { kind: 'select', name: 'side', label: 'Opens to (side)', options: ACCOUNT_SIDES, initial: 'default' },
         ]}
         render={(v) => {
           const heading = str(v, 'heading') as AccountHeading
-          return (
-            <div className="bg-sidebar text-sidebar-foreground w-60 rounded-lg border p-2">
-              <AccountMenu
-                name={PERSON.name}
-                detail={str(v, 'detail') || undefined}
-                email={heading === 'email' ? PERSON.email : undefined}
-                label={heading === 'label' ? PERSON.email : undefined}
-                size={str(v, 'size') as AccountSize}
-                side={str(v, 'side') as AccountSide}
-                className="hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent"
-              >
-                <AccountItems />
-              </AccountMenu>
+          const variant = str(v, 'variant') as AccountVariant
+          const side = str(v, 'side')
+          const menu = (
+            <AccountMenu
+              name={PERSON.name}
+              detail={str(v, 'detail') || undefined}
+              email={heading === 'email' ? PERSON.email : undefined}
+              label={heading === 'label' ? PERSON.email : undefined}
+              variant={variant}
+              size={str(v, 'size') as AccountSize}
+              side={side === 'default' ? undefined : (side as AccountSide)}
+              className={variant === 'row' ? 'hover:bg-sidebar-accent aria-expanded:bg-sidebar-accent' : undefined}
+            >
+              <AccountItems />
+            </AccountMenu>
+          )
+          // Each variant in the place it is meant for: a sidebar's foot, a header's right end.
+          return variant === 'row' ? (
+            <div className="bg-sidebar text-sidebar-foreground w-60 rounded-lg border p-2">{menu}</div>
+          ) : (
+            <div className="bg-background flex h-11 w-80 max-w-full items-center justify-end gap-1 rounded-lg border px-2">
+              <span className="text-muted-foreground mr-auto text-xs">Header</span>
+              {menu}
             </div>
           )
         }}
