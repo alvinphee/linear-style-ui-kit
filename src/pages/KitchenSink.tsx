@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { useTheme } from '@/lib/theme'
 import { usePath } from '@/lib/router'
 import { HugeiconsIcon } from '@hugeicons/react'
@@ -17,40 +17,65 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { isTyping } from '@/lib/keyboard'
 import { PRESETS } from '@/lib/theme'
-import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, goTo } from './nav'
+import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, byCategory, goTo } from './nav'
 import ShortcutsDialog from './ShortcutsDialog'
 import ShowcaseSidebar from './ShowcaseSidebar'
+import AccordionSection from './sections/AccordionSection'
 import AiComponentsSection from './sections/AiComponentsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
 import AiWorkspaceSection from './sections/AiWorkspaceSection'
+import AlertsSection from './sections/AlertsSection'
 import AppShellSection from './sections/AppShellSection'
 import AuditLogSection from './sections/AuditLogSection'
+import BadgesSection from './sections/BadgesSection'
 import BoardSection from './sections/BoardSection'
+import BreadcrumbSection from './sections/BreadcrumbSection'
 import ButtonsSection from './sections/ButtonsSection'
 import CalendarSection from './sections/CalendarSection'
+import CardsSection from './sections/CardsSection'
 import ChartsSection from './sections/ChartsSection'
-import ContentSection from './sections/ContentSection'
+import CommandPaletteSection from './sections/CommandPaletteSection'
 import DashboardSection from './sections/DashboardSection'
 import DataTableSection from './sections/DataTableSection'
-import DisplaySection from './sections/DisplaySection'
+import DatePickerSection from './sections/DatePickerSection'
+import DialogsSection from './sections/DialogsSection'
 import DockScheduleSection from './sections/DockScheduleSection'
-import FormModalsSection, { QuickCreateDialog } from './sections/FormModalsSection'
-import FormsSection from './sections/FormsSection'
+import EmptyStateSection from './sections/EmptyStateSection'
+import FileUploadSection from './sections/FileUploadSection'
+import FormsSection, { QuickCreateDialog } from './sections/FormsSection'
+import GanttSection from './sections/GanttSection'
 import IconsSection from './sections/IconsSection'
 import InboxSection from './sections/InboxSection'
-import InputsSection from './sections/InputsSection'
 import IssueSection from './sections/IssueSection'
 import JobListSection from './sections/JobListSection'
-import NavigationSection from './sections/NavigationSection'
+import KbdSection from './sections/KbdSection'
+import LoadingSection from './sections/LoadingSection'
+import MarkdownSection from './sections/MarkdownSection'
+import MenusSection from './sections/MenusSection'
+import NavMenusSection from './sections/NavMenusSection'
 import OnboardingSection from './sections/OnboardingSection'
-import OverlaysMoreSection from './sections/OverlaysMoreSection'
-import OverlaysSection from './sections/OverlaysSection'
+import PageHeaderSection from './sections/PageHeaderSection'
+import PaginationSection from './sections/PaginationSection'
+import PeopleSection from './sections/PeopleSection'
+import PopoversSection from './sections/PopoversSection'
 import PricingSection from './sections/PricingSection'
+import ProgressSection from './sections/ProgressSection'
+import QrCodeSection from './sections/QrCodeSection'
+import ResizableSection from './sections/ResizableSection'
 import RoadmapSection from './sections/RoadmapSection'
+import ScrollAreaSection from './sections/ScrollAreaSection'
+import SelectSection from './sections/SelectSection'
+import SelectionControlsSection from './sections/SelectionControlsSection'
+import SeparatorSection from './sections/SeparatorSection'
 import SettingsSection from './sections/SettingsSection'
 import { InOverview, PageDemos } from './sections/shared'
+import SheetsSection from './sections/SheetsSection'
 import SignInSection from './sections/SignInSection'
-import StatusSection from './sections/StatusSection'
+import SliderSection from './sections/SliderSection'
+import SortableListSection from './sections/SortableListSection'
+import StatusIconsSection from './sections/StatusIconsSection'
+import TabsSection from './sections/TabsSection'
+import TextFieldsSection from './sections/TextFieldsSection'
 import ThemeSection, { ThemeControls } from './sections/ThemeSection'
 
 // Playgrounds and variant grids, one file per page: playground/buttons.tsx
@@ -78,17 +103,42 @@ export default function KitchenSink() {
     overview,
     theme: () => <ThemeSection />,
     buttons: () => <ButtonsSection />,
+    'selection-controls': () => <SelectionControlsSection />,
+    'date-picker': () => <DatePickerSection />,
+    'file-upload': () => <FileUploadSection />,
     forms: () => <FormsSection />,
-    'form-modals': () => <FormModalsSection />,
-    inputs: () => <InputsSection />,
-    status: () => <StatusSection />,
-    display: () => <DisplaySection />,
-    charts: () => <ChartsSection />,
-    overlays: () => <OverlaysSection onOpenCommand={() => setCommandOpen(true)} />,
-    'overlays-more': () => <OverlaysMoreSection />,
-    navigation: () => <NavigationSection />,
-    content: () => <ContentSection />,
+    select: () => <SelectSection />,
+    slider: () => <SliderSection />,
+    'text-fields': () => <TextFieldsSection />,
+    accordion: () => <AccordionSection />,
+    people: () => <PeopleSection />,
+    badges: () => <BadgesSection />,
     'data-table': () => <DataTableSection />,
+    kbd: () => <KbdSection />,
+    markdown: () => <MarkdownSection />,
+    'qr-code': () => <QrCodeSection />,
+    'sortable-list': () => <SortableListSection />,
+    'status-icons': () => <StatusIconsSection />,
+    alerts: () => <AlertsSection />,
+    'empty-state': () => <EmptyStateSection />,
+    loading: () => <LoadingSection />,
+    progress: () => <ProgressSection />,
+    'command-palette': () => <CommandPaletteSection onOpenCommand={() => setCommandOpen(true)} />,
+    dialogs: () => <DialogsSection />,
+    menus: () => <MenusSection />,
+    sheets: () => <SheetsSection />,
+    popovers: () => <PopoversSection />,
+    breadcrumb: () => <BreadcrumbSection />,
+    'nav-menus': () => <NavMenusSection />,
+    pagination: () => <PaginationSection />,
+    tabs: () => <TabsSection />,
+    cards: () => <CardsSection />,
+    'page-header': () => <PageHeaderSection />,
+    resizable: () => <ResizableSection />,
+    'scroll-area': () => <ScrollAreaSection />,
+    separator: () => <SeparatorSection />,
+    charts: () => <ChartsSection />,
+    gantt: () => <GanttSection />,
     'ai-components': () => <AiComponentsSection />,
     'app-shell': () => <AppShellSection />,
     list: () => <JobListSection />,
@@ -114,7 +164,8 @@ export default function KitchenSink() {
   const components = NAV_GROUPS.find((g) => g.title === 'Components')?.items ?? []
 
   // Every component on one long page, as the kit was before it had one page
-  // per section. Each section links to its own page for the playground.
+  // per section. Each section links to its own page for the playground; a
+  // page with no examples shows its demos here instead.
   // A render function, not a component, so it never remounts its sections.
   function overview() {
     return (
@@ -125,7 +176,14 @@ export default function KitchenSink() {
           description="Every component at a glance. Open a section for its playground, variants and code."
         />
         <InOverview.Provider value>
-          {components.map((c) => <Fragment key={c.id}>{PAGES[c.id]?.()}</Fragment>)}
+          {components.map((c) => {
+            const PageDemo = DEMOS[c.id]
+            return (
+              <PageDemos.Provider key={c.id} value={PageDemo ? <PageDemo /> : null}>
+                {PAGES[c.id]?.()}
+              </PageDemos.Provider>
+            )
+          })}
         </InOverview.Provider>
       </div>
     )
@@ -300,9 +358,9 @@ export default function KitchenSink() {
                 </CommandItem>
               ))}
             </CommandGroup>
-            {NAV_GROUPS.map((g) => (
-              <CommandGroup key={g.title} heading={`Go to · ${g.title}`}>
-                {g.items.map((item) => {
+            {NAV_GROUPS.flatMap((g) => byCategory(g.items).map((part) => (
+              <CommandGroup key={`${g.title}-${part.category}`} heading={`Go to · ${g.title}${part.category ? ` · ${part.category}` : ''}`}>
+                {part.items.map((item) => {
                   const go = GO_KEYS.find((k) => k.id === item.id)
                   return (
                     <CommandItem key={item.id} onSelect={() => run(() => goTo(item.id))}>
@@ -312,7 +370,7 @@ export default function KitchenSink() {
                   )
                 })}
               </CommandGroup>
-            ))}
+            )))}
             <CommandGroup heading="Templates">
               {TEMPLATES.map((m) => (
                 <CommandItem key={m.path} onSelect={() => run(() => { window.location.hash = m.path })}>

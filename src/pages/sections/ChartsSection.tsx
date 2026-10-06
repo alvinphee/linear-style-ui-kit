@@ -1,11 +1,10 @@
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from 'recharts'
+import { useSvgId } from '@/lib/use-svg-id'
 import { LegendLine, LegendRow } from '@/components/chart-legend'
-import { ProgressRing } from '@/components/progress-ring'
 import { StatusBadge } from '@/components/status-badge'
 import {
   ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent, type ChartConfig,
 } from '@/components/ui/chart'
-import { useSvgId } from '@/lib/use-svg-id'
 import { Panel, Section } from './shared'
 
 // Made-up numbers. 19–20 and 26–27 Sep are weekends, hence the dips.
@@ -27,12 +26,16 @@ const WEEKLY = [
 ]
 
 const SCOPE = 34
+
 const CYCLE_DAYS = [
   '22 Sep', '23 Sep', '24 Sep', '25 Sep', '26 Sep', '27 Sep', '28 Sep', '29 Sep', '30 Sep',
   '1 Oct', '2 Oct', '3 Oct', '4 Oct', '5 Oct',
 ]
+
 const TODAY = '30 Sep'
+
 const REMAINING = [34, 33, 31, 30, 27, 24, 22, 19, 16]
+
 const BURNDOWN = CYCLE_DAYS.map((day, i) => ({
   day,
   ideal: Math.round((SCOPE - (SCOPE * i) / (CYCLE_DAYS.length - 1)) * 10) / 10,
@@ -109,48 +112,6 @@ function StatusBarsPanel() {
           <Bar dataKey="todo" stackId="status" fill="var(--color-todo)" maxBarSize={28} radius={[3, 3, 0, 0]} />
         </BarChart>
       </ChartContainer>
-    </Panel>
-  )
-}
-
-const RINGS = [
-  { label: 'On time', value: 92, color: 'var(--brand)', delta: '+3 pts' },
-  // status-done is the brand colour, so the success green (chart-4) keeps the rings apart.
-  { label: 'Photos complete', value: 76, color: 'var(--chart-4)', delta: '+8 pts' },
-  { label: 'Cycle', value: 58, color: 'var(--status-progress)', delta: 'Day 9 of 14' },
-]
-
-function Ring({ label, value, color, delta }: (typeof RINGS)[number]) {
-  return (
-    <figure className="flex min-w-0 flex-col items-center gap-2 text-center">
-      <ProgressRing
-        value={value}
-        size={80}
-        strokeWidth={7}
-        colour={color}
-        label={`${label}: ${value}%`}
-        animateIn
-        className="text-sm font-semibold"
-      >
-        {value}%
-      </ProgressRing>
-      <figcaption className="grid gap-0.5">
-        <span className="text-xs font-medium">{label}</span>
-        <span className="text-muted-foreground text-[11px]">{delta}</span>
-      </figcaption>
-    </figure>
-  )
-}
-
-function RingsPanel() {
-  return (
-    <Panel title="Progress rings" note="ProgressRing, pure SVG">
-      <div className="grid grid-cols-3 gap-2 py-4">
-        {RINGS.map((ring) => (
-          <Ring key={ring.label} {...ring} />
-        ))}
-      </div>
-      <p className="text-muted-foreground border-t pt-3 text-[11px]">Targets: on time 95%, photos 80%. Compared with last month.</p>
     </Panel>
   )
 }
@@ -247,10 +208,11 @@ function CyclePanel() {
 
 export default function ChartsSection() {
   return (
-    <Section id="charts" title="Charts" description="Recharts through the shadcn chart component, coloured by the theme">
+    <Section id="charts" title="Charts" description="Area and bar charts, legends, bar lists and sparklines, coloured by the theme">
       <CompletedPanel />
+
       <StatusBarsPanel />
-      <RingsPanel />
+
       <CyclePanel />
     </Section>
   )

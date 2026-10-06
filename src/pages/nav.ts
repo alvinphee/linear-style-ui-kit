@@ -1,19 +1,26 @@
 import type { IconSvgElement } from '@hugeicons/react'
 import { navigate } from '@/lib/router'
 import {
-  ChartAreaIcon, Compass01Icon, GitCompareIcon, CursorPointer02Icon, FileUploadIcon, GridViewIcon, InboxIcon,
-  InformationCircleIcon, Money03Icon, DashboardSquare01Icon, Calendar03Icon, FormIcon, Table01Icon,
-  Audit01Icon, SparklesIcon, AiBrain01Icon, AiChat02Icon, AiMagicIcon, Building06Icon,
-  InputTextIcon, KanbanIcon, LayoutGridIcon, Layers01Icon, LayersIcon, LeftToRightListBulletIcon, Login01Icon,
-  PaintBoardIcon, Rocket01Icon, Search01Icon, Settings01Icon, Settings02Icon, SlidersHorizontalIcon,
-  SidebarLeftIcon, Tag01Icon, Task01Icon, TimelineIcon, WarehouseIcon,
+  AiBrain01Icon, AiChat02Icon, AiMagicIcon, Alert02Icon, AppWindowIcon, ArrowLeftRightIcon, ArrowRightDoubleIcon,
+  Audit01Icon, Building06Icon, Calendar01Icon, Calendar03Icon, ChartAreaIcon, ChartGanttIcon,
+  CheckmarkSquare02Icon, CommandIcon, Comment01Icon, Compass01Icon, CursorPointer02Icon, DashboardSquare01Icon,
+  DragDropVerticalIcon, DropdownFieldTypeIcon, FileEmpty02Icon, FileUploadIcon, Flag02Icon, FormIcon,
+  GitCompareIcon, GridViewIcon, Heading01Icon, HorizontalResizeIcon, InboxIcon, InputTextIcon, KanbanIcon,
+  KeyboardIcon, LayoutGridIcon, LayoutPanelTopIcon, LeftToRightListBulletIcon, ListCollapseIcon, Loading03Icon,
+  Login01Icon, MenuSquareIcon, Money03Icon, NoteEditIcon, NotebookTabsIcon, PaintBoardIcon, PanelRightIcon,
+  ProgressIcon, QrCodeIcon, Rocket01Icon, ScrollVerticalIcon, Search01Icon, Settings01Icon, Settings02Icon,
+  SidebarLeftIcon, SlidersHorizontalIcon, SolidLine01Icon, SparklesIcon, Table01Icon, Tag01Icon, Task01Icon,
+  TimelineIcon, UserGroupIcon, WarehouseIcon,
 } from '@hugeicons/core-free-icons'
 
-export type NavItem = { id: string; label: string; icon: IconSvgElement }
+// `category` sorts a group's pages under small headings (Components only).
+export type NavItem = { id: string; label: string; icon: IconSvgElement; category?: string }
 
 // The kit in five levels, smallest first: tokens (Theme), components,
 // blocks (screens built from components), layouts (the frame pages sit in)
 // and templates (whole apps, listed in TEMPLATES below). Each item is a page.
+// Components get one page per family (a component and its close relatives,
+// such as Badge, StatusBadge and DeltaBadge), A to Z within each category.
 export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Get started',
@@ -27,19 +34,52 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Components',
     items: [
-      { id: 'buttons', label: 'Buttons', icon: CursorPointer02Icon },
-      { id: 'forms', label: 'Forms', icon: InputTextIcon },
-      { id: 'form-modals', label: 'Form modals', icon: FormIcon },
-      { id: 'inputs', label: 'More inputs', icon: SlidersHorizontalIcon },
-      { id: 'status', label: 'Status', icon: Tag01Icon },
-      { id: 'display', label: 'Feedback and display', icon: InformationCircleIcon },
-      { id: 'charts', label: 'Charts', icon: ChartAreaIcon },
-      { id: 'overlays', label: 'Menus and overlays', icon: Layers01Icon },
-      { id: 'overlays-more', label: 'More overlays', icon: LayersIcon },
-      { id: 'navigation', label: 'Navigation', icon: Compass01Icon },
-      { id: 'content', label: 'Uploads and editor', icon: FileUploadIcon },
-      { id: 'data-table', label: 'Data table', icon: Table01Icon },
-      { id: 'ai-components', label: 'AI components', icon: AiMagicIcon },
+      { id: 'buttons', label: 'Buttons and toggles', icon: CursorPointer02Icon, category: 'Actions' },
+
+      { id: 'selection-controls', label: 'Checkbox, radio and switch', icon: CheckmarkSquare02Icon, category: 'Inputs' },
+      { id: 'date-picker', label: 'Date picker', icon: Calendar01Icon, category: 'Inputs' },
+      { id: 'file-upload', label: 'File upload', icon: FileUploadIcon, category: 'Inputs' },
+      { id: 'forms', label: 'Forms', icon: FormIcon, category: 'Inputs' },
+      { id: 'select', label: 'Select and combobox', icon: DropdownFieldTypeIcon, category: 'Inputs' },
+      { id: 'slider', label: 'Slider', icon: SlidersHorizontalIcon, category: 'Inputs' },
+      { id: 'text-fields', label: 'Text fields', icon: InputTextIcon, category: 'Inputs' },
+
+      { id: 'accordion', label: 'Accordion and collapsible', icon: ListCollapseIcon, category: 'Data display' },
+      { id: 'people', label: 'Avatars and people', icon: UserGroupIcon, category: 'Data display' },
+      { id: 'badges', label: 'Badges and labels', icon: Tag01Icon, category: 'Data display' },
+      { id: 'data-table', label: 'Data table', icon: Table01Icon, category: 'Data display' },
+      { id: 'kbd', label: 'Keyboard keys', icon: KeyboardIcon, category: 'Data display' },
+      { id: 'markdown', label: 'Markdown and editor', icon: NoteEditIcon, category: 'Data display' },
+      { id: 'qr-code', label: 'QR code', icon: QrCodeIcon, category: 'Data display' },
+      { id: 'sortable-list', label: 'Sortable list', icon: DragDropVerticalIcon, category: 'Data display' },
+      { id: 'status-icons', label: 'Status and priority', icon: Flag02Icon, category: 'Data display' },
+
+      { id: 'alerts', label: 'Alerts and toasts', icon: Alert02Icon, category: 'Feedback' },
+      { id: 'empty-state', label: 'Empty state', icon: FileEmpty02Icon, category: 'Feedback' },
+      { id: 'loading', label: 'Loading', icon: Loading03Icon, category: 'Feedback' },
+      { id: 'progress', label: 'Progress', icon: ProgressIcon, category: 'Feedback' },
+
+      { id: 'command-palette', label: 'Command palette', icon: CommandIcon, category: 'Overlays' },
+      { id: 'dialogs', label: 'Dialogs', icon: AppWindowIcon, category: 'Overlays' },
+      { id: 'menus', label: 'Menus', icon: MenuSquareIcon, category: 'Overlays' },
+      { id: 'sheets', label: 'Sheets and drawers', icon: PanelRightIcon, category: 'Overlays' },
+      { id: 'popovers', label: 'Tooltips and popovers', icon: Comment01Icon, category: 'Overlays' },
+
+      { id: 'breadcrumb', label: 'Breadcrumb', icon: ArrowRightDoubleIcon, category: 'Navigation' },
+      { id: 'nav-menus', label: 'Navigation menus', icon: Compass01Icon, category: 'Navigation' },
+      { id: 'pagination', label: 'Pagination', icon: ArrowLeftRightIcon, category: 'Navigation' },
+      { id: 'tabs', label: 'Tabs', icon: NotebookTabsIcon, category: 'Navigation' },
+
+      { id: 'cards', label: 'Cards and panels', icon: LayoutPanelTopIcon, category: 'Layout' },
+      { id: 'page-header', label: 'Page header', icon: Heading01Icon, category: 'Layout' },
+      { id: 'resizable', label: 'Resizable panes', icon: HorizontalResizeIcon, category: 'Layout' },
+      { id: 'scroll-area', label: 'Scroll area', icon: ScrollVerticalIcon, category: 'Layout' },
+      { id: 'separator', label: 'Separator', icon: SolidLine01Icon, category: 'Layout' },
+
+      { id: 'charts', label: 'Charts', icon: ChartAreaIcon, category: 'Charts' },
+      { id: 'gantt', label: 'Gantt parts', icon: ChartGanttIcon, category: 'Charts' },
+
+      { id: 'ai-components', label: 'AI components', icon: AiMagicIcon, category: 'AI' },
     ],
   },
   {
@@ -77,6 +117,18 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 ]
 
 export const NAV = NAV_GROUPS.flatMap((g) => g.items)
+
+// A group's items in runs of one category, for the headings inside a group.
+// Items without a category make one run with no heading.
+export function byCategory(items: NavItem[]) {
+  const runs: { category?: string; items: NavItem[] }[] = []
+  for (const item of items) {
+    const last = runs[runs.length - 1]
+    if (last && last.category === item.category) last.items.push(item)
+    else runs.push({ category: item.category, items: [item] })
+  }
+  return runs
+}
 
 // Linear-style "G then …" jumps. The letter is the key pressed after G.
 export const GO_KEYS: { key: string; id: string }[] = [

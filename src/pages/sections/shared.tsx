@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { Children, createContext, useContext, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
@@ -13,13 +13,15 @@ export const PageDemos = createContext<ReactNode>(null)
 export const InOverview = createContext(false)
 
 // One Section is one page: its title, the page's demos, then the examples.
+// A page can have demos only (no children).
 export function Section({ id, title, description, children }: {
   id: string
   title: string
   description: string
-  children: ReactNode
+  children?: ReactNode
 }) {
   const demos = useContext(PageDemos)
+  const hasExamples = Children.toArray(children).length > 0
   if (useContext(InOverview)) {
     return (
       <section id={id} aria-labelledby={`${id}-title`}>
@@ -34,20 +36,20 @@ export function Section({ id, title, description, children }: {
             Playground and variants <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-3" />
           </button>
         </header>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{children}</div>
+        {hasExamples ? <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{children}</div> : demos}
       </section>
     )
   }
   return (
     <section id={id} aria-labelledby={`${id}-title`}>
       <PageHeader id={`${id}-title`} title={title} description={description} size="lg" className="mb-6" />
-      {demos && (
+      {demos && <div className={hasExamples ? 'mb-10' : undefined}>{demos}</div>}
+      {hasExamples && (
         <>
-          <div className="mb-10">{demos}</div>
-          <h2 className="mb-3 text-sm font-semibold tracking-tight">Examples</h2>
+          {demos && <h2 className="mb-3 text-sm font-semibold tracking-tight">Examples</h2>}
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{children}</div>
         </>
       )}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">{children}</div>
     </section>
   )
 }

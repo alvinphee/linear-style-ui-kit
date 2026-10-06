@@ -4,10 +4,10 @@ import { Add01Icon, ArrowUpRight01Icon, KeyboardIcon, Logout01Icon, Settings01Ic
 import { toast } from 'sonner'
 import { WorkspaceSwitcher, type WorkspaceOption } from '@/blocks/workspace-switcher'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { NavGroup, NavItem } from '@/components/nav-item'
+import { NavGroup, NavHeading, NavItem } from '@/components/nav-item'
 import { SearchTrigger } from '@/components/search-trigger'
 import { Shortcut } from '@/components/shortcut'
-import { NAV_GROUPS, TEMPLATES, goTo } from './nav'
+import { NAV_GROUPS, TEMPLATES, byCategory, goTo } from './nav'
 
 // Made-up workspaces: the switcher shows the pattern, only the first is real.
 const WORKSPACES: WorkspaceOption[] = [
@@ -68,14 +68,19 @@ export default function ShowcaseSidebar({ active, onSearch, onShortcuts }: {
             open={!closed[group.title]}
             onOpenChange={(open) => setClosed((c) => ({ ...c, [group.title]: !open }))}
           >
-            {group.items.map((item) => (
-              <NavItem
-                key={item.id}
-                icon={item.icon}
-                label={item.label}
-                active={active === item.id}
-                onClick={() => goTo(item.id)}
-              />
+            {byCategory(group.items).map((part) => (
+              <div key={part.category ?? 'all'} role={part.category ? 'group' : undefined} aria-label={part.category}>
+                {part.category && <NavHeading className="mt-2.5 text-[10px] tracking-wide uppercase opacity-80">{part.category}</NavHeading>}
+                {part.items.map((item) => (
+                  <NavItem
+                    key={item.id}
+                    icon={item.icon}
+                    label={item.label}
+                    active={active === item.id}
+                    onClick={() => goTo(item.id)}
+                  />
+                ))}
+              </div>
             ))}
           </NavGroup>
         ))}

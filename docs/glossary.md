@@ -25,6 +25,8 @@ used by most design systems).
 | Layouts | The frame pages sit in: navigation, header, content area. Also called the app shell | App shells |
 | Templates | A whole app: a layout, blocks and data, ready to run | ERP app, AI chat app |
 | Kitchen sink | One page that shows every component, to check they look right together | All components |
+| Component family | A component and its close relatives, documented on one page | Badges and labels: Badge, StatusBadge, DeltaBadge, LabelChip |
+| Component category | A heading that groups component pages by what they do, as Ant Design and Material group theirs | Actions, Inputs, Data display, Feedback, Overlays, Navigation, Layout, Charts, AI |
 | Registry | shadcn's list of installable parts, served as JSON, so another project can copy them in with `npx shadcn add` | `registry.json`, built to `public/r/` by `npm run registry` |
 | Registry item | One installable entry in a registry: its files, the npm packages it needs, and the other items it needs (its registry dependencies) | One per component, block and lib file, plus `tokens` |
 | Registry namespace | The short prefix a project uses to name a registry, set once in its `components.json` | `@kit`, as in `@kit/kanban-board` |
@@ -88,6 +90,11 @@ used by most design systems).
 | Inset | The content sits in a card that floats inside the sidebar's background |
 | Breadcrumb | The path to the current page, such as Accounting › Customer invoices |
 | Command palette | The Ctrl+K / ⌘K box for jumping anywhere, searching and running actions |
+| Text field | A box for typing: an input, a text area, or an input group with addons such as a unit or a button |
+| Combobox | A select you can type into to narrow its options. A multi-select one shows what you picked as tags |
+| Toggle group (segmented control) | A row of toggle buttons where one, or several, stay pressed, such as List / Board |
+| Hover card | A card that appears while the pointer rests on a name or link, with more about it |
+| Sortable list | A list whose rows you drag into a new order, with the mouse or the keyboard |
 | Launchpad | The home screen of tiles, one per module (SAP Fiori's term) |
 | Worklist | Records that need you to act, one row each with its actions, such as Approve and Reject (SAP Fiori's term) |
 | App switcher (module switcher) | The control that moves between modules or apps. In the ERP template it sits at the top of the sidebar |
@@ -113,6 +120,12 @@ used by most design systems).
 | Toast | A short message that appears and fades, such as "Invoice sent" |
 | Sheet / drawer | A panel that slides in from an edge |
 | Skeleton | Grey shapes shown while content loads |
+| QR code | A square barcode a phone camera reads: a payment link, a record's address, an authenticator set-up. The component is `QrCode` |
+| Module (QR) | One of the small squares a QR code is made of. Its shape can change (square, rounded, dots) as long as it stays dark on light |
+| Quiet zone | The blank margin a scanner needs around a QR code |
+| Error correction level | How much of a QR code can be lost or covered and still scan: L 7%, M 15%, Q 25%, H 30% |
+| Finder pattern | The three big squares in a QR code's corners that a scanner looks for first. The small ones are alignment patterns |
+| Branded QR code | A QR code with a company's mark (logo, initials or name) in the middle and its name printed under it |
 
 ## AI interface
 | Term | Meaning |

@@ -1,174 +1,12 @@
-import type { ReactNode } from 'react'
-import { cn } from 'cn'
 import { BarList, type BarListItem } from '@/components/bar-list'
 import { LegendLine, LegendRow } from '@/components/chart-legend'
-import { GANTT_LABEL, GanttBar } from '@/components/gantt-bar'
+import { DeltaBadge } from '@/components/delta-badge'
 import { LetterMark } from '@/components/mark'
-import { MilestoneMarker } from '@/components/milestone-marker'
-import { ProgressRing } from '@/components/progress-ring'
 import { Sparkline } from '@/components/sparkline'
-import { TimeMarker, type TimeMarkerTone } from '@/components/time-marker'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { Demos, Gallery, Playground, Variants, bool, element, imports, indent, jsx, lit, str, unless, type Values } from './Playground'
-
-// The chart page's small parts, drawn without a chart library: the progress
-// ring, the legend for a line chart, the bar list, and the Gantt chart's
-// parts (its bar, the milestone diamond and the today line; the chart itself
-// is on the Roadmap page). All figures are made up.
-
-/* ---------- Colours ---------- */
-
-// The theme accent and the five chart colours, by name.
-const COLOURS = {
-  brand: 'var(--brand)',
-  'chart-1': 'var(--chart-1)',
-  'chart-2': 'var(--chart-2)',
-  'chart-3': 'var(--chart-3)',
-  'chart-4': 'var(--chart-4)',
-  'chart-5': 'var(--chart-5)',
-  muted: 'var(--muted-foreground)',
-} as const
-
-type ColourName = keyof typeof COLOURS
-const COLOUR_NAMES = Object.keys(COLOURS) as ColourName[]
-const colourOf = (v: Values) => COLOURS[str(v, 'colour') as ColourName]
-
-/* ---------- Progress ring ---------- */
-
-const RING_VALUES = ['0', '25', '60', '92', '100'] as const
-const RING_SIZES = ['32', '40', '56', '80'] as const
-const RING_STROKES = ['2', '3', '5', '7'] as const
-const RING_CENTRES = ['none', 'percent', 'fraction'] as const
-
-type RingSize = (typeof RING_SIZES)[number]
-type RingCentre = (typeof RING_CENTRES)[number]
-
-// The number in the middle scales with the ring.
-const RING_TEXT: Record<RingSize, string> = {
-  32: 'text-[9px] font-medium',
-  40: 'text-[10px] font-medium',
-  56: 'text-xs font-semibold',
-  80: 'text-base font-semibold',
-}
-
-// A matching thickness for each size, for the variant grid.
-const RING_STROKE_FOR: Record<RingSize, number> = { 32: 3, 40: 3, 56: 5, 80: 7 }
-
-function ringCentre(centre: RingCentre, value: number) {
-  if (centre === 'percent') return `${value}%`
-  if (centre === 'fraction') return `${Math.round((value / 100) * 5)}/5`
-  return undefined
-}
-
-function ringCode(v: Values) {
-  const value = Number(str(v, 'value'))
-  const size = str(v, 'size') as RingSize
-  const centre = ringCentre(str(v, 'centre') as RingCentre, value)
-  const body = jsx('ProgressRing', {
-    value,
-    size: size === '40' ? undefined : Number(size),
-    strokeWidth: str(v, 'strokeWidth') === '3' ? undefined : Number(str(v, 'strokeWidth')),
-    colour: str(v, 'colour') === 'brand' ? undefined : colourOf(v),
-    label: bool(v, 'label') ? `Onboarding: ${value}% done` : undefined,
-    animateIn: bool(v, 'animateIn'),
-    className: centre ? RING_TEXT[size] : undefined,
-  }, centre)
-  return `${imports({ '@/components/progress-ring': ['ProgressRing'] })}\n\n${body}`
-}
-
-function RingDemos() {
-  return (
-    <>
-      <Playground
-        title="ProgressRing"
-        description="Fills clockwise from the top. With label it speaks; without, it is decoration."
-        controls={[
-          { kind: 'select', name: 'value', label: 'Value (%)', options: RING_VALUES, initial: '60' },
-          { kind: 'select', name: 'size', label: 'Size (px)', options: RING_SIZES, initial: '56' },
-          { kind: 'select', name: 'strokeWidth', label: 'Stroke width (px)', options: RING_STROKES, initial: '5' },
-          { kind: 'select', name: 'colour', label: 'Colour', options: COLOUR_NAMES, initial: 'brand' },
-          { kind: 'select', name: 'centre', label: 'In the middle (children)', options: RING_CENTRES, initial: 'percent' },
-          { kind: 'switch', name: 'label', label: 'Spoken label', initial: true },
-          { kind: 'switch', name: 'animateIn', label: 'Animate in', initial: true },
-        ]}
-        render={(v) => {
-          const value = Number(str(v, 'value'))
-          const size = str(v, 'size') as RingSize
-          const centre = ringCentre(str(v, 'centre') as RingCentre, value)
-          return (
-            <ProgressRing
-              // Animate in runs on mount, so turning it on mounts a fresh ring.
-              key={String(bool(v, 'animateIn'))}
-              value={value}
-              size={Number(size)}
-              strokeWidth={Number(str(v, 'strokeWidth'))}
-              colour={colourOf(v)}
-              label={bool(v, 'label') ? `Onboarding: ${value}% done` : undefined}
-              animateIn={bool(v, 'animateIn')}
-              className={centre ? RING_TEXT[size] : undefined}
-            >
-              {centre}
-            </ProgressRing>
-          )
-        }}
-        code={ringCode}
-      />
-
-      <Variants
-        title="ProgressRing sizes"
-        note="size × value, each with a matching stroke width"
-        rows={{ name: 'size', values: RING_SIZES }}
-        cols={{ name: 'value', values: ['25', '60', '100'] as const }}
-        render={(size, value = '60') => (
-          <ProgressRing value={Number(value)} size={Number(size)} strokeWidth={RING_STROKE_FOR[size]} className={RING_TEXT[size]}>
-            {value}%
-          </ProgressRing>
-        )}
-      />
-
-      <Gallery
-        title="ProgressRing in use"
-        items={[
-          {
-            label: 'a checklist',
-            node: (
-              <div className="flex items-center gap-2.5">
-                <ProgressRing value={60} className="text-[10px] font-medium">3/5</ProgressRing>
-                <div className="grid text-xs leading-tight">
-                  <span className="font-medium">Set up your workspace</span>
-                  <span className="text-muted-foreground text-[11px]">3 of 5 steps done</span>
-                </div>
-              </div>
-            ),
-          },
-          {
-            label: 'a target, in a card',
-            node: (
-              <div className="bg-card flex w-52 items-center justify-between gap-3 rounded-lg border p-3">
-                <div className="grid gap-0.5">
-                  <span className="text-muted-foreground text-[11px]">Replies within SLA</span>
-                  <span className="text-base font-semibold tabular-nums">92%</span>
-                  <span className="text-muted-foreground text-[11px]">Target 90%</span>
-                </div>
-                <ProgressRing value={92} size={44} strokeWidth={4} colour="var(--status-done)" />
-              </div>
-            ),
-          },
-          {
-            label: 'small, beside its text',
-            node: (
-              <span className="flex items-center gap-1.5 text-xs">
-                <ProgressRing value={40} size={16} strokeWidth={2} />
-                Q4 launch · 40%
-              </span>
-            ),
-          },
-          { label: 'empty: no dot at 0%', node: <ProgressRing value={0} label="Not started" /> },
-        ]}
-      />
-    </>
-  )
-}
+import {
+  COLOURS, COLOUR_NAMES, Demos, Gallery, Playground, bool, colourOf, element, imports, indent, jsx, lit, str,
+  type Values,
+} from './Playground'
 
 /* ---------- Chart legend ---------- */
 
@@ -418,247 +256,51 @@ function BarListDemos() {
   )
 }
 
-/* ---------- Gantt chart parts ---------- */
+// --- Sparkline -----------------------------------------------------------
 
-// Fixed like label colours, so an item reads the same in every theme.
-const ITEM_COLOURS = {
-  violet: 'oklch(0.6 0.17 300)',
-  blue: 'oklch(0.62 0.15 250)',
-  teal: 'oklch(0.7 0.12 215)',
-  green: 'oklch(0.68 0.14 155)',
-  amber: 'oklch(0.74 0.15 70)',
-  red: 'oklch(0.65 0.18 10)',
-} as const
+// Ten points of this period and the one before. Made up and fixed.
+const SPARK_UP = [12, 14, 13, 17, 16, 19, 22, 21, 24, 27]
 
-type ItemColour = keyof typeof ITEM_COLOURS
-const ITEM_COLOUR_NAMES = Object.keys(ITEM_COLOURS) as ItemColour[]
-const itemColourOf = (v: Values) => ITEM_COLOURS[str(v, 'colour') as ItemColour]
+const SPARK_DOWN = [27, 25, 26, 22, 23, 19, 18, 19, 15, 13]
 
-const GANTT_PROGRESS = ['0', '18', '62', '100'] as const
-const GANTT_WIDTHS = ['120', '200', '320'] as const
-const MARKER_SIZES = ['default', 'sm'] as const
-const MARKER_TONES = ['brand', 'destructive'] as const
+const SPARK_FLAT = [18, 19, 17, 18, 20, 19, 18, 19, 18, 19]
 
-function GanttBarDemos() {
-  return (
-    <>
-      <Playground
-        title="GanttBar"
-        description="One item on a Gantt chart. The chart places it; here it takes the width you give it."
-        controls={[
-          { kind: 'text', name: 'label', label: 'Label', initial: 'Usage-based billing' },
-          { kind: 'select', name: 'colour', label: 'Colour', options: ITEM_COLOUR_NAMES, initial: 'violet' },
-          { kind: 'select', name: 'progress', label: 'Progress (%)', options: GANTT_PROGRESS, initial: '62' },
-          { kind: 'select', name: 'width', label: 'Width (px)', options: GANTT_WIDTHS, initial: '320' },
-          { kind: 'switch', name: 'showProgress', label: 'Show progress', initial: true },
-        ]}
-        render={(v) => (
-          <GanttBar
-            colour={itemColourOf(v)}
-            progress={Number(str(v, 'progress'))}
-            label={str(v, 'label') || undefined}
-            showProgress={bool(v, 'showProgress')}
-            aria-label={`${str(v, 'label') || 'Item'}: ${str(v, 'progress')}% complete`}
-            style={{ width: Number(str(v, 'width')) }}
-          />
-        )}
-        code={(v) => {
-          const body = jsx('GanttBar', {
-            colour: itemColourOf(v),
-            progress: str(v, 'progress') === '0' ? undefined : Number(str(v, 'progress')),
-            label: str(v, 'label') || undefined,
-            showProgress: bool(v, 'showProgress'),
-            'aria-label': `${str(v, 'label') || 'Item'}: ${str(v, 'progress')}% complete`,
-            style: `{{ width: ${str(v, 'width')} }}`,
-          })
-          return `${imports({ '@/components/gantt-bar': ['GanttBar'] })}\n\n${body}`
-        }}
-      />
-
-      <Variants
-        title="GanttBar progress"
-        note="progress × colour"
-        rows={{ name: 'progress', values: GANTT_PROGRESS }}
-        cols={{ name: 'colour', values: ['violet', 'teal', 'amber'] as const }}
-        render={(progress, colour = 'violet') => (
-          <GanttBar colour={ITEM_COLOURS[colour]} progress={Number(progress)} label="Mobile app" showProgress className="w-44" />
-        )}
-      />
-
-      <Gallery
-        title="GanttBar in use"
-        note="inset keeps the text clear of a milestone"
-        items={[
-          {
-            label: 'a milestone on its last day (inset end)',
-            node: (
-              <div className="relative">
-                <GanttBar colour={ITEM_COLOURS.blue} progress={100} label="New onboarding" showProgress inset={{ end: 20 }} className="w-56" />
-                <MilestoneMarker colour={ITEM_COLOURS.blue} className="absolute top-1/2 left-[213px] -translate-x-1/2 -translate-y-1/2" />
-              </div>
-            ),
-          },
-          {
-            label: 'too short: the name beside it',
-            node: (
-              <div className="flex items-center gap-1.5">
-                <GanttBar colour={ITEM_COLOURS.red} progress={40} aria-label="Audit log: 40% complete" className="w-14" />
-                <span className={cn(GANTT_LABEL, 'text-muted-foreground')}>Audit log</span>
-              </div>
-            ),
-          },
-          {
-            label: 'no room at all: cut short',
-            node: <GanttBar colour={ITEM_COLOURS.green} progress={18} label="Design system 2.0" className="w-24" />,
-          },
-        ]}
-      />
-    </>
-  )
-}
-
-function MilestoneDemos() {
-  return (
-    <>
-      <Playground
-        title="MilestoneMarker"
-        description="A key date, as a diamond. Decorative: put it in a labelled button to make it interactive."
-        controls={[
-          { kind: 'select', name: 'colour', label: 'Colour', options: ['muted', ...ITEM_COLOUR_NAMES], initial: 'violet' },
-          { kind: 'select', name: 'size', label: 'Size', options: MARKER_SIZES, initial: 'default' },
-        ]}
-        render={(v) => (
-          <MilestoneMarker
-            colour={str(v, 'colour') === 'muted' ? undefined : itemColourOf(v)}
-            size={str(v, 'size') as (typeof MARKER_SIZES)[number]}
-          />
-        )}
-        code={(v) => {
-          const body = jsx('MilestoneMarker', {
-            colour: str(v, 'colour') === 'muted' ? undefined : itemColourOf(v),
-            size: unless(str(v, 'size'), 'default'),
-          })
-          return `${imports({ '@/components/milestone-marker': ['MilestoneMarker'] })}\n\n${body}`
-        }}
-      />
-
-      <Gallery
-        title="MilestoneMarker in use"
-        items={[
-          {
-            label: 'on a bar, with a tooltip',
-            node: (
-              <div className="relative">
-                <GanttBar colour={ITEM_COLOURS.teal} progress={34} label="Mobile app" aria-label="Mobile app: 34% complete" className="w-56" />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Milestone: Internal beta, 16 Oct"
-                      className="focus-visible:ring-ring/50 absolute top-1/2 left-36 grid size-5 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-sm outline-none focus-visible:ring-2"
-                    >
-                      <MilestoneMarker colour={ITEM_COLOURS.teal} />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Internal beta · 16 Oct</TooltipContent>
-                </Tooltip>
-              </div>
-            ),
-          },
-          {
-            label: 'in a legend (sm)',
-            node: (
-              <span className="text-muted-foreground flex items-center gap-1.5 text-[11px]">
-                <MilestoneMarker size="sm" />
-                Milestone
-              </span>
-            ),
-          },
-        ]}
-      />
-    </>
-  )
-}
-
-// A small timeline for the marker to stand on: a few days and two bars.
-function MiniTimeline({ children }: { children: ReactNode }) {
-  return (
-    <div className="bg-card relative h-28 w-72 overflow-hidden rounded-lg border">
-      {[48, 96, 144, 192, 240].map((x) => (
-        <div key={x} aria-hidden className="absolute top-0 bottom-0 border-l border-dashed" style={{ left: x }} />
-      ))}
-      <GanttBar colour={ITEM_COLOURS.violet} progress={62} aria-label="Usage-based billing: 62% complete" className="absolute top-8 left-4 w-48" />
-      <GanttBar colour={ITEM_COLOURS.amber} aria-label="Search API: 0% complete" className="absolute top-16 left-28 w-40" />
-      {children}
-    </div>
-  )
-}
-
-function TimeMarkerDemos() {
-  return (
-    <>
-      <Playground
-        title="TimeMarker"
-        description="Today or now on a timeline: a line with its label at the top. Place it with style; it centres on that point."
-        controls={[
-          { kind: 'text', name: 'label', label: 'Label', initial: 'Today' },
-          { kind: 'select', name: 'tone', label: 'Tone', options: MARKER_TONES, initial: 'brand' },
-          { kind: 'switch', name: 'description', label: 'Spoken description', initial: true },
-        ]}
-        render={(v) => (
-          <MiniTimeline>
-            <TimeMarker
-              label={str(v, 'label') || undefined}
-              tone={str(v, 'tone') as TimeMarkerTone}
-              description={bool(v, 'description') ? `${str(v, 'label') || 'Today'}, 30 Sep` : undefined}
-              className="top-1.5 bottom-0"
-              style={{ left: 120 }}
-            />
-          </MiniTimeline>
-        )}
-        code={(v) => {
-          const body = jsx('TimeMarker', {
-            label: str(v, 'label') || undefined,
-            tone: unless(str(v, 'tone'), 'brand'),
-            description: bool(v, 'description') ? `${str(v, 'label') || 'Today'}, 30 Sep` : undefined,
-            className: 'top-1.5 bottom-0',
-            style: '{{ left: 120 }}',
-          })
-          return `${imports({ '@/components/time-marker': ['TimeMarker'] })}\n\n${body}`
-        }}
-      />
-
-      <Gallery
-        title="TimeMarker in use"
-        note="the parent is position: relative"
-        items={[
-          {
-            label: 'today on a roadmap',
-            node: <MiniTimeline><TimeMarker label="Today" className="top-1.5 bottom-0" style={{ left: 120 }} /></MiniTimeline>,
-          },
-          {
-            label: 'now on a schedule (destructive)',
-            node: <MiniTimeline><TimeMarker label="14:05" tone="destructive" className="top-1.5 bottom-0" style={{ left: 168 }} /></MiniTimeline>,
-          },
-          {
-            label: 'the line alone',
-            node: <MiniTimeline><TimeMarker className="inset-y-0" style={{ left: 120 }} /></MiniTimeline>,
-          },
-        ]}
-      />
-    </>
-  )
-}
+const SPARK_PREVIOUS = [15, 16, 15, 17, 18, 17, 19, 18, 19, 20]
 
 export default function ChartsDemos() {
   return (
     <Demos>
-      <RingDemos />
       <LegendDemos />
+
       <BarListDemos />
-      <GanttBarDemos />
-      <MilestoneDemos />
-      <TimeMarkerDemos />
+
+      <Gallery
+        title="Sparkline"
+        note="The dashed line is the period before. Decorative: keep the number beside it."
+        items={[
+          { label: 'tone="positive"', node: <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} /> },
+          { label: 'no previous', node: <Sparkline data={SPARK_UP} /> },
+          { label: 'tone="negative"', node: <Sparkline data={SPARK_DOWN} previous={SPARK_PREVIOUS} tone="negative" /> },
+          { label: 'tone="warning"', node: <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} tone="warning" /> },
+          { label: 'tone="neutral"', node: <Sparkline data={SPARK_FLAT} previous={SPARK_PREVIOUS} tone="neutral" /> },
+          { label: 'h-12 w-40', node: <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} className="h-12 w-40" /> },
+          {
+            label: 'beside its number',
+            node: (
+              <div className="flex items-end gap-3">
+                <div className="grid gap-0.5">
+                  <span className="text-muted-foreground text-[11px]">Open pipeline</span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-base font-semibold tabular-nums">$48.2k</span>
+                    <DeltaBadge direction="up" text="+12.4%" />
+                  </span>
+                </div>
+                <Sparkline data={SPARK_UP} previous={SPARK_PREVIOUS} />
+              </div>
+            ),
+          },
+        ]}
+      />
     </Demos>
   )
 }

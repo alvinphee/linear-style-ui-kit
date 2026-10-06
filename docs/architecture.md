@@ -47,7 +47,9 @@ published. As soon as a second file needs it, move it to its level.
 These folders hold code that is not part of the design system:
 
 - **Kit pages** (`src/pages/`): the kitchen sink, the documentation. They
-  show the parts, and wire them to sample data. `sections/shared.tsx`
+  show the parts, and wire them to sample data. Components get one page per
+  component family (a component and its close relatives), under category
+  headings in the sidebar (`nav.ts`). `sections/shared.tsx`
   (Section, Panel, Row) and `playground/` are the kitchen sink's own chrome.
 - **Sample data and stores**: the kit's jobs (`src/pages/data.ts`,
   `jobs-store.tsx`, and `job-options.tsx` for the jobs' menu and filter

@@ -547,3 +547,64 @@ polished) and be resizable, and for the other side slide-outs to be modals.
   dialog can stay in the page until a screenshot is taken. Check the state
   (`aria-valuenow`, `data-state`, the saved width), not the frame.
 
+## QR code (added 2026-10-06)
+- **A new component, `QrCode`** (`src/components/qr-code.tsx`), on its own
+  QR code page: playground, shapes × marks, states, and two
+  examples (pay an invoice, set up an authenticator app). It takes a
+  company's name: printed under the code with an optional caption, and as a
+  mark in the middle (`mark="initials"` or `"name"`, or `logo` for your own).
+- **Encoding comes from `uqr`** (MIT, no dependencies). It returns the grid
+  and each module's type (finder, alignment, timing, data), so the kit draws
+  the SVG itself: three module shapes, whole finder patterns, and a cleared
+  box under the mark.
+- **A mark hides modules**, so with one the code uses error correction H and
+  at least version 4 (33 modules), which keeps the box clear of the finder,
+  timing and format areas. `boostEcc` raises the level for free when the
+  data fits.
+- **Dots failed to scan until the alignment patterns were drawn whole.**
+  Tested by rendering the component, rasterising it (resvg) and decoding it
+  (jsQR): with dots of radius 0.42, or even 0.45, 34 of 56 dotted codes
+  failed to decode; at 0.5 (touching) they passed. Drawing the alignment
+  patterns as solid rings, like the finder patterns, fixed it at 0.42:
+  168 of 168 decoded (every shape, mark and level, with the mark drawn as a
+  dark block and as a light one). At about 4px a module, dense codes fail
+  in every shape alike: that is the decoder running out of pixels.
+- **The one fixed-colour part:** the plate is white with black modules in
+  both modes, because not every scanner reads a light-on-dark code. Only
+  the mark takes a colour (`markColour`, `var(--brand)` by default).
+- **`initials()` moved to `lib/text.ts`** from `person.tsx`, so the avatar
+  and the QR code's mark share it. One word gives two letters, so
+  "Northwind" is "NO": use the full name ("Northwind Trading" → NT).
+
+## One page per component family (added 2026-10-06)
+- **Why:** the Components pages had become grab-bags. "Feedback and
+  display" held alerts, cards, the page header and the QR code; "Status"
+  held badges, avatars, keyboard keys and skeletons; "More inputs" and "More
+  overlays" were overflow. Alvin chose family pages (about 30, not one per
+  component) under category headings.
+- **Now:** 38 pages in nine categories (Actions, Inputs, Data display,
+  Feedback, Overlays, Navigation, Layout, Charts, AI), A to Z within each.
+  Components that belong together share a page (Badges and labels; Avatars
+  and people, with the marks; Progress: bar, ring and usage meter). Parts
+  that had landed on the wrong page moved: IconAction to Buttons and
+  toggles, FileChip to File upload, Shortcut to Keyboard keys, SearchTrigger
+  to Command palette, ProgressRing to Progress, Sparkline to Charts. Form
+  modals joined Forms. The old page addresses (`#/display`, `#/status`…)
+  now open All components.
+- **How:** a script (`@babel/parser`) split the 13 playground and 13 section
+  files by their top-level demos and panels, and gave each new file exactly
+  the constants, helpers, state and imports its demos use. Two clashing
+  names were renamed first (`ACTIONS` in the AI components demos), and the
+  chart colour options moved into `Playground.tsx` so two pages share them.
+  Three demos or panels that mixed two families were split by hand first
+  (Progress and loading; LabelDot and NoAssignee; SearchTrigger and
+  Shortcut). Small demo helpers (`orDefault`, `noop`) are copied per page,
+  as they were per file before.
+- **Another session was editing `playground/overlays-more.tsx`** (the
+  docked panel demos) while this was planned, so the split was built and
+  type-checked in a copy first, then applied once that session had
+  committed. Worth doing again for any change that rewrites shared files.
+- **Section can have no children:** a page with demos only (Tabs, Slider…)
+  shows no "Examples" heading, and its demos stand in for examples on the
+  All components page.
+

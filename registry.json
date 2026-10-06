@@ -219,7 +219,7 @@
       "name": "text",
       "type": "registry:lib",
       "title": "Text",
-      "description": "plural, slug, greeting",
+      "description": "plural, slug, initials, greeting",
       "files": [
         {
           "path": "src/lib/text.ts",
@@ -1426,7 +1426,8 @@
         "cn@^0.4.0"
       ],
       "registryDependencies": [
-        "@kit/avatar"
+        "@kit/avatar",
+        "@kit/text"
       ],
       "files": [
         {
@@ -1469,6 +1470,27 @@
       "files": [
         {
           "path": "src/components/progress-ring.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "qr-code",
+      "type": "registry:component",
+      "title": "QR code",
+      "description": "QR code for a link, with the company's name, a caption and a mark in the middle",
+      "dependencies": [
+        "cn@^0.4.0",
+        "uqr@^0.1.3"
+      ],
+      "registryDependencies": [
+        "@kit/mark",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/qr-code.tsx",
           "type": "registry:component"
         }
       ]

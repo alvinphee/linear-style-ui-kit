@@ -1,5 +1,5 @@
 // Small text helpers: counts with the right word, URL and file name slugs,
-// and the greeting on a welcome screen.
+// initials, and the greeting on a welcome screen.
 
 // A count with its word: "1 job", "3 jobs". Pass the plural when adding "s"
 // is wrong: plural(n, 'reply', 'replies').
@@ -21,6 +21,14 @@ export function slug(text: string, { maxLength, fallback = '' }: { maxLength?: n
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '')
   if (maxLength !== undefined) result = result.slice(0, maxLength)
   return result.replace(/-+$/, '') || fallback
+}
+
+// A name's initials, from its first and last words ("Maya Ross" → MR,
+// "Northwind Trading" → NT); one word gives its first two letters ("Acme" → AC).
+export function initials(name: string) {
+  const words = name.trim().split(/\s+/).filter(Boolean)
+  if (words.length > 1) return (words[0][0] + words[words.length - 1][0]).toUpperCase()
+  return name.trim().slice(0, 2).toUpperCase()
 }
 
 // "Good morning", "Good afternoon" or "Good evening" for the hour of `date`.

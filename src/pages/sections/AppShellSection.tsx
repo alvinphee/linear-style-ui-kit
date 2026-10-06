@@ -44,7 +44,7 @@ import { DEFAULT_LIST_DISPLAY, arrangeJobs, type Group, type JobPatch, type Layo
 import { IssueBoard, IssueList } from './app-shell/IssueView'
 import { NotificationsMenu, useNotifications, type Notifications } from './app-shell/NotificationsMenu'
 import { FILTER_FIELDS, applyFilters, type Filters } from './FilterBar'
-import { QuickCreateDialog } from './FormModalsSection'
+import { QuickCreateDialog } from './FormsSection'
 import { JobPeek, openFullPage } from './JobActions'
 import { Section } from './shared'
 

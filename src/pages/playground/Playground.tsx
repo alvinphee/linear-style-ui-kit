@@ -313,6 +313,22 @@ export function imports(lines: Record<string, string[]>) {
     .join('\n')
 }
 
+// Colour options for a playground's colour prop: the theme accent and the
+// five chart colours, by name. colourOf(values) reads the "colour" control.
+export const COLOURS = {
+  brand: 'var(--brand)',
+  'chart-1': 'var(--chart-1)',
+  'chart-2': 'var(--chart-2)',
+  'chart-3': 'var(--chart-3)',
+  'chart-4': 'var(--chart-4)',
+  'chart-5': 'var(--chart-5)',
+  muted: 'var(--muted-foreground)',
+} as const
+
+export type ColourName = keyof typeof COLOURS
+export const COLOUR_NAMES = Object.keys(COLOURS) as ColourName[]
+export const colourOf = (v: Values) => COLOURS[str(v, 'colour') as ColourName]
+
 // A page's playgrounds and variant grids, stacked.
 export function Demos({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-1 gap-3">{children}</div>

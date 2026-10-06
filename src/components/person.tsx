@@ -1,26 +1,19 @@
 import { HugeiconsIcon } from '@hugeicons/react'
 import { UserIcon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { initials } from '@/lib/text'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 
 // A person, drawn from their name: an initials avatar, or the avatar with the
 // name beside it (a person chip) for tables, lists and activity rows. And the
 // empty avatar that stands for nobody (no assignee).
 
-// First and last name's first letters ("Maya Ross" → MR); a one-word name
-// gives its first two letters.
-function initialsOf(name: string) {
-  const words = name.trim().split(/\s+/).filter(Boolean)
-  if (words.length > 1) return (words[0][0] + words[words.length - 1][0]).toUpperCase()
-  return name.trim().slice(0, 2).toUpperCase()
-}
-
 // Sized with a plain size-* class rather than size="sm": the avatar's own
 // data-[size=sm] rule would otherwise beat a size passed in by the caller.
 export function UserAvatar({ name, className }: { name: string; className?: string }) {
   return (
     <Avatar className={cn('size-6', className)}>
-      <AvatarFallback className="text-[10px]">{initialsOf(name)}</AvatarFallback>
+      <AvatarFallback className="text-[10px]">{initials(name)}</AvatarFallback>
     </Avatar>
   )
 }

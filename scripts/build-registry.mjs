@@ -53,7 +53,7 @@ Object.assign(DESCRIPTIONS, {
   'use-timers': 'setTimeout that is cleared when the component unmounts',
   'use-svg-id': 'A unique id that is safe in SVG gradient and clip path references',
 })
-const ACRONYMS = { ai: 'AI', kpi: 'KPI', csv: 'CSV', otp: 'OTP', svg: 'SVG' }
+const ACRONYMS = { ai: 'AI', kpi: 'KPI', csv: 'CSV', otp: 'OTP', qr: 'QR', svg: 'SVG' }
 const titleOf = (name) =>
   name
     .split('-')

@@ -12,7 +12,8 @@ not tied to any other app. Keep its content generic SaaS. Nothing here ships.
   `components.json` has `"iconLibrary": "hugeicons"`, so every component
   shadcn adds already uses `HugeiconsIcon`. Lucide is not installed.
 - Font: Inter (`@fontsource-variable/inter`)
-- Toasts: sonner. Command menu: cmdk.
+- Toasts: sonner. Command menu: cmdk. QR codes: uqr (encoding only; the kit
+  draws the code).
 
 ## Run
 ```bash
@@ -123,6 +124,7 @@ linear-style-ui-kit/
     │   ├── label-dot.tsx      LabelDot, LabelChip
     │   ├── mention.tsx        @mention pill
     │   ├── progress-ring.tsx  circular progress
+    │   ├── qr-code.tsx        QR code for a link, with the company's name, a caption and a mark in the middle
     │   ├── chart-legend.tsx   LegendLine, LegendRow
     │   ├── bar-list.tsx       ranked bars (top customers, spend)
     │   ├── gantt-bar.tsx      one item's bar on a Gantt chart: progress, name, %
@@ -140,7 +142,7 @@ linear-style-ui-kit/
     │   ├── clipboard.ts       copyText, useCopied
     │   ├── download.ts        downloadText
     │   ├── format.ts          numbers, money, dates, times, sizes, durations
-    │   ├── text.ts            plural, slug, greeting
+    │   ├── text.ts            plural, slug, initials, greeting
     │   ├── keyboard.ts        isTyping (when single-key shortcuts must not fire)
     │   ├── random.ts          seededRandom for sample data
     │   ├── use-timers.ts, use-svg-id.ts, use-media-query.ts
@@ -153,31 +155,23 @@ linear-style-ui-kit/
     └── pages/
         ├── KitchenSink.tsx      page shell, one section per page, header, shortcuts, Ctrl+K menu
         ├── playground/          a page's live demos, one file per page id
-        │   ├── Playground.tsx   Playground, Variants, Gallery, CodeBlock, jsx()
+        │   ├── Playground.tsx   Playground, Variants, Gallery, CodeBlock, jsx(), colour options
         │   └── buttons.tsx …    the reference page; others follow its shape
-        ├── ShowcaseSidebar.tsx  workspace switcher, folding nav groups
+        ├── ShowcaseSidebar.tsx  workspace switcher, folding nav groups, category headings
         ├── ShortcutsDialog.tsx  the "?" keyboard shortcuts, in a modal
         ├── ThemeCompare.tsx     theme comparison: kit theme beside shadcn's default
-        ├── nav.ts               nav groups, section ids, G-then shortcuts
+        ├── nav.ts               nav groups, Components categories, section ids, G-then shortcuts
         ├── data.ts              icon groups, statuses, labels, sample jobs, job constants
         ├── jobs-store.tsx       shared job state (list, board, issue page)
         ├── job-options.tsx      the jobs' status, priority, assignee and label options
         └── sections/
             ├── shared.tsx            Section and Panel wrappers
             ├── ThemeSection.tsx      presets and the theme mixer
-            ├── ButtonsSection.tsx
-            ├── FormsSection.tsx
-            ├── FormModalsSection.tsx quick create, validated dialogs, wizard
-            ├── InputsSection.tsx     button groups, OTP, dates, combobox, tags
-            ├── StatusSection.tsx
-            ├── DisplaySection.tsx    spinners, empty states, alerts, accordion
-            ├── ChartsSection.tsx     area, bars, rings, cycle burn-down
-            ├── OverlaysSection.tsx
-            ├── OverlaysMoreSection.tsx  context menu, sheets, drawer, hover card
-            ├── NavigationSection.tsx    breadcrumb, pagination, menus, panes
-            ├── ContentSection.tsx    file upload, Markdown editor, reorder list
+            ├── <Page>Section.tsx     one per Components page, named after its id: ButtonsSection,
+            │                         TextFieldsSection, QrCodeSection… (38, listed in nav.ts)
+            ├── FormsSection.tsx      whole forms, inline and in dialogs, sheets and a wizard;
+            │                         exports QuickCreateDialog (the C shortcut)
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
-            ├── AiComponentsSection.tsx  AI label, thinking indicator, icon actions, file chips
             ├── AppShellSection.tsx   sidebar and header variations, mixed live (Two rows: a global
             │                         header over the page or the whole app, the breadcrumb under it)
             ├── app-shell/             its grouped list and board, Display and notifications menus
@@ -209,9 +203,13 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **Get started:** All components (every component on one long page, the
   quick look), Theme (the design tokens) and Theme comparison (full page,
   see "Themes")
-- **Components:** single building blocks (button, input, badge…, and the
-  small AI parts), restyled, each with its playground and variants. Every
-  part a block uses has its own demo here.
+- **Components:** single building blocks, restyled, each with its
+  playground and variants. One page per component family: a component and
+  its close relatives (Badges and labels: Badge, StatusBadge, DeltaBadge,
+  LabelChip). 38 pages under category headings: Actions, Inputs, Data
+  display, Feedback, Overlays, Navigation, Layout, Charts, AI. Every part a
+  block uses has its own demo here. A new component joins its family's
+  page; a new family gets its own page (see below).
 - **Blocks:** whole screens built from components, as shadcn calls them
   (list, board, issue detail, inbox, roadmap, dock schedule, settings,
   onboarding, sign-in, the AI workspace, AI in the product…)
@@ -231,6 +229,12 @@ pane and the generated code to copy), **variant grids** (every value of a
 prop, crossed with another), **states**, then the hand-made **examples**.
 The demos live in `src/pages/playground/<page id>.tsx` and are picked up by
 file name; `Section` renders them between its header and the examples.
+
+To add a Components page: an item with its `category` in `nav.ts` (A to Z
+within the category), `sections/<Page>Section.tsx` with the page's
+examples (or none: a `Section` without children), a line in `PAGES` in
+`KitchenSink.tsx`, and `playground/<page id>.tsx` for its demos. A page
+with no examples shows its demos on the All components page.
 
 **Templates** are whole apps made from the kit's layouts and blocks, shown
 full page outside the kit's shell. They import the same components and
@@ -372,7 +376,7 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 116 items: `tokens` (the whole theme from `styles.css`), 47 ui, 32
+needs. 117 items: `tokens` (the whole theme from `styles.css`), 47 ui, 33
 components, 27 blocks and 9 lib files. Which level becomes which item:
 `docs/architecture.md`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
@@ -427,7 +431,8 @@ components, 27 blocks and 9 lib files. Which level becomes which item:
   `bg-subtle`, `text-muted-foreground`, `border`, `text-brand` / `bg-brand`,
   `text-status-todo|progress|done|blocked`, `text-destructive`,
   `var(--chart-1..5)`. Never a Tailwind palette class such as
-  `text-amber-600`.
+  `text-amber-600`. One exception: the QR code's plate is white with black
+  modules in both modes, so every scanner can read it.
 - Before calling UI work done, check it in light and dark mode, and at
   375px wide with no sideways scrolling (`min-w-0`, `flex-wrap`, and
   `grid-cols-1` before any `sm:`/`lg:` columns).
