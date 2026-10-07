@@ -191,6 +191,7 @@ checklist, an expense claim and a survey are all forms to them.
 | Form version | Each save of a form's definition. A submission keeps the version it was filled in against |
 | Submission feed | Submissions as cards grouped by day, newest first, instead of a table. The block is `submission-feed` |
 | Score bar | A submission's checks as one bar in three colours: passed, failed, N/A |
+| Stored form | A form definition as plain JSON, its icon named by id, ready for storage. `toStoredForm` / `fromStoredForm` |
 
 ## ERP modules
 | Module | Covers |

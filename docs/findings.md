@@ -668,3 +668,10 @@ polished) and be resizable, and for the other side slide-outs to be modals.
   carry the result, a three-colour score bar, the failed checks as chips
   and who and when; the table keeps sorting, filters, bulk actions and CSV.
   A view switch in the page header offers both.
+- **Icons are the only thing in a definition that is not data.** A
+  `FormDefinition` carries its icon as a Hugeicons element, which JSON
+  cannot hold. `toStoredForm` swaps it for the id of an icon in the
+  builder's list and `fromStoredForm` swaps it back, so the kit page keeps
+  built forms in localStorage and an app can keep them in a database the
+  same way. Sample forms with `validate` functions lose them in JSON, which
+  is right: a stored form's rules are the schema's built-in ones.

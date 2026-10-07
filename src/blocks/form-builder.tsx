@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
   Add01Icon, ArrowDown01Icon, ArrowUp01Icon, Calendar03Icon, Camera01Icon, CheckmarkSquare02Icon, Copy01Icon, Delete02Icon,
@@ -113,6 +113,23 @@ export function formProblems(form: FormDefinition): string[] {
   })
   if (form.context && !form.context.label.trim()) problems.push('Say what the form is filled in for, or turn that off.')
   return problems
+}
+
+/* ---------- Storing a definition ---------- */
+
+// A definition as plain data: the icon by its id from the builder's list,
+// so it can go to localStorage or a database as JSON and come back.
+export type StoredForm = Omit<FormDefinition, 'icon'> & { iconId?: string }
+
+export function toStoredForm(form: FormDefinition, icons: FormIconOption[]): StoredForm {
+  const { icon, ...rest } = form
+  return { ...rest, iconId: icons.find((i) => i.icon === icon)?.id }
+}
+
+export function fromStoredForm(stored: StoredForm, icons: FormIconOption[]): FormDefinition {
+  const { iconId, ...rest } = stored
+  const icon = icons.find((i) => i.id === iconId)?.icon
+  return icon ? { ...rest, icon } : rest
 }
 
 /* ---------- The builder ---------- */
@@ -389,7 +406,9 @@ export function FormBuilder({ initial, icons = [], categories = [], onSave, onCa
 
 /* ---------- One field ---------- */
 
-function FieldRow({ field, index, count, expanded, onToggle, onChange, onType, onMove, onDuplicate, onRemove }: {
+// One field in the builder: its kind, label and Required switch in a row,
+// with its settings under it when expanded.
+export function FieldRow({ field, index, count, expanded, onToggle, onChange, onType, onMove, onDuplicate, onRemove }: {
   field: FormField
   index: number
   count: number
@@ -538,14 +557,17 @@ function FieldRow({ field, index, count, expanded, onToggle, onChange, onType, o
   )
 }
 
-function AddFieldMenu({ onPick }: { onPick: (type: FormFieldType) => void }) {
+// The Add field button and its menu of kinds, grouped.
+export function AddFieldMenu({ onPick, children }: { onPick: (type: FormFieldType) => void; children?: ReactNode }) {
   const groups = ['Checks', 'Answers', 'More'] as const
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
-          <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> Add field
-        </Button>
+        {children ?? (
+          <Button variant="outline" size="sm">
+            <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" /> Add field
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-64">
         {groups.map((g, i) => (
@@ -566,7 +588,8 @@ function AddFieldMenu({ onPick }: { onPick: (type: FormFieldType) => void }) {
   )
 }
 
-function PasteChecksDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenChange: (open: boolean) => void; onAdd: (text: string) => void }) {
+// A list of statements, one per line, each becoming a required check.
+export function PasteChecksDialog({ open, onOpenChange, onAdd }: { open: boolean; onOpenChange: (open: boolean) => void; onAdd: (text: string) => void }) {
   const [text, setText] = useState('')
   const lines = text.split('\n').filter((l) => l.trim()).length
   return (

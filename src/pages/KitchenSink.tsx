@@ -43,6 +43,7 @@ import DialogsSection from './sections/DialogsSection'
 import DockScheduleSection from './sections/DockScheduleSection'
 import EmptyStateSection from './sections/EmptyStateSection'
 import FileUploadSection from './sections/FileUploadSection'
+import FormBuilderSection from './sections/FormBuilderSection'
 import FormsCatalogueSection from './sections/FormsCatalogueSection'
 import FormsSection, { QuickCreateDialog } from './sections/FormsSection'
 import GanttSection from './sections/GanttSection'
@@ -157,6 +158,7 @@ export default function KitchenSink() {
     settings: () => <SettingsSection />,
     'audit-log': () => <AuditLogSection />,
     'forms-catalogue': () => <FormsCatalogueSection />,
+    'form-builder': () => <FormBuilderSection />,
     pricing: () => <PricingSection />,
     onboarding: () => <OnboardingSection />,
     'sign-in': () => <SignInSection />,

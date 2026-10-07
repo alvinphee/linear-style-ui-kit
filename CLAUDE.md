@@ -89,7 +89,9 @@ linear-style-ui-kit/
     │   ├── filter-bar/        filter menu, filter chips, saved views
     │   ├── folding-breadcrumb.tsx  breadcrumb that folds to fit
     │   ├── form-builder.tsx   makes or edits a form definition: details, sections, a field of any
-    │   │                      kind with its settings, paste checks, a live phone preview
+    │   │                      kind with its settings, paste checks, a live phone preview; its parts
+    │   │                      (AddFieldMenu, FieldRow, PasteChecksDialog) and toStoredForm /
+    │   │                      fromStoredForm, the definition as JSON with the icon by id
     │   ├── form-fields.tsx    the field schema and renderer shared by the form dialog and the
     │   │                      form renderer: text, select, radio… and check, yes-no, rating,
     │   │                      photo, signature
@@ -204,6 +206,7 @@ linear-style-ui-kit/
             ├── dock-schedule/         its made-up yard, side panel and booking dialog
             ├── FormsCatalogueSection.tsx  forms catalogue, a form filled in (phone width too), submissions
             ├── forms-catalogue/       its sample forms and past submissions
+            ├── FormBuilderSection.tsx  the builder on its own, its parts, every field kind live, the JSON it saves
             ├── SettingsSection.tsx
             ├── AuditLogSection.tsx   filterable event log
             ├── PricingSection.tsx    plans, yearly switch, comparison table

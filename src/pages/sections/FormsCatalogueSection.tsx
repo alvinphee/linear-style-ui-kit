@@ -3,7 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, LayoutGridIcon, LeftToRightListBulletIcon, QrCodeIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { FormBuilder, blankForm } from '@/blocks/form-builder'
+import { FormBuilder, blankForm, fromStoredForm, toStoredForm, type StoredForm } from '@/blocks/form-builder'
 import {
   FormRenderer, FormSubmissionView, FormSubmitted, RESULT_LABEL, RESULT_TONE, summarise, type FormDefinition, type FormSubmission,
 } from '@/blocks/form-renderer'
@@ -43,6 +43,27 @@ const LAYOUTS: ViewOption<Layout>[] = [
   { value: 'list', label: 'List', icon: LeftToRightListBulletIcon },
 ]
 
+// Forms made or edited here, kept in this browser (the samples stay in code).
+const STORED = 'kit:forms:v1'
+
+function loadForms(): FormDefinition[] {
+  try {
+    const own = (JSON.parse(localStorage.getItem(STORED) ?? '[]') as StoredForm[]).map((s) => fromStoredForm(s, FORM_ICONS))
+    return [...FORMS.filter((f) => !own.some((o) => o.id === f.id)), ...own]
+  } catch {
+    return FORMS
+  }
+}
+
+function keepForms(forms: FormDefinition[]) {
+  try {
+    const own = forms.filter((f) => f !== FORMS.find((s) => s.id === f.id))
+    localStorage.setItem(STORED, JSON.stringify(own.map((f) => toStoredForm(f, FORM_ICONS))))
+  } catch {
+    // Storage can be blocked; the forms still work for this visit.
+  }
+}
+
 const formPath = (form: FormDefinition, context?: string) => `${PAGE}/${form.id}${context ? `?context=${encodeURIComponent(context)}` : ''}`
 const formLink = (form: FormDefinition, context?: string) => `${window.location.origin}${window.location.pathname}#${formPath(form, context)}`
 
@@ -50,7 +71,7 @@ export default function FormsCatalogueSection() {
   const path = usePath()
   const [route, query = ''] = path.split('?')
   const [, , first, second] = route.split('/')
-  const [forms, setForms] = useState<FormDefinition[]>(FORMS)
+  const [forms, setForms] = useState<FormDefinition[]>(loadForms)
   const formsById = useMemo(() => Object.fromEntries(forms.map((f) => [f.id, f])), [forms])
 
   const building = first === 'new' || first === 'edit'
@@ -101,9 +122,11 @@ export default function FormsCatalogueSection() {
 
   function saveForm(saved: FormDefinition) {
     const exists = forms.some((f) => f.id === saved.id)
-    setForms((all) => (exists ? all.map((f) => (f.id === saved.id ? { ...saved, version: (f.version ?? 1) + 1 } : f)) : [...all, saved]))
+    const next = exists ? forms.map((f) => (f.id === saved.id ? { ...saved, version: (f.version ?? 1) + 1 } : f)) : [...forms, saved]
+    setForms(next)
+    keepForms(next)
     toast.success(exists ? `Saved ${saved.name}` : `Created ${saved.name}`, {
-      description: exists ? 'A new version. Old submissions keep the fields they were filled in with.' : 'It is in the catalogue, with its own QR code.',
+      description: exists ? 'A new version, kept in this browser. Old submissions keep the fields they were filled in with.' : 'It is in the catalogue with its own QR code, and kept in this browser.',
       action: { label: 'Fill it in', onClick: () => navigate(formPath(saved)) },
     })
     navigate(PAGE)

@@ -8,7 +8,7 @@ import {
   GitCompareIcon, GridViewIcon, Heading01Icon, HorizontalResizeIcon, InboxIcon, InputTextIcon, KanbanIcon,
   KeyboardIcon, LayoutGridIcon, LayoutPanelTopIcon, LeftToRightListBulletIcon, ListCollapseIcon, Loading03Icon,
   Login01Icon, MenuSquareIcon, Money03Icon, NoteEditIcon, NotebookTabsIcon, PaintBoardIcon, PanelRightIcon,
-  ProgressIcon, QrCodeIcon, Rocket01Icon, ScrollVerticalIcon, Search01Icon, Settings01Icon, Settings02Icon,
+  PencilEdit02Icon, ProgressIcon, QrCodeIcon, Rocket01Icon, ScrollVerticalIcon, Search01Icon, Settings01Icon, Settings02Icon,
   SidebarLeftIcon, SlidersHorizontalIcon, SolidLine01Icon, SparklesIcon, Table01Icon, Tag01Icon, Task01Icon,
   TaskDone01Icon, TimelineIcon, UserGroupIcon, WarehouseIcon,
 } from '@hugeicons/core-free-icons'
@@ -97,6 +97,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'settings', label: 'Settings', icon: Settings01Icon },
       { id: 'audit-log', label: 'Audit log', icon: Audit01Icon },
       { id: 'forms-catalogue', label: 'Forms catalogue', icon: ClipboardCheckIcon },
+      { id: 'form-builder', label: 'Form builder', icon: PencilEdit02Icon },
       { id: 'pricing', label: 'Pricing', icon: Money03Icon },
       { id: 'onboarding', label: 'Onboarding', icon: Rocket01Icon },
       { id: 'sign-in', label: 'Sign-in page', icon: Login01Icon },
