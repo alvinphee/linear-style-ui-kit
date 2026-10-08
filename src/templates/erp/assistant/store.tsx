@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { Feedback } from '@/blocks/ai/chat-message'
 import type { SummaryPhase } from '@/blocks/ai/ai-summary-card'
+import type { ProjectFile } from '@/blocks/ai/project-page'
 import { edition } from '../edition'
 import { MODULES } from '../modules'
 import { useErp } from '../store'
@@ -11,7 +12,8 @@ import { PROMPTS, respond, topicOf, type Block, type Ctx, type Inline, type Link
 // others. One reply streams at a time; it keeps streaming while you move
 // between pages. The launchpad's AI briefing streams here too, so it is
 // written once per visit, not each time the launchpad opens.
-// Projects group chats under instructions of their own. Incognito chats
+// Projects group chats under instructions and files of their own (the
+// scripted answers follow neither; the page keeps them). Incognito chats
 // stay out of `chats` (the history) and are deleted when you leave them.
 // Chats and projects live in memory, like the records, and reset on reload.
 
@@ -46,7 +48,16 @@ export type Chat = {
   temporary?: boolean
 }
 // The scripted answers cannot follow the instructions; the views show them.
-export type Project = { id: string; name: string; instructions: string; colour: string }
+export type Project = {
+  id: string
+  name: string
+  description: string
+  instructions: string
+  // Project knowledge: the files the assistant draws on, kept for the visit.
+  files: ProjectFile[]
+  colour: string
+}
+export type { ProjectFile }
 
 const PROJECT_COLOURS = ['var(--chart-4)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-1)', 'var(--chart-5)']
 
@@ -54,10 +65,17 @@ const PROJECT_COLOURS = ['var(--chart-4)', 'var(--chart-2)', 'var(--chart-3)', '
 const SEED_PROJECTS: (Project & { modules: string[] })[] = [
   {
     id: 'p-month-end', name: 'Month-end close', colour: PROJECT_COLOURS[0], modules: ['accounting'],
+    description: 'Closing the books each month: receivables, payables and the journals to post.',
+    files: [
+      { id: 'pf-1', name: 'Month-end close checklist.xlsx', size: 48_300 },
+      { id: 'pf-2', name: 'Revenue recognition policy.pdf', size: 312_000 },
+    ],
     instructions: "I'm closing the month as the finance controller. Give amounts in the company's currency, rounded to the dollar, and list overdue invoices and unpaid bills first, oldest first.",
   },
   {
     id: 'p-ops-review', name: 'Weekly operations review', colour: PROJECT_COLOURS[1], modules: ['inventory', 'purchasing'],
+    description: 'Numbers for the Monday operations meeting.',
+    files: [{ id: 'pf-3', name: 'Reorder points by warehouse.csv', size: 9_800 }],
     instructions: 'Summaries for the Monday operations meeting: stock below its reorder point, transfers in transit and late purchase orders. Short bullet points.',
   },
 ]
@@ -158,8 +176,10 @@ type AssistantState = {
   draftProjectId: string | null
   incognito: boolean
   setIncognito: (on: boolean) => void
-  createProject: (project: Pick<Project, 'name' | 'instructions'>) => string
-  updateProject: (id: string, patch: Partial<Pick<Project, 'name' | 'instructions'>>) => void
+  createProject: (project: Pick<Project, 'name'> & Partial<Pick<Project, 'description' | 'instructions'>>) => string
+  updateProject: (id: string, patch: Partial<Pick<Project, 'name' | 'description' | 'instructions'>>) => void
+  addProjectFiles: (id: string, files: ProjectFile[]) => void
+  removeProjectFile: (id: string, fileId: string) => void
   // Its chats go back to the history.
   deleteProject: (id: string) => void
   moveChat: (id: string, projectId: string | null) => void
@@ -319,12 +339,18 @@ export function AssistantProvider({ children }: { children: ReactNode }) {
       setDraftProjectId(null)
       setFocusKey((k) => k + 1)
     },
-    createProject({ name, instructions }) {
+    createProject({ name, description = '', instructions = '' }) {
       const id = uid('p')
-      setProjects((list) => [...list, { id, name, instructions, colour: PROJECT_COLOURS[list.length % PROJECT_COLOURS.length] }])
+      setProjects((list) => [...list, {
+        id, name, description, instructions, files: [], colour: PROJECT_COLOURS[list.length % PROJECT_COLOURS.length],
+      }])
       return id
     },
     updateProject: (id, patch) => setProjects((list) => list.map((p) => (p.id === id ? { ...p, ...patch } : p))),
+    addProjectFiles: (id, files) => setProjects((list) => list.map((p) => (p.id === id ? { ...p, files: [...p.files, ...files] } : p))),
+    removeProjectFile: (id, fileId) => setProjects((list) => list.map((p) => (
+      p.id === id ? { ...p, files: p.files.filter((f) => f.id !== fileId) } : p
+    ))),
     deleteProject(id) {
       setProjects((list) => list.filter((p) => p.id !== id))
       setChats((list) => list.map((c) => (c.projectId === id ? { ...c, projectId: null } : c)))

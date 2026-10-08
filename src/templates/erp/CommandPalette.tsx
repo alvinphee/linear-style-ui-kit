@@ -11,6 +11,7 @@ import { DEMO_USERS, ROLE_LABEL } from './data'
 import { useAssistant } from './assistant/store'
 import { edition } from './edition'
 import { pageFor, pagesOf, specFor } from './modules'
+import { openModule } from './phone'
 import { go, goScreen } from './route'
 import { allowedModules } from './Shell'
 import { useErp } from './store'
@@ -23,6 +24,8 @@ const SEARCHABLE: { entity: EntityId; fields: string[] }[] = [
   { entity: 'quotations', fields: ['customer'] }, { entity: 'opportunities', fields: ['name', 'account'] }, { entity: 'accounts', fields: ['name'] },
   { entity: 'contacts', fields: ['name', 'account'] }, { entity: 'leads', fields: ['name', 'company'] }, { entity: 'items', fields: ['name'] },
   { entity: 'vendors', fields: ['name'] }, { entity: 'employees', fields: ['name', 'jobTitle'] }, { entity: 'bills', fields: ['vendor'] },
+  { entity: 'safetyDocuments', fields: ['title', 'type'] }, { entity: 'riskAssessments', fields: ['activity', 'area'] },
+  { entity: 'certifications', fields: ['course', 'employee'] }, { entity: 'toolboxMeetings', fields: ['topic'] },
 ]
 
 // The create actions, in the order they appear, and the module each belongs to.
@@ -31,6 +34,7 @@ const CREATE: { entity: EntityId; label: string }[] = [
   { entity: 'quotations', label: 'New quotation' }, { entity: 'purchaseOrders', label: 'New purchase order' },
   { entity: 'leads', label: 'New lead' }, { entity: 'opportunities', label: 'New opportunity' }, { entity: 'items', label: 'New item' },
   { entity: 'bills', label: 'New vendor bill' }, { entity: 'journals', label: 'New journal entry' }, { entity: 'leave', label: 'New leave request' },
+  { entity: 'toolboxMeetings', label: 'New toolbox meeting' }, { entity: 'riskAssessments', label: 'New risk assessment' },
   { entity: 'users', label: 'Invite user' },
 ]
 
@@ -140,7 +144,7 @@ export function CommandPalette({ module }: { module: ErpModule }) {
 
           <CommandGroup heading="Go to module">
             {modules.map((m) => (
-              <CommandItem key={m.id} value={`module ${m.name}`} onSelect={() => run(() => go(m.id, m.pages[0].id))}>
+              <CommandItem key={m.id} value={`module ${m.name}`} onSelect={() => run(() => openModule(m))}>
                 <IconMark icon={m.icon} colour={m.colour} size="sm" /> {m.name}
                 <CommandShortcut>G {m.key}</CommandShortcut>
               </CommandItem>

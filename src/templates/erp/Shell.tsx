@@ -39,15 +39,15 @@ export const allowedModules = (role: Role | undefined) => MODULES.filter((m) => 
 
 // Home is "Launchpad" while that is its only page; with the Assistant beside
 // it (ERP + AI) it is "Home".
-const moduleLabel = (m: ErpModule) => (m.id === 'home' && !edition().assistant ? 'Launchpad' : m.name)
-const moduleDescription = (m: ErpModule) => (m.id === 'home' && edition().assistant ? 'Your launchpad and the Assistant' : m.description)
+export const moduleLabel = (m: ErpModule) => (m.id === 'home' && !edition().assistant ? 'Launchpad' : m.name)
+export const moduleDescription = (m: ErpModule) => (m.id === 'home' && edition().assistant ? 'Your launchpad and the Assistant' : m.description)
 
-// The app frame: a full-height sidebar (company, module switcher, the
+// The app frame on a tablet or computer (PhoneShell is the phone's): a full-height sidebar (company, module switcher, the
 // module's pages, recent records, and the account at the foot) beside the
 // page. Over the page, two rows: the global header (search, Ask AI,
 // notifications and light / dark) and the breadcrumb bar. Under the global
 // header, `aside` docks beside the breadcrumb and the page (Ask AI). On a
-// phone the sidebar opens as a sheet.
+// narrow window the sidebar opens as a sheet.
 export function Shell({ module, page, aside, children }: {
   module: ErpModule
   page: ErpPage
@@ -99,11 +99,13 @@ export function Shell({ module, page, aside, children }: {
 }
 
 // The shared workspace switcher, over the companies (multi-company).
-function CompanySwitcher() {
+// `compact` for a top bar (the phone's).
+export function CompanySwitcher({ variant }: { variant?: 'compact' }) {
   const { company, session, setCompany } = useErp()
   if (!company) return null
   return (
     <WorkspaceSwitcher
+      variant={variant}
       workspaces={COMPANIES}
       currentId={company.id}
       onSelect={(id) => {
@@ -112,7 +114,7 @@ function CompanySwitcher() {
         if (next) toast(`Switched to ${next.name}`, { description: 'Demo data is shared between companies.' })
       }}
       label="Companies"
-      detail={`${session ? ROLE_LABEL[session.role] : ''} · ${company.country}`}
+      detail={variant ? undefined : `${session ? ROLE_LABEL[session.role] : ''} · ${company.country}`}
       menuClassName="w-64"
     >
       <DropdownMenuItem onSelect={() => goScreen('companies')}>All companies</DropdownMenuItem>
@@ -352,8 +354,9 @@ function BreadcrumbBar({ module, page }: { module: ErpModule; page: ErpPage }) {
   )
 }
 
-// What needs you: approvals and exceptions from the data, newest first.
-function useAlerts() {
+// What needs you: approvals and exceptions from the data, newest first. The
+// bell's menu here, the Inbox tab on a phone.
+export function useAlerts() {
   const { data } = useErp()
   return useMemo(() => [
     ...data.purchaseOrders.filter((r) => r.status === 'Awaiting approval').slice(0, 2).map((r) => ({

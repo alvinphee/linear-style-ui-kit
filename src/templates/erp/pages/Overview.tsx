@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, Agreement01Icon, Alert02Icon, ArrowRight01Icon, Award01Icon,
-  BankIcon, Briefcase01Icon, Calendar03Icon, Clock01Icon, Coins01Icon, DeliveryTruck01Icon, Exchange01Icon,
+  Add01Icon, Agreement01Icon, Alert02Icon, AlertDiamondIcon, ArrowRight01Icon, Award01Icon,
+  BankIcon, Briefcase01Icon, Calendar03Icon, Certificate01Icon, Clock01Icon, Coins01Icon, DeliveryTruck01Icon, Exchange01Icon,
   Invoice01Icon, Invoice03Icon, PackageIcon, PackageReceiveIcon, PackageRemoveIcon, PercentCircleIcon, QuoteDownIcon,
-  ReceiptTextIcon, Target02Icon, UserAdd01Icon, UserMultipleIcon, Wallet01Icon,
+  ReceiptTextIcon, SearchAreaIcon, Target02Icon, UserAdd01Icon, UserMultipleIcon, Wallet01Icon,
 } from '@hugeicons/core-free-icons'
 import { format } from 'date-fns'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
@@ -27,7 +27,7 @@ import { TODAY, addDays, daysBetween, formatDate, formatMoneyShort } from '../fo
 import { moduleById, specFor } from '../modules'
 import { erpHref } from '../route'
 import { useErp } from '../store'
-import type { EntityId, ErpModule, Row } from '../types'
+import { INSPECTION_CATEGORY, type EntityId, type ErpModule, type Row } from '../types'
 import { ApproveReject, PAGE_HEADER, StatusBadge, Worklist, type WorkItem } from '../ui'
 
 // The Overview page of each module: KPIs, a chart, a breakdown and a list of
@@ -922,6 +922,148 @@ function HrOverview({ mod }: { mod: ErpModule }) {
 }
 
 // ---------------------------------------------------------------------------
+// Workplace safety and health
+
+const WSH_WEEKS = 6
+
+function WshOverview({ mod }: { mod: ErpModule }) {
+  const { data, update } = useErp()
+  // The last incident reported through the forms, for the days-since counter.
+  const incidents = data.submissions
+    .filter((r) => r.formId === 'incident-report')
+    .map((r) => str(r, 'submittedAt').slice(0, 10))
+    .sort()
+  const lastIncident = incidents.at(-1)
+  const recentIncidents = incidents.filter((d) => within(d, 30)).length
+
+  // Inspections are submitted inspection checklists; their result is Passed or Failed.
+  const done = data.submissions.filter((r) => r.category === INSPECTION_CATEGORY)
+  const passed = done.filter((r) => r.result === 'Passed').length
+  const thisWeek = done.filter((r) => within(str(r, 'submittedAt').slice(0, 10), 7))
+  const expired = data.certifications.filter(is('Expired'))
+  const expiring = data.certifications.filter(is('Expiring'))
+  const reviews = [...data.safetyDocuments.filter(is('Review due')), ...data.riskAssessments.filter(is('Review due'))]
+  const highRisk = data.riskAssessments.filter((r) => r.rating === 'High')
+
+  // Rolling 7-day windows ending today: inspections passed and failed in each.
+  const weeks = Array.from({ length: WSH_WEEKS }, (_, i) => {
+    const end = addDays(TODAY, (i - WSH_WEEKS + 1) * 7)
+    const start = addDays(end, -6)
+    const rows = done.filter((r) => str(r, 'submittedAt').slice(0, 10) >= start && str(r, 'submittedAt').slice(0, 10) <= end)
+    return {
+      label: formatDate(start), title: `${formatDate(start)} – ${formatDate(end)}`,
+      passed: rows.filter((r) => r.result === 'Passed').length, failed: rows.filter((r) => r.result === 'Failed').length, note: count(rows.length, 'inspection'),
+    }
+  })
+
+  // Share of each course's certificates still valid.
+  const courses = groupSum(data.certifications, 'course').map((c) => {
+    const rows = data.certifications.filter((r) => r.course === c.label)
+    const valid = rows.filter(is('Valid', 'Expiring')).length
+    return { label: c.label, total: rows.length, valid, pct: pct(valid, rows.length) }
+  }).sort((a, b) => a.pct - b.pct)
+
+  const startReview = (entity: EntityId, r: Row, title: string) => (
+    <Button size="sm" variant="outline" onClick={() => {
+      update(entity, [r.id], { status: 'In review' })
+      toast.success('Review started', { description: title })
+    }}>
+      Start review
+    </Button>
+  )
+
+  // Everything due for renewal or review, soonest first.
+  const due: (WorkItem & { date: string })[] = [
+    ...[...expired, ...expiring].map((r) => ({
+      id: r.id, entity: 'certifications' as const, date: str(r, 'expires'),
+      title: `${str(r, 'employee')} · ${str(r, 'course')}`,
+      detail: `Certificate · ${r.status === 'Expired' ? 'expired' : 'expires'} ${formatDate(str(r, 'expires'))} · ${str(r, 'provider')}`,
+      aside: r.status === 'Expired' ? <Late days={age(str(r, 'expires'))} label="ago" /> : <StatusBadge status="Expiring" />,
+      actions: (
+        <Button size="sm" variant="outline" onClick={() => toast.success(`Refresher booked for ${str(r, 'employee')}`, { description: `${str(r, 'course')}, next available date at ${str(r, 'provider')}.` })}>
+          Book refresher
+        </Button>
+      ),
+    })),
+    ...data.safetyDocuments.filter(is('Review due')).map((r) => ({
+      id: r.id, entity: 'safetyDocuments' as const, date: str(r, 'reviewDue'),
+      title: `${str(r, 'title')} v${str(r, 'version')}`,
+      detail: `${str(r, 'type')} · review was due ${formatDate(str(r, 'reviewDue'))} · ${str(r, 'owner')}`,
+      aside: <Late days={age(str(r, 'reviewDue'))} />,
+      actions: startReview('safetyDocuments', r, str(r, 'title')),
+    })),
+    ...data.riskAssessments.filter(is('Review due')).map((r) => ({
+      id: r.id, entity: 'riskAssessments' as const, date: str(r, 'reviewDue'),
+      title: str(r, 'activity'),
+      detail: `Risk assessment · ${str(r, 'rating').toLowerCase()} risk · review was due ${formatDate(str(r, 'reviewDue'))}`,
+      aside: <Late days={age(str(r, 'reviewDue'))} />,
+      actions: startReview('riskAssessments', r, str(r, 'activity')),
+    })),
+  ].sort((a, b) => a.date.localeCompare(b.date))
+
+  return (
+    <Overview
+      mod={mod}
+      description="Incidents, inspections, training and reviews"
+      create="toolboxMeetings"
+      kpis={[
+        {
+          label: 'Days since last incident', value: lastIncident ? formatNumber(age(lastIncident)) : '—', icon: Alert02Icon, page: 'checklists',
+          sub: recentIncidents ? `${count(recentIncidents, 'incident')} reported in 30 days` : 'None reported in 30 days',
+          tone: recentIncidents ? 'warning' : 'positive',
+        },
+        {
+          label: 'Inspection pass rate', value: `${pct(passed, done.length)}%`, icon: SearchAreaIcon, page: 'inspections',
+          sub: `${passed} passed · ${done.length - passed} failed · ${count(thisWeek.length, 'inspection')} this week`,
+          tone: thisWeek.some((r) => r.result === 'Failed') ? 'negative' : undefined,
+        },
+        {
+          label: 'Certificates to renew', value: formatNumber(expired.length + expiring.length), icon: Certificate01Icon, page: 'training',
+          sub: `${expired.length} expired · ${expiring.length} expire within 60 days`, tone: expired.length ? 'negative' : expiring.length ? 'warning' : undefined,
+        },
+        {
+          label: 'Reviews due', value: formatNumber(reviews.length), icon: AlertDiamondIcon, page: 'risk-assessments',
+          sub: `${count(highRisk.length, 'high-risk activity', 'high-risk activities')} · ${count(data.safetyDocuments.length, 'document')}`,
+          tone: reviews.length ? 'warning' : undefined,
+        },
+      ]}
+      chart={
+        <Panel as="section" title="Inspections by week" action={<Note>{count(done.length, 'inspection')} submitted</Note>}>
+          <Columns
+            data={weeks}
+            series={[
+              { key: 'passed', label: 'Passed', colour: 'var(--status-done)' },
+              { key: 'failed', label: 'Failed', colour: mod.colour },
+            ]}
+            format={(n) => count(n, 'inspection')}
+            axis={String}
+          />
+        </Panel>
+      }
+      side={
+        <Panel as="section" title="Training compliance by course" action={<Note>Valid certificates</Note>}>
+          <BarList
+            colour={mod.colour}
+            max={100}
+            empty="No certificates recorded."
+            items={courses.map((c) => ({ id: c.label, label: c.label, hint: `${c.valid}/${c.total}`, value: c.pct, display: `${c.pct}%` }))}
+          />
+        </Panel>
+      }
+      list={
+        <ListCard
+          title="Due for renewal or review"
+          module={mod.id}
+          page="training"
+          empty="Nothing is due. Every certificate is valid and every document and assessment is within its review date."
+          items={due}
+        />
+      }
+    />
+  )
+}
+
+// ---------------------------------------------------------------------------
 
 export function ModuleOverview({ module }: { module: string }) {
   const mod = moduleById(module)
@@ -933,6 +1075,7 @@ export function ModuleOverview({ module }: { module: string }) {
       case 'purchasing': return <PurchasingOverview mod={mod} />
       case 'accounting': return <AccountingOverview mod={mod} />
       case 'hr': return <HrOverview mod={mod} />
+      case 'wsh': return <WshOverview mod={mod} />
     }
   }
   return (

@@ -1,6 +1,6 @@
 import {
-  Alert02Icon, Building03Icon, Calendar03Icon, ClipboardCheckIcon, DeliveryTruck01Icon, Door01Icon, ForkliftIcon, IdCardIcon,
-  ReceiptIcon, Shield01Icon, SmileIcon, Store01Icon, UserCheck01Icon,
+  Alert02Icon, Building03Icon, Calendar03Icon, ClipboardCheckIcon, DeliveryTruck01Icon, Door01Icon, FireExtinguisherIcon, FireIcon, ForkliftIcon,
+  IdCardIcon, ReceiptIcon, SecurityCheckIcon, Shield01Icon, SmileIcon, Store01Icon, UserCheck01Icon, WarehouseIcon,
 } from '@hugeicons/core-free-icons'
 import type { FormIconOption } from '@/blocks/form-builder'
 import type { FormDefinition } from '@/blocks/form-renderer'
@@ -16,6 +16,9 @@ export type ErpForm = FormDefinition & { module: string }
 const check = (key: string, label: string, description?: string) =>
   ({ key, label, type: 'check', required: true, description } as const)
 const options = (...values: string[]) => values.map((v) => ({ value: v, label: v }))
+
+// The Workplace safety module's colour, for its forms.
+const WSH = 'oklch(0.6 0.19 20)'
 
 export const ERP_FORMS: ErpForm[] = [
   {
@@ -164,8 +167,8 @@ export const ERP_FORMS: ErpForm[] = [
     ],
   },
   {
-    id: 'incident-report', module: 'admin', name: 'Incident report', description: 'Report an accident, near miss or damage',
-    category: 'Safety', icon: Alert02Icon, colour: 'oklch(0.55 0.02 260)', version: 2, estimatedMinutes: 5,
+    id: 'incident-report', module: 'wsh', name: 'Incident report', description: 'Report an accident, near miss or damage',
+    category: 'Safety', icon: Alert02Icon, colour: WSH, version: 2, estimatedMinutes: 5,
     sections: [
       {
         id: 'what', title: 'What happened',
@@ -187,6 +190,117 @@ export const ERP_FORMS: ErpForm[] = [
       },
     ],
   },
+  {
+    id: 'site-safety-inspection', module: 'wsh', name: 'Site safety inspection', description: 'A walk through one area: housekeeping, fire, people and equipment',
+    category: 'Inspections', icon: SecurityCheckIcon, colour: WSH, version: 3, estimatedMinutes: 8,
+    context: { label: 'Area', placeholder: 'Such as Loading bay or Warehouse A' },
+    sections: [
+      {
+        id: 'housekeeping', title: 'Housekeeping',
+        fields: [check('aisles', 'Aisles and walkways clear'), check('floors', 'Floors dry, no spills or trip hazards'), check('waste', 'Waste in bins, nothing stacked against walls'), check('racking', 'Racking undamaged, load notices in place')],
+      },
+      {
+        id: 'fire', title: 'Fire and emergency',
+        fields: [
+          check('extinguishers', 'Extinguishers in date and unobstructed'), check('exits', 'Fire exits unlocked and clear'), check('lighting', 'Emergency lighting works', 'Press the test button'),
+          check('assembly', 'Assembly point signed and clear'), check('firstaid', 'First aid kit stocked and in date'),
+        ],
+      },
+      {
+        id: 'people', title: 'People and PPE',
+        fields: [
+          check('hivis', 'Everyone in hi-vis and safety footwear'), check('walkways', 'Pedestrians keeping to the walkways'),
+          { key: 'unsafe', label: 'Was everyone working safely?', type: 'yes-no', required: true, notePlaceholder: 'What did you see, and what did you do about it?' },
+        ],
+      },
+      {
+        id: 'equipment', title: 'Equipment',
+        fields: [check('forklifts', 'Forklift pre-use checks signed today'), check('ladders', 'Ladders tagged and in good order'), check('charging', 'Charging bay ventilated, no ignition sources'), { key: 'photos', label: 'Photos of anything found', type: 'photo', multiple: true }],
+      },
+      { id: 'sign', title: 'Sign-off', fields: [{ key: 'inspector', label: 'Inspector', type: 'text', required: true, autoComplete: 'name' }, { key: 'signature', label: 'Signature', type: 'signature', required: true }] },
+    ],
+  },
+  {
+    id: 'fire-safety-inspection', module: 'wsh', name: 'Fire safety inspection', description: 'Monthly: extinguishers, hose reels, alarms, exits and signage in one area',
+    category: 'Inspections', icon: FireExtinguisherIcon, colour: WSH, version: 2, estimatedMinutes: 6,
+    context: { label: 'Area', placeholder: 'Such as Warehouse B or Office' },
+    sections: [
+      {
+        id: 'equipment', title: 'Fire-fighting equipment',
+        fields: [
+          check('extinguishers', 'Every extinguisher present, charged and in date', 'Check the gauge and the service tag'), check('hosereels', 'Hose reels unobstructed and turn freely'),
+          check('blankets', 'Fire blankets in place where cooking or hot work happens'), check('signage', 'Equipment signed and visible from 10 m'),
+        ],
+      },
+      {
+        id: 'alarm', title: 'Detection and alarm',
+        fields: [check('callpoints', 'Manual call points unobstructed and undamaged'), check('detectors', 'Detectors clear of dust, nothing stored within 50 cm'), check('alarmtest', 'Weekly alarm test logged', 'Check the log book')],
+      },
+      {
+        id: 'escape', title: 'Means of escape',
+        fields: [
+          check('exits', 'Exit doors open freely from inside, not locked or chained'), check('routes', 'Escape routes clear for their full width'),
+          check('exitlights', 'Exit signs lit'), check('assembly', 'Assembly point signed and clear'),
+          { key: 'drill', label: 'Has a fire drill been held in the last six months?', type: 'yes-no', required: true, notePlaceholder: 'When is the next one planned?' },
+        ],
+      },
+      { id: 'sign', title: 'Sign-off', fields: [{ key: 'inspector', label: 'Inspector', type: 'text', required: true, autoComplete: 'name' }, { key: 'signature', label: 'Signature', type: 'signature', required: true }] },
+    ],
+  },
+  {
+    id: 'racking-inspection', module: 'wsh', name: 'Racking inspection', description: 'One aisle of pallet racking: uprights, beams, loads and labels',
+    category: 'Inspections', icon: WarehouseIcon, colour: WSH, version: 1, estimatedMinutes: 5,
+    context: { label: 'Aisle', placeholder: 'Such as Aisle A-04' },
+    sections: [
+      {
+        id: 'structure', title: 'Structure',
+        fields: [
+          check('uprights', 'Uprights straight, no dents deeper than 3 mm'), check('footplates', 'Footplates anchored, no missing bolts'), check('beams', 'Beams level, locking pins in place'),
+          check('bracing', 'Bracing intact'), check('guards', 'Column guards fitted at aisle ends'),
+        ],
+      },
+      {
+        id: 'loads', title: 'Loads',
+        fields: [
+          check('notices', 'Load notices fitted and legible'), check('overhang', 'No pallet overhanging the beam by more than 50 mm'), check('damagedpallets', 'No split or damaged pallets in the rack'),
+          { key: 'damage', label: 'Any damage reported since the last inspection?', type: 'yes-no', required: true, notePlaceholder: 'What was hit, and has it been offloaded?' },
+          { key: 'photos', label: 'Photos of any damage', type: 'photo', multiple: true },
+        ],
+      },
+      { id: 'sign', title: 'Sign-off', fields: [{ key: 'inspector', label: 'Inspector', type: 'text', required: true, autoComplete: 'name' }, { key: 'signature', label: 'Signature', type: 'signature', required: true }] },
+    ],
+  },
+  {
+    id: 'hot-work-permit', module: 'wsh', name: 'Hot work permit', description: 'Before welding, cutting or grinding outside the workshop',
+    category: 'Permits', icon: FireIcon, colour: WSH, version: 2, estimatedMinutes: 5,
+    context: { label: 'Location', placeholder: 'Where the work is, such as Dock door 03' },
+    sections: [
+      {
+        id: 'work', title: 'The work',
+        fields: [
+          { key: 'date', label: 'Date', type: 'date', required: true },
+          { key: 'work', label: 'Type of work', type: 'radio', required: true, options: options('Welding', 'Cutting', 'Grinding', 'Brazing'), optionsClassName: '@sm:grid-cols-4' },
+          { key: 'duration', label: 'How long', type: 'number', required: true, placeholder: '2', hint: 'hours' },
+          { key: 'requestedBy', label: 'Requested by', type: 'text', required: true, autoComplete: 'name' },
+        ],
+      },
+      {
+        id: 'precautions', title: 'Precautions',
+        fields: [
+          check('combustibles', 'Combustibles moved or covered within 10 m'), check('extinguisher', 'Fire extinguisher at hand'), check('watch', 'Fire watch assigned'),
+          check('sprinklers', 'Sprinklers and detectors unimpaired'), check('cylinders', 'Gas cylinders upright and secured'), check('ventilation', 'Area ventilated'),
+        ],
+      },
+      {
+        id: 'authorise', title: 'Authorisation',
+        fields: [
+          { key: 'after', label: 'Will the fire watch stay 30 minutes after the work?', type: 'yes-no', required: true, notePlaceholder: 'Who covers it?' },
+          { key: 'authorisedBy', label: 'Authorised by', type: 'text', required: true, autoComplete: 'name' },
+          { key: 'signature', label: 'Signature', type: 'signature', required: true },
+        ],
+      },
+    ],
+  },
 ]
 
 export const formById = (id: string | null | undefined) => ERP_FORMS.find((f) => f.id === id)
@@ -197,6 +311,8 @@ export const FORM_ICONS: FormIconOption[] = [
   { id: 'forklift', label: 'Forklift', icon: ForkliftIcon }, { id: 'door', label: 'Site', icon: Door01Icon }, { id: 'store', label: 'Stock', icon: Store01Icon },
   { id: 'receipt', label: 'Claim', icon: ReceiptIcon }, { id: 'smile', label: 'Survey', icon: SmileIcon }, { id: 'id', label: 'Visitor', icon: IdCardIcon },
   { id: 'person', label: 'People', icon: UserCheck01Icon }, { id: 'alert', label: 'Incident', icon: Alert02Icon }, { id: 'shield', label: 'Safety', icon: Shield01Icon },
+  { id: 'inspection', label: 'Inspection', icon: SecurityCheckIcon }, { id: 'fire', label: 'Permit', icon: FireIcon },
+  { id: 'extinguisher', label: 'Fire safety', icon: FireExtinguisherIcon }, { id: 'racking', label: 'Racking', icon: WarehouseIcon },
   { id: 'building', label: 'Facilities', icon: Building03Icon }, { id: 'calendar', label: 'Schedule', icon: Calendar03Icon },
 ]
 export const formsOf = (moduleId: string) => ERP_FORMS.filter((f) => f.module === moduleId)

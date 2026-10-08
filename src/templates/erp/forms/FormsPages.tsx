@@ -37,6 +37,17 @@ const NOW = new Date(`${TODAY}T12:00:00`)
 
 /* ---------- The catalogue, and a form being filled in ---------- */
 
+// A scanned code: a link into this app opens what it points to. The
+// catalogue's Scan button and the phone's Scan tab both use it.
+export function openScanned(value: string) {
+  const at = value.indexOf('#/')
+  if (at < 0) {
+    toast('Not a form link', { description: value.length > 80 ? `${value.slice(0, 80)}…` : value })
+    return
+  }
+  navigate(value.slice(at + 1))
+}
+
 export function FormsCataloguePage({ module, title = 'Forms' }: { module?: string; title?: string }) {
   const path = usePath()
   const route = parseRoute(path)
@@ -61,16 +72,6 @@ export function FormsCataloguePage({ module, title = 'Forms' }: { module?: strin
   const today = data.submissions.filter((s) => String(s.submittedAt).startsWith(TODAY)).length
   const here = route.screen === 'app' ? [route.module, route.page ?? 'catalogue'] : ['forms', 'catalogue']
 
-  // A scanned code: a link into this app opens what it points to.
-  function scanned(value: string) {
-    const at = value.indexOf('#/')
-    if (at < 0) {
-      toast('Not a form link', { description: value.length > 80 ? `${value.slice(0, 80)}…` : value })
-      return
-    }
-    navigate(value.slice(at + 1))
-  }
-
   return (
     <div className="grid gap-4 pb-6">
       <PageHeader
@@ -91,7 +92,7 @@ export function FormsCataloguePage({ module, title = 'Forms' }: { module?: strin
           onEdit={(f) => go('forms', 'builder', f.id)}
           href={formLink}
           brand={{ company: company?.name, mark: 'initials' }}
-          onScan={scanned}
+          onScan={openScanned}
         />
       </div>
     </div>
@@ -110,7 +111,14 @@ function nextNumber(rows: Row[]) {
   return `SUB-${highest + 1}`
 }
 
-function FillPage({ form, context, back }: { form: FormDefinition; context?: string; back: () => void }) {
+// `back` is where Cancel and the last button go: the catalogue, or the
+// Inspections page when the checklist was opened from there.
+export function FillPage({ form, context, back, backLabel = 'Back to forms' }: {
+  form: FormDefinition
+  context?: string
+  back: () => void
+  backLabel?: string
+}) {
   const { session, data, add, openPeek, setPageTitle } = useErp()
   const [done, setDone] = useState<FormSubmission | null>(null)
 
@@ -126,6 +134,7 @@ function FillPage({ form, context, back }: { form: FormDefinition; context?: str
       id,
       form: form.name,
       formId: form.id,
+      category: form.category ?? '',
       context: submission.context ?? '',
       result: RESULT_LABEL[submission.result],
       passed: submission.score?.passed ?? 0,
@@ -144,7 +153,7 @@ function FillPage({ form, context, back }: { form: FormDefinition; context?: str
       <FormSubmitted form={form} submission={done} className="h-full">
         <Button size="sm" onClick={() => openPeek('submissions', done.id!)}>Open {done.id}</Button>
         <Button size="sm" variant="outline" onClick={() => setDone(null)}>Fill in another</Button>
-        <Button size="sm" variant="ghost" onClick={back}>Back to forms</Button>
+        <Button size="sm" variant="ghost" onClick={back}>{backLabel}</Button>
       </FormSubmitted>
     )
   }

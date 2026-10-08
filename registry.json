@@ -106,31 +106,31 @@
           "sidebar-ring": "var(--primary)"
         },
         "dark": {
-          "background": "oklch(0.17 calc(var(--grey-c) * 1.15) var(--grey-h))",
+          "background": "oklch(0.195 calc(var(--grey-c) * 1.15) var(--grey-h))",
           "foreground": "oklch(0.96 calc(var(--grey-c) * 0.6) var(--grey-h))",
-          "card": "oklch(0.2 calc(var(--grey-c) * 1.4) var(--grey-h))",
-          "popover": "oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "card": "oklch(0.225 calc(var(--grey-c) * 1.4) var(--grey-h))",
+          "popover": "oklch(0.255 calc(var(--grey-c) * 1.7) var(--grey-h))",
           "primary": "oklch(0.6 var(--brand-c) var(--brand-h))",
-          "secondary": "oklch(0.25 calc(var(--grey-c) * 1.7) var(--grey-h))",
-          "secondary-foreground": "oklch(0.9 calc(var(--grey-c) * 1.1) var(--grey-h))",
-          "muted": "oklch(0.23 calc(var(--grey-c) * 1.4) var(--grey-h))",
-          "muted-foreground": "oklch(0.66 calc(var(--grey-c) * 3) var(--grey-h))",
-          "accent": "oklch(1 0 0 / 6%)",
+          "secondary": "oklch(0.29 calc(var(--grey-c) * 1.7) var(--grey-h))",
+          "secondary-foreground": "oklch(0.92 calc(var(--grey-c) * 1.1) var(--grey-h))",
+          "muted": "oklch(0.265 calc(var(--grey-c) * 1.4) var(--grey-h))",
+          "muted-foreground": "oklch(0.7 calc(var(--grey-c) * 3) var(--grey-h))",
+          "accent": "oklch(1 0 0 / 9%)",
           "destructive": "oklch(0.66 0.19 25)",
-          "border": "oklch(1 0 0 / 7%)",
-          "input": "oklch(1 0 0 / 10%)",
+          "border": "oklch(1 0 0 / 12%)",
+          "input": "oklch(1 0 0 / 18%)",
           "brand": "oklch(0.66 calc(var(--brand-c) * 0.93) var(--brand-h))",
-          "subtle": "oklch(0.19 calc(var(--grey-c) * 1.15) var(--grey-h))",
+          "subtle": "oklch(0.21 calc(var(--grey-c) * 1.15) var(--grey-h))",
           "status-progress": "oklch(0.78 0.14 80)",
           "status-blocked": "oklch(0.66 0.19 25)",
           "chart-2": "oklch(0.7 0.12 200)",
           "chart-3": "oklch(0.78 0.14 80)",
           "chart-4": "oklch(0.7 0.15 150)",
           "chart-5": "oklch(0.66 0.19 25)",
-          "sidebar": "oklch(0.155 calc(var(--grey-c) * 1.15) var(--grey-h))",
-          "sidebar-foreground": "oklch(0.82 calc(var(--grey-c) * 1.4) var(--grey-h))",
-          "sidebar-accent": "oklch(1 0 0 / 6%)",
-          "sidebar-border": "oklch(1 0 0 / 6%)"
+          "sidebar": "oklch(0.165 calc(var(--grey-c) * 1.15) var(--grey-h))",
+          "sidebar-foreground": "oklch(0.84 calc(var(--grey-c) * 1.4) var(--grey-h))",
+          "sidebar-accent": "oklch(1 0 0 / 9%)",
+          "sidebar-border": "oklch(1 0 0 / 10%)"
         }
       },
       "css": {
@@ -2516,6 +2516,30 @@
       ]
     },
     {
+      "name": "mobile-shell",
+      "type": "registry:block",
+      "title": "Mobile shell",
+      "description": "the phone app's frame (PWA): MobileShell, top bar, tab bar, floating",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/sheet",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/mobile-shell.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/mobile-shell.tsx"
+        }
+      ]
+    },
+    {
       "name": "notifications-menu",
       "type": "registry:block",
       "title": "Notifications menu",
@@ -2566,6 +2590,34 @@
           "path": "src/blocks/period-picker.tsx",
           "type": "registry:component",
           "target": "@components/blocks/period-picker.tsx"
+        }
+      ]
+    },
+    {
+      "name": "project-page",
+      "type": "registry:block",
+      "title": "Project page",
+      "description": "Project page: a project's instructions, knowledge (files) and chats, on a page of its own",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/dropdown-menu",
+        "@kit/empty",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/icon-action",
+        "@kit/textarea"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/project-page.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/project-page.tsx"
         }
       ]
     },

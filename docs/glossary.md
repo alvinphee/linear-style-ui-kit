@@ -22,11 +22,18 @@ used by most design systems).
 | Type scale | The fixed set of text sizes a design uses | 13px body text in `styles.css`, and the sizes in the components |
 | Components | Single building blocks with props and variants | shadcn primitives in `src/components/ui` (Button, Input, Badge…), our own small ones in `src/components/` (status badge, person chip…) |
 | Blocks | A section or screen built from components that does one task | `src/blocks/`: board, data table, folding breadcrumb… |
-| Layouts | The frame pages sit in: navigation, header, content area. Also called the app shell | App shells |
+| Layouts | The empty frame an app's pages sit in: navigation, header, content area. Also called the app shell. Three tests: it holds a page, not a thing (put the inbox in it, then the calendar, and the frame does not change); it has no data of its own (sample data belongs to the content, never to the frame); an app has one or two of them, not twenty. A calendar, an inbox, a dock schedule or a form page is a block, not a layout, however it is arranged inside; "all with sample data" is the giveaway. shadcn calls whole pages blocks and Tailwind UI calls frames application shells; the kit keeps frame and content apart so a fix to a block reaches every page | App shells |
 | Templates | A whole app: a layout, blocks and data, ready to run | ERP app, AI chat app |
-| Kitchen sink | One page that shows every component, to check they look right together | All components |
+| Component explorer (component workshop) | A site that shows every component on its own page, with a sidebar to find them, so each is built and checked before an app uses it. Storybook is the best-known one | This kit's whole site: `KitchenSink.tsx`, `ShowcaseSidebar.tsx`, `nav.ts` |
+| Kitchen sink | One page that shows every component, to check they look right together. Often said loosely of a whole component explorer | All components |
+| Component page | One page of a component explorer, for one component family: its playgrounds, variant grids, states, then examples | `#/buttons`, `#/badges`… |
 | Component family | A component and its close relatives, documented on one page | Badges and labels: Badge, StatusBadge, DeltaBadge, LabelChip |
 | Component category | A heading that groups component pages by what they do, as Ant Design and Material group theirs | Actions, Inputs, Data display, Feedback, Overlays, Navigation, Layout, Charts, AI |
+| Playground | A live preview of a component with a props pane and the generated code to copy. Storybook calls these the canvas and the controls | The first panels on a component page (`Playground` in `playground/Playground.tsx`) |
+| Props pane (controls) | The selects and switches beside a playground, one per prop, that change the preview | The right side of each playground |
+| Variant grid | Every value of one prop side by side, often crossed with another (variant × size). In Storybook each variant is a story | `Variants` in `playground/Playground.tsx` |
+| States | How a component looks in each condition: default, hover, focus, disabled, loading, error, empty | After the variant grids on a component page |
+| Examples | The component in real use, made by hand rather than generated from props | The last panels on a component page |
 | Registry | shadcn's list of installable parts, served as JSON, so another project can copy them in with `npx shadcn add` | `registry.json`, built to `public/r/` by `npm run registry` |
 | Registry item | One installable entry in a registry: its files, the npm packages it needs, and the other items it needs (its registry dependencies) | One per component, block and lib file, plus `tokens` |
 | Registry namespace | The short prefix a project uses to name a registry, set once in its `components.json` | `@kit`, as in `@kit/kanban-board` |
@@ -119,6 +126,21 @@ used by most design systems).
 | Empty state | What a page shows when it has nothing to list |
 | Toast | A short message that appears and fades, such as "Invoice sent" |
 | Sheet / drawer | A panel that slides in from an edge |
+| Bottom sheet | A sheet that rises from the bottom of a phone screen, with a grab handle: pickers, sort and filter, quick create. The kit's `SheetContent` with `side="bottom"`; `container` keeps it inside a framed screen |
+| PWA (progressive web app) | A web app a phone can install: it gets a home-screen icon, opens full screen and can work offline. A web app manifest describes it; a service worker caches it and sends work made offline |
+| Standalone (display mode) | How an installed PWA opens: full screen, with no browser address bar or toolbar. The opposite is opening in a browser tab |
+| Install prompt | The offer to add a web app to the home screen, shown in a browser tab and never once installed |
+| Tab bar (bottom navigation) | A row of three to five tabs at the foot of a phone screen, in place of a sidebar. Each tab keeps its own stack of screens |
+| Stack navigation (push / pop) | Phone navigation one screen at a time: opening a record pushes a screen with a back arrow, Back pops it |
+| Top bar (navigation bar) | A phone screen's header: a big title on a tab's first screen, a back arrow and a centred title on a pushed one, at most two actions |
+| Menu screen (full-screen menu) | A phone's navigation behind a "Menu" button in the top bar: every destination full screen under the bar, in big type under small headings, in place of a tab bar or a slide-out drawer. shadcn's own site uses it on a phone. The block part is `MobileMenu` |
+| Floating tab bar | A tab bar that floats over the page as a capsule, with search as a round button beside it; it shrinks to the current tab while you scroll down and comes back as you scroll up (iOS 26's behaviour). The block part is `MobileFloatingTabBar` |
+| Large title | A page's big heading at the top of its content that stands for the title; the small title in the top bar appears once it scrolls away |
+| Mobile shell | The phone app's frame: top bar, the screen, and the tab bar or the screen's own bottom action. The block is `mobile-shell` |
+| Floating action button (FAB) | A round button floating over the bottom right of a phone screen for its main action, such as New issue |
+| Safe area | The part of a phone screen clear of the status bar, notch and home indicator. CSS reads it as `env(safe-area-inset-*)` |
+| Home indicator | The short bar at the bottom of a phone without a home button; swiping it goes home |
+| Background sync | Sending changes made offline once the connection is back, done by the service worker |
 | Skeleton | Grey shapes shown while content loads |
 | QR code | A square barcode a phone camera reads: a payment link, a record's address, an authenticator set-up. The component is `QrCode` |
 | Module (QR) | One of the small squares a QR code is made of. Its shape can change (square, rounded, dots) as long as it stays dark on light |
@@ -154,8 +176,11 @@ used by most design systems).
 | Citation | A numbered link from a sentence to the source it came from |
 | Artifact | A document, table or code the AI made, opened in its own panel with versions |
 | Chat history | The list of past chats: projects, pinned, then the rest grouped by date (Today, Yesterday, Previous 7 days) or as one list |
-| Project (AI chat) | A folder of related chats with its own instructions, which the assistant follows in each of them |
+| Project (AI chat) | A folder of related chats with its own instructions and knowledge, which the assistant follows in each of them. Opens on a page of its own (the project page block), as in ChatGPT, Claude and Gemini; a dialog only names it |
 | Instructions (custom instructions) | Standing directions for the assistant: who you are, what to focus on, how to answer |
+| Project knowledge (project files) | The files added to a project, such as PDFs, sheets or notes, that the assistant draws on in every chat in it. The product term in ChatGPT, Claude and Gemini; RAG and long context are the two ways to get them to the model, not the name of the feature |
+| Long context (in-context, "context stuffing") | Putting the whole of a project's knowledge into the prompt on every turn. Exact and simple, but it stops working once the files outgrow the model's context window |
+| RAG (retrieval-augmented generation) | Splitting the knowledge into chunks and indexing them, then putting only the few chunks that match each question into the prompt. Scales to big libraries; may miss the right passage. Products use long context while the knowledge is small and RAG once it is not |
 | Chat library (All chats) | A page of every chat, with a search and filters by type |
 | Incognito chat (temporary chat) | A chat that is not kept in the history and is deleted when you leave it |
 | Credits meter | How much of the plan's AI usage is left this month |
@@ -202,6 +227,7 @@ checklist, an expense claim and a survey are all forms to them.
 | Purchasing (procurement) | Purchase requisitions, purchase orders, goods receipts, vendors |
 | Accounting (finance) | Customer invoices, vendor bills, payments, journal entries, chart of accounts, financial reports |
 | Human resources (HR) | Employees, leave requests, payroll |
+| Workplace safety and health (WSH) | Toolbox meetings, inspections and checklists, safety documents, training certificates, risk assessments. Singapore's term (the WSH Act); elsewhere EHS (environment, health and safety), HSE or OHS |
 | Administration | Users, roles and permissions, company settings, audit trail, integrations |
 
 ## ERP records and documents
@@ -250,6 +276,23 @@ checklist, an expense claim and a survey are all forms to them.
 | Role | A set of permissions given to users, such as Finance or Sales | |
 | Audit trail | Who changed what, and when | |
 | Multi-company | One system holding several legal companies (entities), each with its own books | |
+
+## Workplace safety and health
+| Term | Meaning | Number |
+|---|---|---|
+| Toolbox meeting (toolbox talk) | A short safety briefing for a work crew at the start of a shift, on one topic, with attendance taken | TBM-1001 |
+| Inspection | A checklist filled in on the spot for one area or piece of equipment and handed in: passed, or failed with the checks that failed. In the kit it is a form submission in the Inspections category | SUB-1080 |
+| Finding | A check that failed on an inspection, to be put right (a corrective action) | |
+| Safety document | A controlled document: a policy, safe work procedure (SWP), plan, procedure or standard, with a version, an owner, an effective date and a review date | DOC-1001 |
+| Version (document control) | One approved issue of a document, numbered major.minor: a minor version for a small change (3.2 → 3.3), a major one for a rewrite (→ 4.0). Earlier versions stay in the history | |
+| Review due | An approved document or assessment past its review date | |
+| Training certificate | Proof that a person completed a safety course, valid until it expires; expiring means within 60 days | CERT-3001 |
+| Training compliance | The share of required certificates that are still valid, by course | |
+| Risk assessment | Hazards of one activity, each rated and controlled; reviewed yearly | RA-401 |
+| Hazard | Something that could cause harm, with a control that lessens it | |
+| Risk matrix | Severity × likelihood on a 5 × 5 grid, banded Low (1–4), Medium (5–12) and High (15–25) | |
+| Permit to work | A signed form that allows dangerous work (hot work, confined space) once the precautions are checked | |
+| Incident | An accident, near miss or damage, reported through a form | |
 
 ## Yard management
 The vocabulary of the dock schedule block (`src/blocks/dock-schedule/`), as

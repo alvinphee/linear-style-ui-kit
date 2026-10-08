@@ -4,12 +4,15 @@ import {
   Calendar03Icon, Note01Icon, PackageIcon, PackageReceiveIcon, Plug01Icon, QuoteDownIcon, ReceiptTextIcon,
   Settings01Icon, Shield01Icon, ShoppingCart01Icon, Store01Icon, Tag01Icon, Target02Icon, UserGroupIcon,
   UserLock01Icon, UserMultipleIcon, Wallet01Icon, WarehouseIcon, Home01Icon, Calculator01Icon, PipelineIcon,
-  Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon, BubbleChatIcon, ClipboardCheckIcon, ClipboardListIcon, FileValidationIcon,
-  Add01Icon,
+  Briefcase01Icon, Payment01Icon, SlidersHorizontalIcon, BubbleChatIcon, ClipboardCheckIcon, ClipboardListIcon, FileValidationIcon, Folder01Icon,
+  Add01Icon, AlertDiamondIcon, Certificate01Icon, CheckListIcon, HardHatIcon, LegalDocument01Icon, Presentation01Icon, SearchAreaIcon,
 } from '@hugeicons/core-free-icons'
 import { CUSTOMERS, PEOPLE, VENDORS, WAREHOUSES } from './data'
+import { ACTIVITIES, AREAS, COURSES, DOCUMENT_TYPES, PROVIDERS, SITES, TOOLBOX_TOPICS } from './wsh/sample'
+import { InspectionsPage } from './wsh/WshPages'
 import { TODAY, addDays } from './format'
 import { AllChatsPage, AssistantPage, AssistantSidebar } from './assistant/AssistantPage'
+import { ErpProjectPage } from './assistant/ProjectPage'
 import { edition } from './edition'
 import Launchpad from './Launchpad'
 import { ModuleOverview } from './pages/Overview'
@@ -17,17 +20,21 @@ import { OpportunityPipeline } from './pages/Pipeline'
 import { FinancialReports } from './pages/Reports'
 import { CompanySettings, Integrations, RolesPermissions } from './pages/Admin'
 import { FormBuilderPage, FormsCataloguePage, SubmissionsPage } from './forms/FormsPages'
-import type { Data, ErpModule, ListSpec, Row } from './types'
+import { INSPECTION_CATEGORY, type Data, type ErpModule, type ListSpec, type Row } from './types'
 
 // Every module, its pages, and how each list looks. Names follow the
 // standard ERP vocabulary (docs/glossary.md).
 
 const REPS = ['Priya Nair', 'Daniel Tan', 'Jordan Lee', 'Hannah Ong']
+// The supervisors and the WSH team, who run toolbox meetings, inspect and own the safety documents.
+const WSH_LEADS = ['Ravi Kumar', 'Siti Rahman', 'Marcus Lim', 'Farid Hassan', 'Omar Aziz', 'Aisha Yusof']
 const WH = WAREHOUSES.map((w) => w.id)
 const is = (...statuses: string[]) => (r: Row) => statuses.includes(String(r.status))
 const count = (rows: Row[], ...statuses: string[]) => rows.filter(is(...statuses)).length
 const sum = (rows: Row[], key: string) => rows.reduce((t, r) => t + Number(r[key] ?? 0), 0)
 const today = (rows: Row[]) => rows.filter((r) => String(r.submittedAt).startsWith(TODAY))
+const isInspection = (r: Row) => r.category === INSPECTION_CATEGORY
+const inspections = (d: Data) => d.submissions.filter(isInspection)
 const short = (n: number) => (n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}K`)
 
 export const LISTS = {
@@ -486,6 +493,112 @@ export const LISTS = {
       { key: 'target', label: 'Record', kind: 'id' }, { key: 'module', label: 'Module', hide: 'lg' }, { key: 'ip', label: 'IP address', hide: 'xl' },
     ],
   },
+
+  // Workplace safety and health (WSH). Dates are checked against the demo's today.
+  toolboxMeetings: {
+    entity: 'toolboxMeetings', singular: 'toolbox meeting', plural: 'Toolbox meetings', prefix: 'TBM-', primary: 'topic',
+    columns: [
+      { key: 'id', label: 'Meeting', kind: 'id' }, { key: 'topic', label: 'Topic' }, { key: 'site', label: 'Site', hide: 'md' },
+      { key: 'date', label: 'Date', kind: 'date' }, { key: 'time', label: 'Time', hide: 'xl' }, { key: 'conductedBy', label: 'Led by', kind: 'person', hide: 'lg' },
+      { key: 'attendees', label: 'Attended', kind: 'number', hide: 'md' }, { key: 'duration', label: 'Minutes', kind: 'number', hide: '2xl' },
+      { key: 'status', label: 'Status', kind: 'status' },
+    ],
+    views: [
+      { id: 'upcoming', label: 'Upcoming', match: is('Scheduled') }, { id: 'held', label: 'Held', match: is('Completed') },
+      { id: 'week', label: 'This week', match: (r) => String(r.date) >= addDays(TODAY, -6) && String(r.date) <= TODAY }, { id: 'all', label: 'All' },
+    ],
+    create: {
+      fields: [
+        { key: 'topic', label: 'Topic', type: 'select', options: [...TOOLBOX_TOPICS], required: true },
+        { key: 'site', label: 'Site', type: 'select', options: [...SITES], required: true },
+        { key: 'date', label: 'Date', type: 'date', required: true },
+        { key: 'time', label: 'Time', type: 'text', placeholder: '08:00' },
+        { key: 'conductedBy', label: 'Led by', type: 'select', options: WSH_LEADS },
+      ],
+      defaults: { status: 'Scheduled', attendees: 0, duration: 15, time: '08:00' },
+    },
+    bulk: [{ label: 'Mark held', patch: { status: 'Completed' } }, { label: 'Cancel', patch: { status: 'Cancelled' } }],
+  },
+  // An inspection is a submitted inspection checklist: the same records as
+  // Forms › Submissions, only those of forms in the Inspections category.
+  inspections: {
+    entity: 'submissions', filter: isInspection, singular: 'inspection', plural: 'Inspections', primary: 'form',
+    columns: [
+      { key: 'id', label: 'Number', kind: 'id' }, { key: 'form', label: 'Checklist' }, { key: 'context', label: 'Area' },
+      { key: 'result', label: 'Result', kind: 'status' }, { key: 'failed', label: 'Fails', kind: 'number', hide: 'lg' },
+      { key: 'submittedBy', label: 'Inspector', kind: 'person', hide: 'md' }, { key: 'submittedAt', label: 'When', kind: 'datetime' },
+    ],
+    views: [
+      { id: 'all', label: 'All' }, { id: 'failed', label: 'Failed', match: (r) => r.result === 'Failed' },
+      { id: 'passed', label: 'Passed', match: (r) => r.result === 'Passed' }, { id: 'today', label: 'Today', match: (r) => String(r.submittedAt).startsWith(TODAY) },
+    ],
+  },
+  safetyDocuments: {
+    entity: 'safetyDocuments', singular: 'safety document', plural: 'Safety documents', prefix: 'DOC-', primary: 'title',
+    columns: [
+      { key: 'id', label: 'Document', kind: 'id' }, { key: 'title', label: 'Title' }, { key: 'type', label: 'Type', hide: 'md' },
+      { key: 'version', label: 'Version' }, { key: 'owner', label: 'Owner', kind: 'person', hide: 'lg' },
+      { key: 'effective', label: 'Effective', kind: 'date', hide: 'xl' }, { key: 'reviewDue', label: 'Review due', kind: 'date', hide: 'md' },
+      { key: 'status', label: 'Status', kind: 'status' },
+    ],
+    views: [
+      { id: 'current', label: 'Current', match: is('Approved', 'Review due') }, { id: 'review', label: 'Review due', match: is('Review due') },
+      { id: 'drafts', label: 'Drafts and reviews', match: is('Draft', 'In review') }, { id: 'all', label: 'All' },
+    ],
+    create: {
+      fields: [
+        { key: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Ladder use' },
+        { key: 'type', label: 'Type', type: 'select', options: [...DOCUMENT_TYPES], required: true },
+        { key: 'owner', label: 'Owner', type: 'select', options: WSH_LEADS },
+      ],
+      defaults: { status: 'Draft', version: '0.1', effective: '', reviewDue: '', versions: '[]' },
+    },
+    bulk: [{ label: 'Send for review', patch: { status: 'In review' } }, { label: 'Mark superseded', patch: { status: 'Superseded' } }],
+  },
+  certifications: {
+    entity: 'certifications', singular: 'certificate', plural: 'Training certificates', prefix: 'CERT-', primary: 'course',
+    columns: [
+      { key: 'id', label: 'Certificate', kind: 'id' }, { key: 'course', label: 'Course' }, { key: 'employee', label: 'Employee', kind: 'person' },
+      { key: 'provider', label: 'Provider', hide: 'xl' }, { key: 'issued', label: 'Issued', kind: 'date', hide: 'lg' },
+      { key: 'expires', label: 'Expires', kind: 'date' }, { key: 'status', label: 'Status', kind: 'status' },
+    ],
+    views: [
+      { id: 'all', label: 'All' }, { id: 'expiring', label: 'Expiring', match: is('Expiring') },
+      { id: 'expired', label: 'Expired', match: is('Expired') }, { id: 'valid', label: 'Valid', match: is('Valid') },
+    ],
+    create: {
+      fields: [
+        { key: 'employee', label: 'Employee', type: 'select', options: [...PEOPLE], required: true },
+        { key: 'course', label: 'Course', type: 'select', options: COURSES.map(([c]) => c), required: true },
+        { key: 'provider', label: 'Provider', type: 'select', options: [...PROVIDERS] },
+        { key: 'issued', label: 'Issued', type: 'date', required: true },
+        { key: 'expires', label: 'Expires', type: 'date', required: true },
+      ],
+      defaults: { status: 'Valid', expires: addDays(TODAY, 730) },
+    },
+  },
+  riskAssessments: {
+    entity: 'riskAssessments', singular: 'risk assessment', plural: 'Risk assessments', prefix: 'RA-', primary: 'activity',
+    columns: [
+      { key: 'id', label: 'Assessment', kind: 'id' }, { key: 'activity', label: 'Activity' }, { key: 'area', label: 'Area', hide: 'md' },
+      { key: 'hazards', label: 'Hazards', kind: 'number', hide: 'lg' }, { key: 'rating', label: 'Highest risk', kind: 'status' },
+      { key: 'assessedBy', label: 'Assessed by', kind: 'person', hide: 'xl' }, { key: 'reviewDue', label: 'Review due', kind: 'date', hide: 'md' },
+      { key: 'status', label: 'Status', kind: 'status' },
+    ],
+    views: [
+      { id: 'all', label: 'All' }, { id: 'high', label: 'High risk', match: (r) => r.rating === 'High' },
+      { id: 'review', label: 'Review due', match: is('Review due', 'In review') }, { id: 'draft', label: 'Draft', match: is('Draft') },
+    ],
+    create: {
+      fields: [
+        { key: 'activity', label: 'Activity', type: 'select', options: [...ACTIVITIES], required: true },
+        { key: 'area', label: 'Area', type: 'select', options: [...AREAS], required: true },
+        { key: 'assessedBy', label: 'Assessed by', type: 'select', options: WSH_LEADS },
+      ],
+      defaults: { status: 'Draft', hazards: 0, rating: 'Low', assessed: TODAY, reviewDue: addDays(TODAY, 365), hazardsJson: '[]' },
+    },
+    bulk: [{ label: 'Approve', patch: { status: 'Approved' } }, { label: 'Send for review', patch: { status: 'In review' } }],
+  },
 } satisfies Record<string, ListSpec>
 
 const list = (id: keyof typeof LISTS) => LISTS[id] as ListSpec
@@ -498,6 +611,8 @@ export const MODULES: ErpModule[] = [
       { id: 'launchpad', label: 'Launchpad', icon: DashboardSquare01Icon, render: () => <Launchpad /> },
       { id: 'assistant', label: 'Assistant', icon: AiChat02Icon, render: () => <AssistantPage />, sidebar: AssistantSidebar, assistant: true },
       { id: 'chats', label: 'All chats', icon: BubbleChatIcon, render: () => <AllChatsPage />, sidebar: AssistantSidebar, assistant: true, hidden: true },
+      // A project's page, …/home/project/<id>: reached from the Assistant's sidebar.
+      { id: 'project', label: 'Projects', icon: Folder01Icon, render: () => <ErpProjectPage />, sidebar: AssistantSidebar, assistant: true, hidden: true },
     ],
   },
   {
@@ -590,6 +705,21 @@ export const MODULES: ErpModule[] = [
       { id: 'catalogue', label: 'All forms', icon: ClipboardListIcon, render: () => <FormsCataloguePage /> },
       { id: 'submissions', label: 'Submissions', icon: FileValidationIcon, list: list('submissions'), render: () => <SubmissionsPage spec={list('submissions')} />, badge: (d) => today(d.submissions).filter((r) => r.result === 'Failed').length },
       { id: 'builder', label: 'New form', icon: Add01Icon, render: () => <FormBuilderPage /> },
+    ],
+  },
+  {
+    id: 'wsh', name: 'Workplace safety', icon: HardHatIcon, colour: 'oklch(0.6 0.19 20)', key: 'W',
+    description: 'WSH: toolbox meetings, inspections, safety documents, training and risk assessments',
+    roles: ['admin', 'operations', 'hr'],
+    metric: (d) => `${today(inspections(d)).length} inspections today · ${count(d.certifications, 'Expiring', 'Expired')} certificates to renew`,
+    pages: [
+      { id: 'overview', label: 'Overview', icon: DashboardSquare01Icon, render: () => <ModuleOverview module="wsh" /> },
+      { id: 'toolbox', label: 'Toolbox meetings', icon: Presentation01Icon, list: list('toolboxMeetings'), badge: (d) => count(d.toolboxMeetings.filter((r) => r.date === TODAY), 'Scheduled') },
+      { id: 'inspections', label: 'Inspections', icon: SearchAreaIcon, group: 'Checklists and inspections', list: list('inspections'), render: () => <InspectionsPage spec={list('inspections')} />, badge: (d) => today(inspections(d)).filter((r) => r.result === 'Failed').length },
+      { id: 'checklists', label: 'Checklists', icon: CheckListIcon, group: 'Checklists and inspections', render: () => <FormsCataloguePage module="wsh" title="Safety checklists" /> },
+      { id: 'documents', label: 'Safety documents', icon: LegalDocument01Icon, group: 'Documents and training', list: list('safetyDocuments'), badge: (d) => count(d.safetyDocuments, 'Review due') },
+      { id: 'training', label: 'Training certificates', icon: Certificate01Icon, group: 'Documents and training', list: list('certifications'), badge: (d) => count(d.certifications, 'Expiring', 'Expired') },
+      { id: 'risk-assessments', label: 'Risk assessments', icon: AlertDiamondIcon, group: 'Risk management', list: list('riskAssessments'), badge: (d) => count(d.riskAssessments, 'Review due') },
     ],
   },
   {

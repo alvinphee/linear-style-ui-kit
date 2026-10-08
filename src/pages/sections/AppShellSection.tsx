@@ -43,6 +43,7 @@ import { DisplayMenu } from './app-shell/DisplayMenu'
 import { DEFAULT_LIST_DISPLAY, arrangeJobs, type Group, type JobPatch, type Layout, type ListDisplay } from './app-shell/display'
 import { IssueBoard, IssueList } from './app-shell/IssueView'
 import { NotificationsMenu, useNotifications, type Notifications } from './app-shell/NotificationsMenu'
+import { PhoneShell, type PhoneAction, type PhoneDisplay, type PhoneNav, type PhoneTabStyle } from './app-shell/PhoneShell'
 import { FILTER_FIELDS, applyFilters, type Filters } from './FilterBar'
 import { QuickCreateDialog } from './FormsSection'
 import { JobPeek, openFullPage } from './JobActions'
@@ -67,6 +68,42 @@ const HEADERS: { value: HeaderStyle; label: string; note: string }[] = [
   { value: 'search', label: 'Search', note: 'A search box in the middle' },
   { value: 'crumbs-search', label: 'Crumb + search', note: 'Breadcrumb on the left, search in the middle' },
   { value: 'two-rows', label: 'Two rows', note: 'Search and account on a top row, the breadcrumb on a row under it' },
+]
+
+const PHONE_DISPLAYS: { value: PhoneDisplay; label: string; note: string }[] = [
+  { value: 'browser', label: 'Browser tab', note: 'Opened from a link: the browser’s bars show, and the app offers to install' },
+  { value: 'installed', label: 'Installed', note: 'Opened from the home screen: full screen, no browser bars (standalone)' },
+]
+
+const PHONE_NAVS: { value: PhoneNav; label: string; note: string }[] = [
+  { value: 'tabs', label: 'Tab bar', note: 'Four tabs at the bottom, each with its own stack of screens' },
+  { value: 'menu', label: 'Menu screen', note: '“Menu” in the top bar opens every destination full screen, in big type' },
+  { value: 'both', label: 'Both', note: 'The menu screen for everything, and a tab bar for the screens used all day' },
+]
+
+const PHONE_TAB_STYLES: { value: PhoneTabStyle; label: string; note: string }[] = [
+  { value: 'classic', label: 'Classic', note: 'A strip along the bottom' },
+  { value: 'floating', label: 'Floating', note: 'Over the page, search beside it; shrinks as you scroll down, as iOS 26’s does' },
+]
+
+const PHONE_ACTIONS: { value: PhoneAction; label: string; note: string }[] = [
+  { value: 'fab', label: 'Floating button', note: 'A round + over the list, bottom right' },
+  { value: 'tab', label: 'Tab bar', note: 'A round + in the middle of the tab bar' },
+  { value: 'top', label: 'Top bar', note: 'A + in the top bar, beside the screen’s other action' },
+]
+
+// What changes from the desktop frame, beside the phone.
+const PHONE_NOTES: { title: string; text: string }[] = [
+  { title: 'Tab bar, not a sidebar', text: 'Four tabs for what people do on their feet. Everything else sits under More, one tap deeper. The Inbox tab carries the unread count.' },
+  { title: 'Floating, as iOS 26', text: 'The tab bar can float over the page as a capsule, with search as a round button beside it. Scroll down and it shrinks to the current tab; scroll up or tap it and it comes back. iOS 26’s behaviour, in the kit’s own look.' },
+  { title: 'Or a menu screen', text: 'Menu in the top bar opens every destination full screen under it, in big type on a blurred page, as shadcn’s own site does on a phone. Its two bars turn into a cross; Escape or a choice closes it.' },
+  { title: 'One screen at a time', text: 'An issue pushes a screen with a back arrow named after where you came from. Each tab keeps its own stack; tapping the tab you are on goes back to its first screen.' },
+  { title: 'A top bar with one job', text: 'A big title on a first screen, a back arrow and a centred title on a pushed one, and at most two actions. No breadcrumb and no search box in the bar.' },
+  { title: 'Within thumb reach', text: 'The main action at the bottom: a floating button, the middle of the tab bar, or the screen’s own bottom button (Mark as done), which covers the tab bar.' },
+  { title: 'Bottom sheets', text: 'Pickers, sort and filter, and quick create rise from the bottom instead of dropping from where the mouse was.' },
+  { title: 'Cards, not columns', text: 'A list row becomes a card: status, number, priority, title, assignee. Saved views become chips that scroll sideways.' },
+  { title: 'Safe areas', text: 'The status bar and home indicator belong to the phone. env(safe-area-inset-*) pads the page clear of them once installed.' },
+  { title: 'Offline', text: 'Turn Offline on and change an issue: it is kept on the phone and counted, then sent when you reconnect, as a service worker’s background sync would.' },
 ]
 
 // Made-up workspaces and teams. Pages are ids; team pages are "team:page".
@@ -159,6 +196,11 @@ export default function AppShellSection() {
   const [footAccount, setFootAccount] = useState(false)
   const [peekId, setPeekId] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
+  const [phoneDisplay, setPhoneDisplay] = useState<PhoneDisplay>('browser')
+  const [phoneAction, setPhoneAction] = useState<PhoneAction>('fab')
+  const [phoneNav, setPhoneNav] = useState<PhoneNav>('tabs')
+  const [phoneTabStyle, setPhoneTabStyle] = useState<PhoneTabStyle>('classic')
+  const [offline, setOffline] = useState(false)
   const notes = useNotifications()
   const { jobs, addJob, updateJob, select } = useJobs()
 
@@ -316,7 +358,7 @@ export default function AppShellSection() {
   )
 
   return (
-    <Section id="app-shell" title="App shells" description="Sidebar and header variations. Mix any sidebar with any header.">
+    <Section id="app-shell" title="App shells" description="Sidebar and header variations, mixed live, and the phone app's frame.">
       <div className="bg-card grid gap-x-6 gap-y-2 rounded-lg border px-3 py-2.5 lg:col-span-2 sm:flex sm:flex-wrap sm:items-start">
         <Picker
           label="Sidebar"
@@ -380,6 +422,58 @@ export default function AppShellSection() {
         <code>inset</code>, and <code>collapsible</code> is <code>icon</code>, <code>offcanvas</code> or{' '}
         <code>none</code>. Narrow the window to see the menu button and the sheet.
       </p>
+
+      <div className="mt-8 grid gap-1 lg:col-span-2">
+        <h2 className="text-sm font-semibold tracking-tight">Phone app (PWA)</h2>
+        <p className="text-muted-foreground text-xs">
+          The frame for the same app installed on a phone. Not the desktop shell folded up: its own layout,
+          with the same components and the same issues (an edit here shows in the frame above).
+        </p>
+      </div>
+      <div className="bg-card grid gap-x-6 gap-y-2 rounded-lg border px-3 py-2.5 lg:col-span-2 sm:flex sm:flex-wrap sm:items-start">
+        <Picker label="Opened" value={phoneDisplay} options={PHONE_DISPLAYS} onChange={(v) => setPhoneDisplay(v as PhoneDisplay)} />
+        <Picker label="Navigation" value={phoneNav} options={PHONE_NAVS} onChange={(v) => setPhoneNav(v as PhoneNav)} />
+        {phoneNav !== 'menu' && (
+          <Picker label="Tab bar" value={phoneTabStyle} options={PHONE_TAB_STYLES} onChange={(v) => setPhoneTabStyle(v as PhoneTabStyle)} />
+        )}
+        <Picker
+          label="Main action"
+          value={phoneAction}
+          // The tab bar's middle button needs a classic tab bar.
+          options={phoneNav === 'menu' || phoneTabStyle === 'floating' ? PHONE_ACTIONS.filter((o) => o.value !== 'tab') : PHONE_ACTIONS}
+          onChange={(v) => setPhoneAction(v as PhoneAction)}
+        />
+        <div className="grid min-w-0 gap-1.5">
+          <span className="text-muted-foreground text-[11px]">Connection</span>
+          <label className="flex h-6 items-center gap-2 text-xs">
+            <Switch checked={offline} onCheckedChange={setOffline} />
+            Offline
+          </label>
+          <span className="text-muted-foreground text-[11px]">Changes wait on the phone until you reconnect</span>
+        </div>
+      </div>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-6 lg:col-span-2 lg:grid-cols-[minmax(0,24.5rem)_minmax(0,1fr)]">
+        <PhoneShell
+          display={phoneDisplay}
+          nav={phoneNav}
+          tabStyle={phoneTabStyle}
+          action={phoneAction}
+          offline={offline}
+          notes={notes}
+          onInstall={() => {
+            setPhoneDisplay('installed')
+            toast.success('Installed', { description: 'It now opens full screen from the home screen.' })
+          }}
+        />
+        <dl className="grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          {PHONE_NOTES.map((n) => (
+            <div key={n.title} className="grid gap-0.5">
+              <dt className="text-xs font-medium">{n.title}</dt>
+              <dd className="text-muted-foreground text-xs leading-relaxed">{n.text}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="left" className="bg-sidebar text-sidebar-foreground gap-0 p-0 data-[side=left]:w-72 data-[side=left]:max-w-[85vw]" showCloseButton={false}>

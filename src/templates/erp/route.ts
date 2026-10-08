@@ -7,6 +7,7 @@ import { edition } from './edition'
 //   /companies             choose a company
 //   /home/launchpad        the launchpad
 //   /home/assistant        the full-page Assistant (ERP + AI only)
+//   /home/project/<id>     a project's page: instructions, knowledge, chats (ERP + AI only)
 //   /<module>/<page>       any module page, e.g. /accounting/invoices
 //   /<module>/<page>/<id>  one thing on that page, e.g. a form to fill in:
 //                          /forms/catalogue/vehicle-check?context=SGX-4821

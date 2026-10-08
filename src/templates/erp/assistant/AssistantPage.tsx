@@ -1,17 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Add01Icon, BubbleChatIcon, Folder01Icon, IncognitoIcon } from '@hugeicons/core-free-icons'
 import { ChatHistory, type HistoryChat } from '@/blocks/ai/chat-history'
 import { ChatLibrary, type LibraryChat, type LibraryType } from '@/blocks/ai/chat-library'
 import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat-thread'
-import { FormDialog } from '@/blocks/form-dialog'
-import type { FormField } from '@/blocks/form-fields'
 import { IncognitoToggle } from '@/components/incognito-toggle'
 import { toast } from 'sonner'
-import { greeting } from '@/lib/text'
+import { usePath } from '@/lib/router'
+import { greeting, plural } from '@/lib/text'
 import { ROLE_LABEL } from '../data'
 import { MODULES } from '../modules'
-import { go } from '../route'
+import { go, parseRoute } from '../route'
 import { useErp } from '../store'
 import type { EntityId } from '../types'
 import { PROMPTS, firstName, starterPrompts } from './answers'
@@ -77,8 +76,15 @@ export function AssistantPage() {
           icon: Folder01Icon,
           title: `New chat in ${project.name}`,
           description: project.instructions
-            ? <>Replies in this project follow its instructions: “{shorten(project.instructions, 140)}”</>
-            : 'This project has no instructions yet. Add them from its menu in the sidebar.',
+            ? (
+              <>
+                Replies in this project follow its instructions: “{shorten(project.instructions, 140)}”
+                {project.files.length > 0 && <>, and draw on its {plural(project.files.length, 'file')}.</>}
+              </>
+            )
+            : project.files.length
+              ? `Replies draw on its ${plural(project.files.length, 'file')}. It has no instructions yet: add them on its page.`
+              : 'This project has no instructions yet. Add them on its page, from its menu in the sidebar.',
         }
         : {
           icon: undefined,
@@ -123,56 +129,9 @@ export function AssistantPage() {
   )
 }
 
-const PROJECT_FIELDS: FormField[] = [
-  { key: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Month-end close', requiredMessage: 'Give the project a name.' },
-  {
-    key: 'instructions', label: 'Instructions', type: 'textarea', hint: 'Optional', rows: 6, maxLength: 1000,
-    placeholder: "Who you are, what to focus on and how to answer. For example: I'm the finance controller. List overdue invoices first, amounts rounded to the dollar.",
-    description: 'The assistant follows these in every chat in this project.',
-  },
-]
-
-// New project, or Edit project: its name and the instructions the assistant
-// follows in each of its chats. The kit's FormDialog block.
-function ProjectDialog({ editing, onClose, onCreated }: {
-  // "new", a project's id, or null when closed.
-  editing: string | null
-  onClose: () => void
-  onCreated: (id: string) => void
-}) {
-  const { projects, createProject, updateProject } = useAssistant()
-  // Keeps the title while the dialog animates closed.
-  const last = useRef(editing)
-  if (editing) last.current = editing
-  const project = last.current && last.current !== 'new' ? projects.find((p) => p.id === last.current) : undefined
-  return (
-    <FormDialog
-      open={editing !== null}
-      onOpenChange={(open) => !open && onClose()}
-      title={project ? 'Edit project' : 'New project'}
-      description="A project keeps related chats together, with instructions the assistant follows in each of them."
-      fields={PROJECT_FIELDS}
-      initialValues={project ? { name: project.name, instructions: project.instructions } : undefined}
-      submitLabel={project ? 'Save' : 'Create project'}
-      onSubmit={(values) => {
-        const name = String(values.name)
-        const instructions = String(values.instructions ?? '')
-        if (project) {
-          updateProject(project.id, { name, instructions })
-          toast('Project saved')
-          return
-        }
-        const id = createProject({ name, instructions })
-        toast(`Created ${name}`, { description: 'A new chat in it is ready.' })
-        onCreated(id)
-      }}
-      className="sm:max-w-lg"
-    />
-  )
-}
-
 // The Assistant's part of the app sidebar, under the Home pages: + New chat,
-// then Search chats and All chats, then Projects (with their instructions),
+// then Search chats and All chats, then Projects (named in place; a project
+// opens on its page, Home › Projects, with its instructions and files),
 // Pinned and Chats (by date or one list, any type or one). Incognito is the
 // toggle at the top right of the chat, not a row here.
 // Every chat shows the icon of the module it is about. From the kit's
@@ -180,10 +139,11 @@ function ProjectDialog({ editing, onClose, onCreated }: {
 export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => void; pageId?: string }) {
   const {
     chats, projects, active, draftProjectId, runningChatId, newChat, openChat, renameChat, pinChat,
-    deleteChat, moveChat, deleteProject,
+    deleteChat, moveChat, createProject, deleteProject,
   } = useAssistant()
   const { groupByDate, setGroupByDate } = useErp()
-  const [editing, setEditing] = useState<string | null>(null)
+  const route = parseRoute(usePath())
+  const openProjectId = pageId === 'project' && route.screen === 'app' ? route.rest : null
 
   // New rows only when a row would look different, not on every streamed word.
   const signature = chats.map((c) => `${c.id}|${c.title}|${c.pinned}|${c.updatedAt}|${c.projectId}|${c.topic}`).join('\n')
@@ -193,14 +153,17 @@ export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => vo
   }), [signature])
   const shown = useMemo(() => rows.map((r) => (r.id === runningChatId ? { ...r, running: true } : r)), [rows, runningChatId])
   const toChat = () => go('home', 'assistant')
+  const toProject = (id: string) => {
+    go('home', 'project', id)
+    onNavigate?.()
+  }
 
   return (
-    <>
-      <ChatHistory
+    <ChatHistory
         chats={shown}
         projects={projects}
         activeChatId={pageId === 'assistant' && active && !active.temporary ? active.id : null}
-        activeProjectId={pageId === 'assistant' && !active ? draftProjectId : null}
+        activeProjectId={openProjectId ?? (pageId === 'assistant' && !active ? draftProjectId : null)}
         newChatIcon={Add01Icon}
         types={getChatTypes()}
         onNewChat={() => {
@@ -211,8 +174,9 @@ export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => vo
           openChat(id)
           toChat()
         }}
-        onNewProject={() => setEditing('new')}
-        onEditProject={setEditing}
+        onOpenProject={toProject}
+        onCreateProject={(name) => toProject(createProject({ name }))}
+        onEditProject={toProject}
         onNewChatInProject={(id) => {
           newChat(id)
           toChat()
@@ -242,16 +206,6 @@ export function AssistantSidebar({ onNavigate, pageId }: { onNavigate?: () => vo
         emptyText="No chats yet. Ask something to start one."
         className="h-auto min-h-0 flex-1"
       />
-      <ProjectDialog
-        editing={editing}
-        onClose={() => setEditing(null)}
-        onCreated={(id) => {
-          newChat(id)
-          toChat()
-          onNavigate?.()
-        }}
-      />
-    </>
   )
 }
 
@@ -268,7 +222,7 @@ let chatTypes: LibraryType[] | null = null
 const getChatTypes = () => (chatTypes ??= MODULES.map((m) => (m.id === 'home'
   ? { value: m.id, label: 'General', icon: BubbleChatIcon }
   : { value: m.id, label: m.name, icon: m.icon, colour: m.colour })))
-const chatType = (topic: string | null) => getChatTypes().find((t) => t.value === (topic ?? 'home')) ?? getChatTypes()[0]
+export const chatType = (topic: string | null) => getChatTypes().find((t) => t.value === (topic ?? 'home')) ?? getChatTypes()[0]
 
 // Home › All chats (ERP + AI): every chat, with a search and filter chips by
 // type (the module each chat is about). From the kit's ChatLibrary block.

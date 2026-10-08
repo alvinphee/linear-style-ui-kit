@@ -15,16 +15,21 @@ export type Recent = { entity: EntityId; id: string; label: string }
 // Where you land after signing in (the ERP + AI edition lets you choose).
 export type StartPage = 'launchpad' | 'assistant'
 
+// How a phone gets around: the tab bar, the menu screen behind "Menu", or both.
+export type PhoneNav = 'tabs' | 'menu' | 'both'
+// The phone's tab bar: a strip along the bottom, or floating over the page (working as iOS 26's).
+export type TabStyle = 'classic' | 'floating'
+
 // groupByDate: the Assistant's chat history grouped by date, or one list (the default).
 // copilotWidth: the Ask AI panel's width, as you last left it.
 type Saved = {
-  session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean
+  session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean; phoneNav: PhoneNav; tabStyle: TabStyle
   copilotWidth: number
 }
 
 const KEY = 'linear-kit:erp:v1'
 
-const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false, copilotWidth: 400 }
+const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false, phoneNav: 'tabs', tabStyle: 'classic', copilotWidth: 400 }
 
 function load(): Saved {
   try {
@@ -42,6 +47,8 @@ type ErpState = {
   forms: ErpForm[]
   favourites: string[]
   startPage: StartPage
+  phoneNav: PhoneNav
+  tabStyle: TabStyle
   groupByDate: boolean
   copilotWidth: number
   // A page's own title for the end of the breadcrumb, such as a chat's.
@@ -63,6 +70,8 @@ type ErpState = {
   saveForm: (form: ErpForm) => void
   toggleFavourite: (moduleId: string) => void
   setStartPage: (page: StartPage) => void
+  setPhoneNav: (nav: PhoneNav) => void
+  setTabStyle: (style: TabStyle) => void
   setGroupByDate: (byDate: boolean) => void
   setCopilotWidth: (width: number) => void
   setPageTitle: (title: string | null) => void
@@ -118,6 +127,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     forms,
     favourites: saved.favourites,
     startPage: saved.startPage,
+    phoneNav: saved.phoneNav,
+    tabStyle: saved.tabStyle,
     groupByDate: saved.groupByDate,
     copilotWidth: saved.copilotWidth,
     pageTitle,
@@ -141,7 +152,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     },
     update: (entity, ids, patch) => {
       setData((d) => ({ ...d, [entity]: d[entity].map((r) => (ids.includes(r.id) ? { ...r, ...patch } : r)) }))
-      const change = Object.entries(patch).map(([k, v]) => `${k} → ${v}`).join(', ')
+      // A field kept as JSON (a document's version history, an assessment's hazards) is not spelt out.
+      const change = Object.entries(patch).filter(([, v]) => !/^[[{]/.test(String(v))).map(([k, v]) => `${k} → ${v}`).join(', ')
       for (const id of ids) audit(`set ${change} on`, id)
     },
     remove: (entity, ids) => {
@@ -158,6 +170,8 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       favourites: s.favourites.includes(moduleId) ? s.favourites.filter((m) => m !== moduleId) : [...s.favourites, moduleId],
     })),
     setStartPage: (startPage) => setSaved((s) => ({ ...s, startPage })),
+    setPhoneNav: (phoneNav) => setSaved((s) => ({ ...s, phoneNav })),
+    setTabStyle: (tabStyle) => setSaved((s) => ({ ...s, tabStyle })),
     setGroupByDate: (groupByDate) => setSaved((s) => ({ ...s, groupByDate })),
     setCopilotWidth: (copilotWidth) => setSaved((s) => ({ ...s, copilotWidth })),
     setPageTitle,
@@ -166,7 +180,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       setPeek({ entity, id })
       const row = data[entity].find((r) => r.id === id)
       if (!row) return
-      const label = String(row.name ?? row.customer ?? row.vendor ?? row.subject ?? row.item ?? row.memo ?? row.employee ?? id)
+      const label = String(row.name ?? row.title ?? row.topic ?? row.activity ?? row.customer ?? row.vendor ?? row.subject ?? row.item ?? row.memo ?? row.employee ?? id)
       setRecent((list) => [{ entity, id, label }, ...list.filter((r) => r.id !== id)].slice(0, 6))
     },
     closePeek: () => setPeek(null),

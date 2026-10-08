@@ -21,7 +21,9 @@ npm install
 npm run dev
 ```
 It opens on http://localhost:5180. That is not Vite's default 5173, so it
-never clashes with another Vite app.
+never clashes with another Vite app. A `PORT` variable overrides it, which
+is how a second Claude session previews the kit while the first holds 5180
+(`autoPort` in `.claude/launch.json`).
 
 Add a shadcn component (it arrives with Hugeicons already):
 ```bash
@@ -74,11 +76,13 @@ linear-style-ui-kit/
     ├── blocks/                reusable blocks: props in, no sample data
     │   ├── ai/                prompt box, chat history (projects, pinned, chats by
     │   │                      date or as one list), chat library (All chats:
-    │   │                      search, filter by type), artifact panel, thinking
-    │   │                      trail, chat message, markdown, chat thread (with
-    │   │                      the welcome screen and prompt starters), AI
-    │   │                      summary card (the AI workspace, AI in the product
-    │   │                      and both ERP templates share them)
+    │   │                      search, filter by type), project page (a project's
+    │   │                      name, custom instructions, project knowledge and
+    │   │                      chats), artifact panel, thinking trail, chat
+    │   │                      message, markdown, chat thread (with the welcome
+    │   │                      screen and prompt starters), AI summary card (the
+    │   │                      AI workspace, AI in the product and both ERP
+    │   │                      templates share them)
     │   ├── account-menu.tsx   who is signed in, with their menu: a row at a sidebar's foot, or the avatar in a header
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
@@ -107,6 +111,12 @@ linear-style-ui-kit/
     │   ├── kanban-board.tsx   columns, drag and drop, "Move to…" menu, card shell
     │   ├── kpi-card.tsx       KPI card, delta badge, sparkline, grid
     │   ├── markdown.tsx       Markdown renderer (chat replies, artifacts, previews)
+    │   ├── mobile-shell.tsx   the phone app's frame (PWA): MobileShell, top bar, tab bar, floating
+    │   │                      button, bottom sheet and its options, chips, cards, grouped rows,
+    │   │                      the menu screen (MobileMenu: "Menu" opens every destination
+    │   │                      full screen in big type, as shadcn's site does on a phone), and
+    │   │                      the floating tab bar (MobileFloatingTabBar: over the page, search
+    │   │                      beside it, shrinking while you scroll down, as iOS 26's works)
     │   ├── notifications-menu.tsx  the bell's popover
     │   ├── period-picker.tsx  period switch, compare, date range picker
     │   ├── record-sheet.tsx   record peek: one record in a centred modal (center peek) or a panel from the right (side peek)
@@ -169,7 +179,8 @@ linear-style-ui-kit/
     │   ├── ai-chat/AiChatApp.tsx   the AI workspace filling the window
     │   ├── erp/               the ERP app (see "The ERP template")
     │   │   ├── assistant/     Ask AI: answers, shared chats, the Assistant page
-    │   │   └── forms/         the Forms module: form definitions, catalogue and fill pages, sample submissions
+    │   │   ├── forms/         the Forms module: form definitions, catalogue and fill pages, sample submissions
+    │   │   └── wsh/           the Workplace safety (WSH) module: sample records, and the peek's version history and risk matrix
     │   └── erp-ai/ErpAiApp.tsx     the ERP + AI edition of the same app
     └── pages/
         ├── KitchenSink.tsx      page shell, one section per page, header, shortcuts, Ctrl+K menu
@@ -192,8 +203,11 @@ linear-style-ui-kit/
             │                         exports QuickCreateDialog (the C shortcut)
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
             ├── AppShellSection.tsx   sidebar and header variations, mixed live (Two rows: a global
-            │                         header over the page or the whole app, the breadcrumb under it)
-            ├── app-shell/             its grouped list and board, Display and notifications menus
+            │                         header over the page or the whole app, the breadcrumb under it),
+            │                         then the phone app (PWA) layout
+            ├── app-shell/             its grouped list and board, Display and notifications menus,
+            │                         and PhoneShell (the mobile shell block on the kit's jobs, in a
+            │                         phone frame: install prompt, offline queue)
             ├── JobListSection.tsx    grouped list with bulk select
             ├── FilterBar.tsx         filter chips, saved views, display options
             ├── BoardSection.tsx      Kanban with drag and drop
@@ -235,7 +249,14 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **Blocks:** whole screens built from components, as shadcn calls them
   (list, board, issue detail, inbox, roadmap, dock schedule, settings,
   onboarding, sign-in, the AI workspace, AI in the product…)
-- **Layouts:** the frame pages sit in (App shells)
+- **Layouts:** the frame pages sit in (App shells): the desktop shells, mixed
+  live, and the phone app (PWA) layout in a phone-sized frame. Its controls:
+  opened in a browser tab or installed (standalone), navigation (tab bar,
+  menu screen or both), the tab bar's style (classic or floating), where the
+  main action sits (floating button, tab bar, top
+  bar), and Offline, which keeps changes
+  on the phone until you reconnect. It runs on the same jobs, so an edit in
+  the phone shows in the desktop frame above it
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
 
@@ -264,8 +285,10 @@ share the same stores, so a chat started in the kit shows up in the AI chat
 template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
 - `#/templates/ai-chat`: the AI workspace filling the window, with Settings.
   Its sidebar is laid out like the ERP + AI Assistant's: + New chat; Search
-  chats and All chats (a page: search, filter chips by type); Projects (each
-  with a menu: new chat in it, edit on its page, delete); Pinned; Chats (one
+  chats and All chats (a page: search, filter chips by type); Projects (named
+  in place, then opened on the project page: description, custom
+  instructions, project knowledge, its chats; each with a menu: new chat in
+  it, edit on its page, delete); Pinned; Chats (one
   list by default, or by date, kept in the browser; any type or one). A chat's type is
   the kind of work its first prompt asked for (`chatTypeOf` in
   `ai/engine.ts`: jobs, writing, research, invoices, code…), shown as an
@@ -289,23 +312,50 @@ session, company and starred modules are kept in the browser.
   notifications and the light / dark toggle) and the breadcrumb bar
   (company › module › section › page, folding to fit). With the sidebar
   hidden (`[`), the module switcher and the account move into the global
-  header. On a phone the sidebar is a sheet. Ask AI docks under the global
+  header. Below 768px wide the sidebar is a sheet. Ask AI docks under the global
   header, beside the breadcrumb and the page, which narrows to make room (the
   kit's docked panel): the Ask AI button opens and closes it, Escape closes
   it, its edge resizes it and the width is kept in the browser. Below 1024px
   wide it is a sheet over the page.
+- On a phone (under 768px, `phone.ts`) the frame is `PhoneShell.tsx`, the
+  kit's mobile shell block, not the sidebar folded up. A tab bar: Home,
+  Inbox (what needs you, the bell's alerts), Scan (in the middle: a form's QR
+  code, or a link typed in), Ask AI (the Ask AI sheet; the Assistant page in
+  ERP + AI) and More (modules, company, role, theme, start page, sign out).
+  Home is a stack of screens made from the route: launchpad › a module's
+  pages (`/<module>` with no page, a screen of its own on a phone) › a page ›
+  one thing on it (a form being filled in, which covers the tab bar). Each
+  has a back arrow named after the screen under it, and the page's own
+  heading stands for the title until it scrolls away. List pages show their
+  records as cards (`MobileListPage`: search, saved views and a status
+  filter as chips), with New as the floating button. A record opens full
+  width (the side peek). Inbox and More lie over the page, which stays
+  mounted under them. A page with its own part of the sidebar (the
+  Assistant's chats) opens it from the top bar. Both editions share it.
+  More › Navigation (kept in the browser): Tab bar, Menu, or Both. Menu
+  swaps the tab bar for the menu screen: "Menu" in the top bar (its two bars
+  turn into a cross) opens, under the bar, Home, Ask AI or the Assistant,
+  Inbox and Scan; the open module's pages with their counts; every module;
+  and the account settings. Every page is then a first screen, so only a
+  form being filled in keeps a back arrow. A choice, Escape or Menu again
+  closes it. Both keeps a tab bar too (Home, Inbox, Scan, Ask AI; no More).
+  Tab bar style: Classic (a strip along the bottom) or Floating, which works
+  as iOS 26's does without its glass look: a solid capsule over the page,
+  Scan among the tabs and search (the command palette) as a round button
+  beside it; scrolling down shrinks it to the current tab, scrolling up or a
+  tap brings it back.
 - Modules (`modules.tsx`): CRM, Sales, Inventory, Purchasing, Accounting,
-  Human resources, Forms, Administration. Each lists its pages; a list page is a
-  `ListSpec` (columns, saved views, create form, bulk actions) rendered by
-  `ListPage.tsx`. Roles decide which modules a user sees.
+  Human resources, Forms, Workplace safety, Administration. Each lists its
+  pages; a list page is a `ListSpec` (columns, saved views, create form, bulk
+  actions) rendered by `ListPage.tsx`. Roles decide which modules a user sees.
 - Every record opens in a centred modal (center peek, `Overlays.tsx`) and
   every list with a create spec gets the same create dialog.
 - Shortcuts: `Ctrl+K` / `⌘K` command palette (modules, pages, records by
   number or name, create, switch role or company), `Ctrl+J` / `⌘J` Ask AI,
   `G` then a letter for a module (`G C` CRM, `G S` Sales, `G I`
-  Inventory, `G P` Purchasing, `G A` Accounting, `G H` HR, `G X`
-  Administration, `G L` launchpad), `C` create on a list, `[` hide the
-  sidebar.
+  Inventory, `G P` Purchasing, `G A` Accounting, `G H` HR, `G W` Workplace
+  safety, `G X` Administration, `G L` launchpad), `C` create on a list, `[`
+  hide the sidebar.
 - Routes: `#/templates/erp/<module>/<page>`, for example
   `#/templates/erp/accounting/invoices`. A third segment names one thing on
   the page: `#/templates/erp/forms/catalogue/vehicle-check?context=SGX%204821`
@@ -322,8 +372,35 @@ session, company and starred modules are kept in the browser.
   the visit, and an edit makes a new version. Each form's QR button prints
   the code that opens it; the Scan button reads one. Ask AI answers "Which
   checks failed this week?" from the submissions.
+- Workplace safety (`wsh/`, module id `wsh`, for the operations, HR and
+  admin roles): the WSH module, with sample records made up in
+  `wsh/sample.ts`. Overview (days since the last incident report, inspection
+  pass rate, certificates to renew, reviews due; inspections by week;
+  training compliance by course; one worklist of everything due for renewal
+  or review, with Book refresher and Start review). Toolbox meetings (held or
+  scheduled, attendance in the peek). Checklists and inspections: an
+  inspection is a filled-in checklist, like a paper form handed in. The
+  Inspections page lists the submissions of checklists in the Inspections
+  category (site safety, fire safety, racking), passed or failed from their
+  checks, with every answer in the peek; New inspection picks a checklist
+  and fills it in at `/wsh/inspections/<form>`, then comes back to the list.
+  Checklists is the Forms catalogue filtered to this module (those three,
+  the hot work permit and the incident report). A `ListSpec` may `filter`
+  its entity's records, which is how Inspections shows only its own
+  submissions. Documents and training: Safety documents
+  with versioning (each record keeps its version history as JSON; the peek
+  lists it and publishes the next minor or major version, which approves the
+  document from today and sets the review a year out; a document past its
+  review date reads Review due) and Training certificates (valid, expiring
+  within 60 days, expired). Risk management: Risk assessments, each with its
+  hazards (severity × likelihood on the 5 × 5 matrix, Low 1–4, Medium 5–12,
+  High 15–25); the peek draws the matrix with the hazards counted in their
+  cells and lists them worst first with their controls. Ask AI answers about
+  certificates, inspections, toolbox meetings, risk assessments and safety
+  documents; the launchpad lists expired certificates under Needs your
+  attention.
 - Ask AI (`Copilot.tsx`, with its answers, chats and views in `assistant/`)
-  answers from the live records: about 25 kinds of question, scripted, no
+  answers from the live records: about 30 kinds of question, scripted, no
   model. Record numbers in answers open the record's peek, with Ask AI still
   open beside the page.
 
@@ -337,15 +414,20 @@ into it: switch features on with `edition().assistant` instead. It adds:
 - Home › Assistant: the full-page chat. Its chat history fills the app
   sidebar under the Home pages (a page's `sidebar`), so there is still one
   sidebar, laid out like the big chat apps: + New chat; Search chats and All
-  chats; Projects (folders of chats, each with
-  instructions, set up in a dialog; a project's menu offers a new chat in
-  it, edit and delete); Pinned; then Chats, one list by default, whose
+  chats; Projects (folders of chats, named in place; a project's menu offers
+  a new chat in it, edit and delete); Pinned; then Chats, one list by default, whose
   options button groups them by date (kept in the browser) and shows one type of
   chat. Every chat shows the icon of the module it is about. The
   breadcrumb ends with the chat's title.
 - Home › All chats (reached from that sidebar, not listed under Home): every
   chat, with a search and filter chips by type (the module a chat is about,
   from `topicOf` in `answers.ts`).
+- Home › Projects › a project (`/home/project/<id>`, reached from that
+  sidebar: clicking a project, New project or its Edit): the kit's project
+  page block, as the big chat apps open a project. Its description, custom
+  instructions, project knowledge (files, kept for the visit) and chats;
+  the breadcrumb ends with its name. The scripted answers follow neither the
+  instructions nor the files; the views show them.
 - Incognito (the toggle at the top right of the Assistant; not in the
   sidebar): chats that stay out of the history and are deleted when
   you leave them. The scripted answers cannot follow a project's
@@ -365,7 +447,9 @@ Section ids and shortcut letters live in `src/pages/nav.ts`.
 The colour scheme, text size and corners are in `src/styles.css`, so they
 can be moved as one piece:
 - Near-neutral greys with a faint cool tint, and one indigo accent (`--brand`)
-- Borders drawn at 7–9% opacity instead of solid greys
+- Borders drawn at low opacity instead of solid greys: 9% in light mode,
+  12% in dark (inputs 18%), so dark stays dark but every outline still reads,
+  as in an IDE or Linear
 - 13px Inter body text (with Inter's alternate letters), 8px corner radius
 - Status colours as tokens: `--status-todo`, `--status-progress`,
   `--status-done`, `--status-blocked`
@@ -412,8 +496,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 126 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
-components, 32 blocks and 9 lib files. Which level becomes which item:
+needs. 128 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
+components, 34 blocks and 9 lib files. Which level becomes which item:
 `docs/architecture.md`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes

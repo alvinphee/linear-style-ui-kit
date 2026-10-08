@@ -13,13 +13,17 @@ const TEXT: Record<string, string> = {
   operator: 'Ravi Kumar', hours: '4210', sku: 'SKU-1004', counted: '118', system: '120', coldroom: '4', notes: '', driver: 'Daniel Tan',
   odometer: '128450', merchant: 'Grab', amount: '38.50', purpose: 'Taxi to the client visit', name: 'Jamie Ng', company: 'Kestrel Labs',
   host: 'Priya Nair', comments: 'Quick delivery, friendly driver.', where: 'Dock door 03', description: 'A pallet slipped off the forks while reversing. Nobody nearby.',
-  reporter: 'Marcus Lim', start: addDays(TODAY, 7),
+  reporter: 'Marcus Lim', start: addDays(TODAY, 7), inspector: 'Siti Rahman', duration: '2', requestedBy: 'Farid Hassan', authorisedBy: 'Ravi Kumar',
 }
 const CONTEXTS: Record<string, string[]> = {
   'forklift-pre-use': ['FL-03', 'FL-07', 'FL-12'],
   'stock-count': ['A-04-2', 'B-11-1', 'C-02-4'],
   'vehicle-check': ['SGX 4821', 'SKT 907', 'SLM 2210'],
   'employee-onboarding': ['Zoe Tan', 'Omar Aziz'],
+  'site-safety-inspection': ['Loading bay', 'Warehouse A', 'Workshop', 'Yard'],
+  'fire-safety-inspection': ['Warehouse A', 'Warehouse B', 'Office', 'Workshop'],
+  'racking-inspection': ['Aisle A-04', 'Aisle B-11', 'Aisle C-02'],
+  'hot-work-permit': ['Dock door 03', 'Workshop bay 2', 'Yard, container line'],
 }
 
 function answers(formId: string, rand: () => number, failRate: number): FormValues {
@@ -47,11 +51,11 @@ export function sampleSubmissions(rand: () => number, people: readonly string[])
   const pad = (n: number) => String(n).padStart(2, '0')
   const rows: Row[] = []
   let n = 1080
-  // About three a day over the past twelve days, the shop-floor checks most often.
-  const weights = ERP_FORMS.map((f) => (f.context ? 3 : f.category === 'Warehouse' ? 2 : 1))
+  // About three a day over the past twelve days, the shop-floor checks and inspections most often.
+  const weights = ERP_FORMS.map((f) => (f.category === 'Inspections' ? 4 : f.context ? 3 : f.category === 'Warehouse' ? 2 : 1))
   const total = weights.reduce((a, b) => a + b, 0)
   for (let day = 0; day < 12; day++) {
-    const count = day === 0 ? 4 : 2 + Math.floor(rand() * 3)
+    const count = day === 0 ? 5 : 3 + Math.floor(rand() * 3)
     for (let i = 0; i < count; i++) {
       let pick = rand() * total
       const form = ERP_FORMS.find((_, k) => (pick -= weights[k]) < 0) ?? ERP_FORMS[0]
@@ -62,6 +66,7 @@ export function sampleSubmissions(rand: () => number, people: readonly string[])
         id: `SUB-${n--}`,
         form: form.name,
         formId: form.id,
+        category: form.category ?? '',
         context: contexts ? contexts[Math.floor(rand() * contexts.length)] : '',
         result: RESULT_LABEL[resultOf(form, values)],
         passed: score?.passed ?? 0,

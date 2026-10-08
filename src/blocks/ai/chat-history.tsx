@@ -181,9 +181,11 @@ export function ChatMenuItems({ kit, chat, projects, onPin, onRename, onMove, on
 
 // A small input that edits a name in place: Enter or leaving it saves,
 // Escape cancels. It takes focus and selects its text when it appears.
-export function RenameInput({ initial, label, onDone, className }: {
+export function RenameInput({ initial, label, placeholder, onDone, className }: {
   initial: string
   label: string
+  // Shown while empty, such as "Project name" for a new project.
+  placeholder?: string
   // null means cancelled (or left empty).
   onDone: (value: string | null) => void
   className?: string
@@ -212,6 +214,7 @@ export function RenameInput({ initial, label, onDone, className }: {
       ref={ref}
       value={value}
       aria-label={label}
+      placeholder={placeholder}
       onChange={(e) => setValue(e.target.value)}
       onKeyDown={(e) => {
         e.stopPropagation()
@@ -225,7 +228,7 @@ export function RenameInput({ initial, label, onDone, className }: {
         }
       }}
       onBlur={() => finish(true)}
-      className={cn('bg-background border-ring/60 ring-ring/20 h-6 min-w-0 flex-1 rounded-md border px-1.5 text-xs ring-2 outline-none', className)}
+      className={cn('bg-background border-ring/60 ring-ring/20 placeholder:text-muted-foreground h-6 min-w-0 flex-1 rounded-md border px-1.5 text-xs ring-2 outline-none', className)}
     />
   )
 }
@@ -759,6 +762,7 @@ export function ChatHistory({
                       <RenameInput
                         initial=""
                         label="Project name"
+                        placeholder="Project name, then Enter"
                         onDone={(name) => {
                           setCreating(false)
                           if (name) go(() => onCreateProject(name))

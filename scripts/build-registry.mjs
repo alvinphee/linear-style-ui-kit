@@ -48,6 +48,7 @@ Object.assign(DESCRIPTIONS, {
   'chat-history': 'Chat history: the sidebar of an AI chat app, with search, projects and pinned chats',
   'chat-message': "Chat message: the person's message, the assistant's reply and its actions bar",
   'chat-thread': 'Chat thread: the scrolling messages, and the welcome screen with prompt starters',
+  'project-page': "Project page: a project's instructions, knowledge (files) and chats, on a page of its own",
   'prompt-box': 'Prompt box (composer): growing text area, attached files, toolbar and send',
   'thinking-trail': 'Thinking trail: what an agent did on the way to its answer, in one quiet line',
   'use-timers': 'setTimeout that is cleared when the component unmounts',

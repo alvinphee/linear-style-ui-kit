@@ -7,12 +7,15 @@ import type { FormField, FormValues } from '@/blocks/form-fields'
 import { RecordSheet, RecordSheetContent, type RecordActivity } from '@/blocks/record-sheet'
 import { Button } from '@/components/ui/button'
 import { copyText } from '@/lib/clipboard'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { TODAY, formatDate } from './format'
 import { specFor } from './modules'
+import { PHONE } from './phone'
 import { useErp } from './store'
 import type { Field, ListSpec, Row, Value } from './types'
 import { CellValue, StatusBadge } from './ui'
 import { SubmissionDetails } from './forms/FormsPages'
+import { DocumentVersions, RiskAssessmentDetails, ToolboxMeetingDetails } from './wsh/WshPages'
 
 const title = (spec: ListSpec) => spec.singular[0].toUpperCase() + spec.singular.slice(1)
 
@@ -32,9 +35,11 @@ export function RecordPeek() {
   const row = peek && spec ? data[spec.entity].find((r) => r.id === peek.id) : undefined
   // Notes stay with their record for this visit, so stepping away and back keeps them.
   const [notes, setNotes] = useState<Record<string, { id: number; text: string }[]>>({})
+  // On a phone the record fills the screen, sliding in like a pushed screen.
+  const phone = useMediaQuery(PHONE)
 
   return (
-    <RecordSheet open={!!row} onOpenChange={(open) => !open && closePeek()}>
+    <RecordSheet open={!!row} onOpenChange={(open) => !open && closePeek()} peek={phone ? 'side' : 'center'}>
       {row && spec && (
         <RecordSheetContent
           key={row.id}
@@ -90,6 +95,9 @@ export function RecordPeek() {
           deleteDescription={`It is removed from ${spec.plural.toLowerCase()} for everyone in this company.`}
         >
           {spec.entity === 'submissions' && <SubmissionDetails row={row} />}
+          {spec.entity === 'safetyDocuments' && <DocumentVersions row={row} />}
+          {spec.entity === 'riskAssessments' && <RiskAssessmentDetails row={row} />}
+          {spec.entity === 'toolboxMeetings' && <ToolboxMeetingDetails row={row} />}
         </RecordSheetContent>
       )}
     </RecordSheet>
@@ -126,7 +134,7 @@ function navigation(rows: Row[], id: string, open: (id: string) => void) {
 }
 
 function createdOn(row: Row) {
-  const date = row.created || row.issued || row.ordered || row.date
+  const date = row.created || row.issued || row.ordered || row.date || row.assessed || row.effective || row.scheduled
   return date ? formatDate(String(date), true) : undefined
 }
 

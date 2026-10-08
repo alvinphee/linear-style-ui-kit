@@ -5,15 +5,18 @@ import { Button } from '@/components/ui/button'
 import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { isTyping } from '@/lib/keyboard'
 import { usePath } from '@/lib/router'
+import { useMediaQuery } from '@/lib/use-media-query'
 import { CommandPalette } from './CommandPalette'
 import { AssistantProvider, useAssistant } from './assistant/store'
 import { CopilotPanel } from './Copilot'
 import { ROLE_LABEL } from './data'
-import { ListPage } from './ListPage'
+import { ListPage, MobileListPage } from './ListPage'
 import { Login, Companies } from './Login'
 import { MODULES, moduleById, pageFor, pagesOf } from './modules'
 import { CreateDialog, RecordPeek } from './Overlays'
 import { CLASSIC, landingPage, setEdition, type Edition } from './edition'
+import { PHONE } from './phone'
+import { PhoneShell } from './PhoneShell'
 import { base, go, parseRoute } from './route'
 import { Shell } from './Shell'
 import { ErpProvider, useErp } from './store'
@@ -38,6 +41,7 @@ function ErpRoutes() {
   const route = parseRoute(path)
   const { session, company, setPaletteOpen, copilotOpen, setCopilotOpen, startCreate, peek, closePeek, startPage, pageTitle, setReturnTo } = useErp()
   const { focusComposer } = useAssistant()
+  const phone = useMediaQuery(PHONE)
 
   // Guards: sign in first, then choose a company. Replace, so Back skips them.
   const target = !session ? 'login' : !company && route.screen !== 'companies' ? 'companies' : session && route.screen === 'login' ? 'home' : null
@@ -125,10 +129,13 @@ function ErpRoutes() {
   if (!session || route.screen === 'login') return <Login />
   if (!company || route.screen === 'companies') return <Companies />
 
-  return (
-    <Shell module={module} page={page} aside={<CopilotPanel />}>
-      {allowed ? (
-        page.render ? page.render() : page.list ? <ListPage key={`${module.id}/${page.id}`} spec={page.list} /> : null
+  // A phone gets its own frame (tab bar, stacked screens) and lists as cards.
+  const List = phone ? MobileListPage : ListPage
+  const index = phone && route.screen === 'app' && !route.page && module.id !== 'home'
+  const content = (
+    <>
+      {index ? null : allowed ? (
+        page.render ? page.render() : page.list ? <List key={`${module.id}/${page.id}`} spec={page.list} /> : null
       ) : (
         <Empty className="h-full">
           <EmptyHeader>
@@ -146,6 +153,21 @@ function ErpRoutes() {
       <CommandPalette module={module} />
       <RecordPeek />
       <CreateDialog />
-    </Shell>
+    </>
+  )
+
+  // …/<module> with no page is, on a phone, the module's list of pages.
+  return phone ? (
+    <PhoneShell
+      module={module}
+      page={page}
+      index={index}
+      rest={route.screen === 'app' ? route.rest : null}
+      aside={<CopilotPanel />}
+    >
+      {content}
+    </PhoneShell>
+  ) : (
+    <Shell module={module} page={page} aside={<CopilotPanel />}>{content}</Shell>
   )
 }

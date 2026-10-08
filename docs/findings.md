@@ -675,3 +675,166 @@ polished) and be resizable, and for the other side slide-outs to be modals.
   built forms in localStorage and an app can keep them in a database the
   same way. Sample forms with `validate` functions lose them in JSON, which
   is right: a stored form's rules are the schema's built-in ones.
+
+## Dark mode that still shows its outlines (added 2026-10-07)
+The first dark theme was too dark: background at L 0.17 with borders at 7%
+white, so a text field's outline or a card's edge needed a squint. Linear,
+VS Code's "Dark modern" and phone dark modes stay dark but keep each step of
+the grey scale a clear step up, with borders around 12% white and input
+borders nearer 18%. The `.dark` block in `styles.css` now follows that:
+background 0.195, card 0.225, popover 0.255, muted 0.265, secondary 0.29;
+`--border` 12%, `--input` 18%, `--accent` 9%, the sidebar a shade darker
+than the page with a 10% seam. Muted text went from 0.66 to 0.70 for the
+same reason. Light mode is unchanged. Everything else that reads an outline
+got it for free, because every border in the kit goes through these tokens.
+
+## A project is a page, not a dialog (added 2026-10-07)
+ChatGPT, Claude and Gemini open a project as a screen of its own: title,
+custom instructions, project knowledge (the files) and the chats in it. The
+ERP + AI edition had a two-field dialog instead, with no files at all, while
+the AI chat template already had a page written inside its kit section. The
+page is now a block (`src/blocks/ai/project-page.tsx`) and both apps render
+it; the ERP got a `files` field on its projects and a `/home/project/<id>`
+route, so a project can be linked and the breadcrumb ends with its name.
+What stays a dialog is quick create: name it in the sidebar, then land on
+the page. Nobody writes a thousand characters of instructions before they
+have seen the project.
+
+Two terms worth keeping straight (now in the glossary): the feature is
+"project knowledge". RAG (retrieval-augmented generation: index the files,
+put only the matching chunks in the prompt) and long context ("context
+stuffing": paste the whole lot in every turn) are the two ways to get those
+files to the model, not the feature's name. The kit's hints say the
+assistant "draws on" the files, which commits to neither.
+
+Vite could not hot-reload `modules.tsx` and `assistant/AssistantPage.tsx`
+while they changed: the two import each other (the module list names the
+Assistant pages, and the pages read the module list), so a reload of one
+re-ran the other before its icons were defined and the page went blank. A
+full reload fixes it. The cycle predates this work; worth breaking one day.
+
+## A new ERP module is mostly data (added 2026-10-07)
+The Workplace safety module (toolbox meetings, inspections, checklists,
+safety documents with versions, training certificates, risk assessments)
+took five `ListSpec`s, a sample generator and an overview; every list, peek,
+create dialog, bulk action, saved view, palette search and launchpad tile
+came from the existing machinery. What it needed of its own was small and
+sits in `src/templates/erp/wsh/`: the version history and Publish inside a
+document's peek, and the 5 × 5 risk matrix inside an assessment's. Both
+keep their structured part (versions, hazards) as a JSON string on the row,
+the way submissions keep their answers, so the generic table never sees it;
+the store's audit line now skips values that look like JSON, or a published
+version would have written the whole history into the audit trail.
+
+Checklists did not need a new page: the module's Checklists page is the
+Forms catalogue filtered to `module: 'wsh'`, and the incident report moved
+there from Administration, where it never belonged. Inspections did not
+need their own records either. The first cut kept a planned list of
+inspections (type, inspector, date, a status set by hand) beside the
+checklists, with nothing joining them; the owner's model was simpler: an
+inspection *is* the filled-in checklist, like a paper form handed to the
+boss. So the Inspections page is the submissions of checklists in the
+Inspections category, New inspection picks one and fills it in, and the
+result comes from the checks. One generic hook made that possible: a
+`ListSpec` can `filter` its entity's records, so the same submissions
+appear in Forms › Submissions and in WSH › Inspections without being stored
+twice. A submission now keeps its form's category for that. Two statuses were
+reused rather than invented (Expired, Expiring), and Expired turned red: a
+lapsed certificate is a stop, and an expired quotation reads the same way.
+
+A second Claude session cannot preview the kit while the first holds port
+5180 (`strictPort`). The dev server now takes a `PORT` variable, and the
+launch config sets `autoPort`, so each session gets its own server.
+
+## The bulk bar takes the toolbar's place (added 2026-10-07)
+Selecting rows used to insert the bulk bar above the table, so every table
+jumped down a row the moment the first checkbox was ticked, and back up
+when the selection cleared. Gmail and the Material data table put the
+selection actions where the toolbar was instead. The data table block now
+lays the bar over its toolbar (or over the column header when it has no
+toolbar), with the covered controls made inert and invisible, so the rows
+stay exactly where they were. The bar scrolls sideways rather than
+wrapping, so it is never taller than what it covers.
+
+## A phone layout is its own frame, not the desktop one folded (added 2026-10-08)
+The desktop shells already work at 375px: the sidebar becomes a sheet, the
+table drops columns, the record opens in a modal. That is a page that
+survives a phone, not one made for it. The phone layout on the App shells
+page swaps the frame and keeps everything inside it: a tab bar for the
+sidebar, a pushed screen with a back arrow for the centre peek, cards for
+table rows, bottom sheets for menus, the main action at the foot. The
+components (status and priority icons, avatars, label dots, the search
+field, empty states) and the job store are the same ones, so an edit made
+in the phone shows in the desktop frame above it.
+
+Two things were needed from below. shadcn's `SheetContent` always portals
+to the body and covers the window; it now takes `container`, and with one
+it is positioned inside that element, so a bottom sheet stays inside the
+phone's screen. And each tab keeps its own stack of screens, so going to
+Inbox and back to Issues returns to the issue you had open; tapping the tab
+you are on empties its stack, as phone apps do.
+
+What a real PWA adds is not drawn, only mimicked: the manifest
+(`display: standalone`, icons, theme colour), the service worker (cache the
+app shell, queue changes, background sync) and `env(safe-area-inset-*)`,
+which the frame already uses and which is zero outside an installed app.
+
+## The ERP's phone layout is a route stack, not a second app (added 2026-10-08)
+The phone layout moved from a demo on the App shells page into a block,
+`mobile-shell`, once the ERP needed it too: the demo and the ERP now draw
+the same top bar, tab bar, floating button, bottom sheets, chips, cards and
+grouped rows. Below 768px the ERP renders `PhoneShell` instead of `Shell`
+around the same page; nothing in the modules changed.
+
+The stack of screens is the route itself, which already had the levels:
+launchpad, module, page, one thing on the page. The only new address is
+`/<module>` with no page, which a phone shows as the module's list of pages
+and a computer, as before, as its first page; `openModule` (in `phone.ts`)
+picks which to go to. Because every screen is a route, the phone's Back
+button and the top bar's back arrow always agree, and a scanned QR code
+lands on the right screen with the right back arrow.
+
+Three things were found by checking every page at 375px. A wrapper with
+`min-h-full` broke the Assistant: its chat fills its parent with `h-full`,
+which needs a definite height, so the composer slid under the tab bar;
+`h-full` on the wrapper fixed it, and taller pages still scroll. Inbox and
+More must lie over the page rather than replace it, or a list loses its
+search and the record peek, palette and create dialog (which live beside
+the page) unmount. And a card needs the amount's label ("Balance due"): a
+bare $0.00 on a paid invoice reads as a mistake.
+
+## A menu screen beside the tab bar, and no dialogs inside it (added 2026-10-08)
+The phone layout now offers a second way round, taken from shadcn's own
+site at phone width: "Menu" in the top bar, whose two bars turn into a
+cross, opens every destination full screen under the bar, in big type under
+small headings, on a blurred page. Their version is a popover sized to the
+space under the header; the kit's (`MobileMenu`) is a layer inside the
+mobile shell under the top bar, so it works in the App shells page's phone
+frame as well as full screen, and what it covers is made `inert`. It is an
+option, not a replacement: More › Navigation in the ERP, a picker on the
+App shells page.
+
+Two bugs came from it. Escape inside the menu did nothing, because the
+menu stopped the key from reaching its own document listener; it now
+listens once, on the document, and marks the key handled. And a dialog
+must not open over the open menu: the role sheet, rendered inside the
+menu's settings, stalled the page on opening the menu, and opened from
+there it shut at once, its focus taken back by the menu. Every choice in
+the menu now closes it first and then acts (Scan, Ask AI, Role), and the
+sheets live beside the shell, not in the settings the menu reuses.
+
+## iOS 26's tab bar is behaviour, not glass (added 2026-10-08)
+Asked for "a tab bar like iOS 26", the first cut copied its look as well:
+translucent glass with blur. What was wanted was how it works: it floats
+over the page instead of taking a strip of it, search sits apart as a round
+button, and it shrinks to the current tab while you scroll down, coming
+back as you scroll up or tap it. The floating bar is now solid, in the
+kit's card style. Ask which is meant when a reference has both a look and a
+behaviour; this kit keeps its own look.
+
+MobileShell measures the scroll and tells the bar when to shrink (its
+`floatingBar` is a function of `minimized`), so any page gets the
+behaviour without knowing about it. The page's last cards need room to
+scroll out from under the bar (`pb-28`), and the floating New button sits
+above it.
+

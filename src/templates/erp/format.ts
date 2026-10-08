@@ -38,17 +38,18 @@ const TONES: Record<string, Tone> = {
   // Good outcomes
   Won: 'success', Accepted: 'success', Paid: 'success', Delivered: 'success', Received: 'success', Approved: 'success',
   Active: 'success', Posted: 'success', Completed: 'success', Qualified: 'success', 'In stock': 'success', Connected: 'success',
-  Reconciled: 'success', Passed: 'success',
+  Reconciled: 'success', Passed: 'success', Valid: 'success', Low: 'success',
   // In motion
   Sent: 'info', Confirmed: 'info', Contacted: 'info', Proposal: 'info', 'In transit': 'info', Shipped: 'info',
   Ordered: 'info', Processing: 'progress', Negotiation: 'progress', 'Partially paid': 'progress', 'Partially received': 'progress',
-  Discovery: 'progress', Scheduled: 'progress', Invited: 'info', 'On leave': 'info', Probation: 'progress',
+  Discovery: 'progress', Scheduled: 'progress', Invited: 'info', 'On leave': 'info', Probation: 'progress', 'In review': 'progress',
   // Needs attention
   'Awaiting approval': 'warning', Pending: 'warning', Overdue: 'danger', 'Low stock': 'warning', Expiring: 'warning',
-  'Ready to pick': 'warning', New: 'info', Open: 'warning', Unpaid: 'warning',
+  'Ready to pick': 'warning', New: 'info', Open: 'warning', Unpaid: 'warning', 'Review due': 'warning', Medium: 'warning',
   // Stopped
-  Lost: 'danger', Rejected: 'danger', Failed: 'danger', Cancelled: 'neutral', Void: 'neutral', Expired: 'neutral', 'Out of stock': 'danger',
+  Lost: 'danger', Rejected: 'danger', Failed: 'danger', Cancelled: 'neutral', Void: 'neutral', Expired: 'danger', 'Out of stock': 'danger',
   Suspended: 'danger', Inactive: 'neutral', Archived: 'neutral', Draft: 'neutral', Closed: 'neutral', Disconnected: 'neutral',
+  Superseded: 'neutral', High: 'danger',
 }
 
 export const toneOf = (status: string): Tone => TONES[status] ?? 'neutral'

@@ -62,9 +62,11 @@ function registryWatch(): Plugin {
   }
 }
 
-// Port 5180, not Vite's default 5173, so it never clashes with another Vite app.
+// Port 5180, not Vite's default 5173, so it never clashes with another Vite
+// app. A PORT variable overrides it, so a second copy (another Claude
+// session's preview) can run beside the first.
 export default defineConfig({
   plugins: [react(), tailwindcss(), registryWatch()],
   resolve: { alias: { '@': path.resolve(root, './src') } },
-  server: { port: 5180, strictPort: true },
+  server: { port: Number(process.env.PORT) || 5180, strictPort: true },
 })

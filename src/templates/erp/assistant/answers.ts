@@ -3,7 +3,7 @@ import { plural } from '@/lib/text'
 import { ROLE_LABEL } from '../data'
 import { TODAY, addDays, daysBetween, formatDate } from '../format'
 import { MODULES, moduleById } from '../modules'
-import type { Data, EntityId, ErpModule, Role, Row } from '../types'
+import { INSPECTION_CATEGORY, type Data, type EntityId, type ErpModule, type Role, type Row } from '../types'
 
 // Ask AI's answers. They are scripted from the live records (no model is
 // called): about 25 kinds of question, matched by keywords, each answered
@@ -57,6 +57,7 @@ export const PROMPTS: Record<string, string[]> = {
   hr: ['Who is on leave this week?', 'When is the next payroll run?', 'How many employees are on probation?'],
   admin: ['Which users have not set up 2FA?', 'Which users are invited or suspended?', 'What changed in the audit trail today?'],
   forms: ['Which checks failed this week?', 'What was submitted today?'],
+  wsh: ['Which certificates expire soon?', 'Which inspections failed this week?', 'Which risk assessments are due for review?', 'What toolbox meetings are this week?'],
 }
 
 // The home prompts, then the first prompt of each module the role can open.
@@ -597,6 +598,90 @@ const INTENTS: Intent[] = [
       }
       blocks.push(p(`${plural(unpaid.length, 'order')} ${isAre(unpaid.length)} still unpaid, worth ${money(sum(unpaid, 'amount'))}.`))
       return { blocks, source: plural(data.salesOrders.length, 'sales order'), links: [{ label: 'Sales orders', module: 'sales', page: 'orders' }] }
+    },
+  },
+  // Workplace safety and health. Before the forms answers, which also match "inspection".
+  {
+    module: 'wsh', match: /certif|training|licen[cs]e|competen|refresher|\bexpir/,
+    answer: ({ data }) => {
+      const expired = data.certifications.filter(is('Expired')).sort(earliest('expires'))
+      const expiring = data.certifications.filter(is('Expiring')).sort(earliest('expires'))
+      const source = plural(data.certifications.length, 'training certificate')
+      const links: Link[] = [{ label: 'Training certificates', module: 'wsh', page: 'training' }]
+      if (!expired.length && !expiring.length) return { blocks: [p('Every training certificate is valid, and none expires in the next 60 days.')], source, links }
+      const blocks: Block[] = []
+      if (expired.length) {
+        blocks.push(
+          p(`${plural(expired.length, 'certificate')} ${expired.length === 1 ? 'has' : 'have'} expired, so ${expired.length === 1 ? 'that person' : 'those people'} should not do that work until retrained:`),
+          list(expired.slice(0, 5).map((r) => [ref('certifications', r.id), ` · ${str(r, 'employee')}, ${str(r, 'course')}, expired ${formatDate(str(r, 'expires'))}`])),
+        )
+      }
+      if (expiring.length) {
+        blocks.push(
+          p(`${plural(expiring.length, 'certificate')} ${expiring.length === 1 ? 'expires' : 'expire'} within 60 days${eg(expiring.length, 'the soonest')}`),
+          list(expiring.slice(0, 5).map((r) => [ref('certifications', r.id), ` · ${str(r, 'employee')}, ${str(r, 'course')}, expires ${formatDate(str(r, 'expires'))}`])),
+        )
+      }
+      blocks.push(p('Book the refresher before the date passes; a certificate renews from the course date, not from expiry.'))
+      return { blocks, source, links, followUps: ['Which inspections failed this week?'] }
+    },
+  },
+  {
+    module: 'wsh', match: /risk assess|\bhazard|high.?risk|\bRAs?\b/,
+    answer: ({ data }) => {
+      const due = data.riskAssessments.filter(is('Review due', 'In review')).sort(earliest('reviewDue'))
+      const high = data.riskAssessments.filter((r) => r.rating === 'High')
+      const blocks: Block[] = [
+        p(`${plural(data.riskAssessments.length, 'risk assessment')} cover the site's activities; ${plural(high.length, 'activity', 'activities')} ${isAre(high.length)} rated high risk${eg(high.length, 'including')}`),
+        list(high.slice(0, 4).map((r) => [ref('riskAssessments', r.id), ` · ${str(r, 'activity')}, ${str(r, 'area')}, ${plural(num(r, 'hazards'), 'hazard')}`])),
+      ]
+      if (due.length) {
+        blocks.push(
+          p(`${plural(due.length, 'assessment')} ${isAre(due.length)} due for review or being reviewed:`),
+          list(due.slice(0, 4).map((r) => [ref('riskAssessments', r.id), ` · ${str(r, 'activity')}, review was due ${formatDate(str(r, 'reviewDue'))}, ${str(r, 'status').toLowerCase()}`])),
+        )
+      } else blocks.push(p('Every assessment is within its review date.'))
+      return { blocks, source: plural(data.riskAssessments.length, 'risk assessment'), links: [{ label: 'Risk assessments', module: 'wsh', page: 'risk-assessments' }], followUps: ['Which certificates expire soon?'] }
+    },
+  },
+  {
+    module: 'wsh', match: /toolbox|tool box|safety (talk|brief|meeting)/,
+    answer: ({ data }) => {
+      const { start, end } = thisWeek()
+      const week = data.toolboxMeetings.filter((r) => str(r, 'date') >= start && str(r, 'date') <= end).sort(earliest('date'))
+      const held = week.filter(is('Completed'))
+      const coming = week.filter(is('Scheduled'))
+      const blocks: Block[] = [p(`${plural(week.length, 'toolbox meeting')} this week: ${held.length} held, ${coming.length} still to come.${week.length ? ' Soonest first:' : ''}`)]
+      if (week.length) blocks.push(list(week.slice(0, 6).map((r) => [ref('toolboxMeetings', r.id), ` · ${str(r, 'topic')}, ${str(r, 'site')}, ${formatDate(str(r, 'date'))} ${str(r, 'time')}, ${str(r, 'status').toLowerCase()}${num(r, 'attendees') ? `, ${num(r, 'attendees')} attended` : ''}`])))
+      return { blocks, source: plural(data.toolboxMeetings.length, 'toolbox meeting'), links: [{ label: 'Toolbox meetings', module: 'wsh', page: 'toolbox' }] }
+    },
+  },
+  {
+    module: 'wsh', match: /inspection|safety walk/,
+    answer: ({ data }) => {
+      const all = data.submissions.filter((r) => str(r, 'category') === INSPECTION_CATEGORY)
+      const { start } = thisWeek()
+      const week = all.filter((r) => str(r, 'submittedAt').slice(0, 10) >= start)
+      const failed = week.filter((r) => str(r, 'result') === 'Failed').sort((a, b) => str(b, 'submittedAt').localeCompare(str(a, 'submittedAt')))
+      const blocks: Block[] = [
+        p(`${plural(week.length, 'inspection')} ${week.length === 1 ? 'has' : 'have'} been submitted this week, ${week.length - failed.length} passed and ${failed.length} failed.${failed.length ? ' The failed ones, latest first:' : ''}`),
+      ]
+      if (failed.length) {
+        blocks.push(list(failed.slice(0, 5).map((r) => [ref('submissions', r.id), ` · ${str(r, 'form')}${str(r, 'context') ? ` for ${str(r, 'context')}` : ''}: ${plural(num(r, 'failed'), 'fail')}, ${str(r, 'submittedBy')}, ${formatDate(str(r, 'submittedAt').slice(0, 10))}`])))
+        blocks.push(p('Open one to see which checks failed and the inspector\'s notes.'))
+      }
+      return { blocks, source: plural(all.length, 'inspection'), links: [{ label: 'Inspections', module: 'wsh', page: 'inspections' }, { label: 'Safety checklists', module: 'wsh', page: 'checklists' }], followUps: ['Which checks failed this week?'] }
+    },
+  },
+  {
+    module: 'wsh', match: /safety document|\bswp\b|safe work procedure|\bpolicy\b|\bprocedures?\b|review due|due for review/,
+    answer: ({ data }) => {
+      const due = data.safetyDocuments.filter(is('Review due')).sort(earliest('reviewDue'))
+      const inReview = data.safetyDocuments.filter(is('In review', 'Draft'))
+      const blocks: Block[] = [p(`${plural(data.safetyDocuments.length, 'safety document')} are in the register. ${due.length ? `${plural(due.length, 'document')} ${isAre(due.length)} past the review date:` : 'None is past its review date.'}`)]
+      if (due.length) blocks.push(list(due.slice(0, 5).map((r) => [ref('safetyDocuments', r.id), ` · ${str(r, 'title')} v${str(r, 'version')}, ${str(r, 'type').toLowerCase()}, review was due ${formatDate(str(r, 'reviewDue'))}, ${str(r, 'owner')}`])))
+      if (inReview.length) blocks.push(p(`${plural(inReview.length, 'document')} ${isAre(inReview.length)} a draft or in review. Publishing a new version from the document approves it from today.`))
+      return { blocks, source: plural(data.safetyDocuments.length, 'safety document'), links: [{ label: 'Safety documents', module: 'wsh', page: 'documents' }] }
     },
   },
   {

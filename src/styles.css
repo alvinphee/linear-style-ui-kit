@@ -114,31 +114,34 @@
 }
 
 .dark {
-    --background: oklch(0.17 calc(var(--grey-c) * 1.15) var(--grey-h));
+    /* Dark like an IDE or Linear: still dark, but each step of the scale is a
+       clear step up, and borders sit at 12-18% white so an outline reads at a
+       glance rather than being guessed at. */
+    --background: oklch(0.195 calc(var(--grey-c) * 1.15) var(--grey-h));
     --foreground: oklch(0.96 calc(var(--grey-c) * 0.6) var(--grey-h));
-    --card: oklch(0.2 calc(var(--grey-c) * 1.4) var(--grey-h));
-    --popover: oklch(0.22 calc(var(--grey-c) * 1.7) var(--grey-h));
+    --card: oklch(0.225 calc(var(--grey-c) * 1.4) var(--grey-h));
+    --popover: oklch(0.255 calc(var(--grey-c) * 1.7) var(--grey-h));
     --primary: oklch(0.6 var(--brand-c) var(--brand-h));
-    --secondary: oklch(0.25 calc(var(--grey-c) * 1.7) var(--grey-h));
-    --secondary-foreground: oklch(0.9 calc(var(--grey-c) * 1.1) var(--grey-h));
-    --muted: oklch(0.23 calc(var(--grey-c) * 1.4) var(--grey-h));
-    --muted-foreground: oklch(0.66 calc(var(--grey-c) * 3) var(--grey-h));
-    --accent: oklch(1 0 0 / 6%);
+    --secondary: oklch(0.29 calc(var(--grey-c) * 1.7) var(--grey-h));
+    --secondary-foreground: oklch(0.92 calc(var(--grey-c) * 1.1) var(--grey-h));
+    --muted: oklch(0.265 calc(var(--grey-c) * 1.4) var(--grey-h));
+    --muted-foreground: oklch(0.7 calc(var(--grey-c) * 3) var(--grey-h));
+    --accent: oklch(1 0 0 / 9%);
     --destructive: oklch(0.66 0.19 25);
-    --border: oklch(1 0 0 / 7%);
-    --input: oklch(1 0 0 / 10%);
+    --border: oklch(1 0 0 / 12%);
+    --input: oklch(1 0 0 / 18%);
     --brand: oklch(0.66 calc(var(--brand-c) * 0.93) var(--brand-h));
-    --subtle: oklch(0.19 calc(var(--grey-c) * 1.15) var(--grey-h));
+    --subtle: oklch(0.21 calc(var(--grey-c) * 1.15) var(--grey-h));
     --status-progress: oklch(0.78 0.14 80);
     --status-blocked: oklch(0.66 0.19 25);
     --chart-2: oklch(0.7 0.12 200);
     --chart-3: oklch(0.78 0.14 80);
     --chart-4: oklch(0.7 0.15 150);
     --chart-5: oklch(0.66 0.19 25);
-    --sidebar: oklch(0.155 calc(var(--grey-c) * 1.15) var(--grey-h));
-    --sidebar-foreground: oklch(0.82 calc(var(--grey-c) * 1.4) var(--grey-h));
-    --sidebar-accent: oklch(1 0 0 / 6%);
-    --sidebar-border: oklch(1 0 0 / 6%);
+    --sidebar: oklch(0.165 calc(var(--grey-c) * 1.15) var(--grey-h));
+    --sidebar-foreground: oklch(0.84 calc(var(--grey-c) * 1.4) var(--grey-h));
+    --sidebar-accent: oklch(1 0 0 / 9%);
+    --sidebar-border: oklch(1 0 0 / 10%);
 }
 
 /* "Mono" accent: black buttons on light, white buttons on dark. */

@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowUpRight01Icon, SidebarLeftIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import { ProjectPage } from '@/blocks/ai/project-page'
 import { IconAction } from '@/components/icon-action'
 import { AiMotion } from '@/components/thinking-indicator'
 import { Button } from '@/components/ui/button'
@@ -16,13 +17,12 @@ import { AllChats } from './ai/AllChats'
 import { ArtifactPanel } from './ai/ArtifactPanel'
 import { ActionsContext, type WorkspaceActions } from './ai/context'
 import { Conversation } from './ai/Conversation'
-import { chatType, modelById, now, uid } from './ai/data'
+import { chatType, modelById, now, toFileRef, uid } from './ai/data'
 import {
   buildScript, chatTypeOf, continueAfterApproval, play, titleFor, type AgentContext, type Controller, type ScriptEvent,
   type Sink,
 } from './ai/engine'
 import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
-import { ProjectPage } from './ai/ProjectPage'
 import { SettingsDialog } from './ai/SettingsDialog'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
 import { clearSaved, initialState, loadState, reducer, saveState } from './ai/store'
@@ -573,7 +573,15 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
             <ProjectPage
               project={project}
               chats={summaries.filter((c) => c.projectId === project.id)}
-              sidebarToggle={sidebarToggle}
+              now={now}
+              filesHint="Files the assistant draws on in every chat in this project. They stay in this browser only."
+              onChange={(patch) => actions.patchProject(project.id, patch)}
+              onAddFiles={(files) => actions.addProjectFiles(project.id, files.map(toFileRef))}
+              onRemoveFile={(fileId) => actions.removeProjectFile(project.id, fileId)}
+              onNewChat={() => actions.newChat(project.id)}
+              onOpenChat={actions.openChat}
+              onDelete={() => actions.deleteProject(project.id)}
+              start={sidebarToggle}
             />
           ) : view.kind === 'library' ? (
             <AllChats chats={kept} projects={state.projects} runningChatId={runningChatId} sidebarToggle={sidebarToggle} />

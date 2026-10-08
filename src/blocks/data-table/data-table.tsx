@@ -178,8 +178,50 @@ export function DataTable<TData extends RowData>({
   const countClass = 'text-muted-foreground text-xs whitespace-nowrap tabular-nums'
   const controlsInToolbar = !hasHeader && hasControls
   const hasToolbar = !!search || !!facets?.length || !!filters || controlsInToolbar
+  const selecting = selectable && selectedRows.length > 0
+
+  // While rows are selected, the bulk bar takes the toolbar's place (or the
+  // column header's, when there is no toolbar), laid over it, so nothing
+  // moves and the table stays where it was. The covered controls are made
+  // inert so they cannot be reached from the keyboard until the selection
+  // is cleared. The bar scrolls sideways rather than wrapping, so it stays
+  // one row tall.
+  const bulkBar = (bleed: boolean) => selecting && (
+    <div
+      role="toolbar"
+      aria-label="Bulk actions"
+      className={cn(
+        'absolute inset-y-0 z-20 flex items-center gap-x-2 overflow-x-auto overflow-y-hidden [scrollbar-width:none]',
+        'bg-[color-mix(in_oklch,var(--brand)_6%,var(--background))] dark:bg-[color-mix(in_oklch,var(--brand)_12%,var(--background))]',
+        // In a flush table the toolbar sits inside the page padding; the bar reaches the edges.
+        bleed && !card ? '-inset-x-4 @2xl:-inset-x-6' : 'inset-x-0',
+        v.x,
+      )}
+    >
+      <span className="text-xs whitespace-nowrap" aria-live="polite">
+        <span className="font-medium tabular-nums">{selectedRows.length}</span> selected
+      </span>
+      {selectedRows.length < filteredCount && (
+        <Button variant="link" size="sm" className="px-1" onClick={() => table.toggleAllRowsSelected(true)}>
+          Select all {filteredCount}
+        </Button>
+      )}
+      <div className="ml-auto flex items-center justify-end gap-1">
+        {bulkActions?.(selectedRows.map((r) => r.original))}
+        <Button variant="ghost" size="icon-sm" aria-label="Clear selection" onClick={() => table.resetRowSelection(true)}>
+          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
+        </Button>
+      </div>
+    </div>
+  )
+
   const toolbar = hasToolbar && (
-    <div className={cn('flex flex-wrap items-center gap-1.5', card && cn('border-b py-2', v.x))}>
+    <div className={cn('relative', card && 'border-b')}>
+    <div
+      className={cn('flex flex-wrap items-center gap-1.5', card && cn('py-2', v.x), selecting && 'invisible')}
+      inert={selecting || undefined}
+      aria-hidden={selecting || undefined}
+    >
       {search && (
         <SearchField
           value={query}
@@ -221,32 +263,7 @@ export function DataTable<TData extends RowData>({
         <span className={cn(countClass, 'ml-auto')} aria-live="polite">{countText}</span>
       )}
     </div>
-  )
-
-  const bulkBar = selectable && selectedRows.length > 0 && (
-    <div
-      role="toolbar"
-      aria-label="Bulk actions"
-      className={cn(
-        'bg-brand/5 dark:bg-brand/10 flex flex-wrap items-center gap-x-2 gap-y-1 py-1.5',
-        card ? 'border-b' : 'border-t',
-        v.x,
-      )}
-    >
-      <span className="text-xs whitespace-nowrap" aria-live="polite">
-        <span className="font-medium tabular-nums">{selectedRows.length}</span> selected
-      </span>
-      {selectedRows.length < filteredCount && (
-        <Button variant="link" size="sm" className="px-1" onClick={() => table.toggleAllRowsSelected(true)}>
-          Select all {filteredCount}
-        </Button>
-      )}
-      <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
-        {bulkActions?.(selectedRows.map((r) => r.original))}
-        <Button variant="ghost" size="icon-sm" aria-label="Clear selection" onClick={() => table.resetRowSelection(true)}>
-          <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} />
-        </Button>
-      </div>
+    {bulkBar(true)}
     </div>
   )
 
@@ -269,11 +286,10 @@ export function DataTable<TData extends RowData>({
           )
         )}
 
-        {/* In a page that scrolls, the bar stays in view; the solid layer keeps rows from showing through. */}
-        {bulkBar && (card ? bulkBar : <div className="bg-background sticky top-0 z-20">{bulkBar}</div>)}
-
         {/* Scrolls both ways, so the sticky header stays put and the page never scrolls sideways. */}
         <div className={cn('@container relative overflow-auto', !card && 'border-t', scrollClassName)}>
+          {/* Without a toolbar the bar lies over the column header, which is 32px tall. */}
+          {!hasToolbar && selecting && <div className="sticky top-0 z-20 h-0"><div className="relative h-8">{bulkBar(false)}</div></div>}
           <table className="w-full caption-bottom text-xs" style={pageRows.length > 0 && minTableWidth ? { minWidth: minTableWidth } : undefined}>
             {caption && <caption className="sr-only">{caption}</caption>}
             <thead>

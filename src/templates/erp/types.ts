@@ -17,6 +17,7 @@ export type EntityId =
   | 'employees' | 'leave' | 'payroll'
   | 'users' | 'audit'
   | 'submissions'
+  | 'toolboxMeetings' | 'safetyDocuments' | 'certifications' | 'riskAssessments'
 
 export type Data = Record<EntityId, Row[]>
 
@@ -44,8 +45,15 @@ export type Field = {
 // A saved view: a named filter shown as a tab above the list.
 export type SavedView = { id: string; label: string; match?: (row: Row) => boolean }
 
+// The category a submission's form had when it was filled in. Inspections
+// are the submissions of forms in this category.
+export const INSPECTION_CATEGORY = 'Inspections'
+
 export type ListSpec = {
   entity: EntityId
+  // Only these of the entity's records (the Inspections page lists the
+  // submissions of inspection checklists); the rest of the entity is untouched.
+  filter?: (row: Row) => boolean
   singular: string
   plural: string
   // Prefix for the number of a new record, e.g. "INV-2026-".

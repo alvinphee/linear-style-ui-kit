@@ -12,8 +12,9 @@ import { formatMoney } from '@/lib/format'
 import { greeting, plural } from '@/lib/text'
 import { Briefing, LaunchpadAsk } from './assistant/LaunchpadAi'
 import { edition } from './edition'
-import { formatDate, TODAY } from './format'
+import { addDays, formatDate, TODAY } from './format'
 import { MODULES, pageFor } from './modules'
+import { openModule } from './phone'
 import { go } from './route'
 import { useErp } from './store'
 import type { EntityId, Role } from './types'
@@ -35,6 +36,7 @@ const QUICK: { entity: EntityId; label: string; roles: Role[] }[] = [
   { entity: 'leads', label: 'Lead', roles: ['admin', 'sales'] },
   { entity: 'items', label: 'Item', roles: ['admin', 'operations'] },
   { entity: 'leave', label: 'Leave request', roles: ['admin', 'hr'] },
+  { entity: 'toolboxMeetings', label: 'Toolbox meeting', roles: ['admin', 'operations', 'hr'] },
 ]
 
 export default function Launchpad() {
@@ -43,7 +45,8 @@ export default function Launchpad() {
   const modules = MODULES.filter((m) => m.id !== 'home' && m.roles.includes(role))
   const sorted = [...modules].sort((a, b) => Number(favourites.includes(b.id)) - Number(favourites.includes(a.id)))
 
-  // Approvals first (purchase orders, requisitions, leave), then overdue invoices.
+  // Approvals first (purchase orders, requisitions, leave), then overdue
+  // invoices, then safety: certificates that have expired or expire this month.
   const approvals: Attention[] = [
     ...data.purchaseOrders.filter((r) => r.status === 'Awaiting approval').map((row): Attention => ({
       id: row.id, entity: 'purchaseOrders', title: `${row.id} · ${row.vendor}`, detail: `${formatMoney(Number(row.amount))} · requested by ${row.buyer}`,
@@ -67,6 +70,20 @@ export default function Launchpad() {
       ),
       roles: ['admin', 'finance', 'sales'],
     })),
+    ...data.certifications
+      .filter((r) => r.status === 'Expired' || (r.status === 'Expiring' && String(r.expires) <= addDays(TODAY, 30)))
+      .sort((a, b) => String(a.expires).localeCompare(String(b.expires)))
+      .map((row): Attention => ({
+        id: row.id, entity: 'certifications', title: `${row.employee} · ${row.course}`,
+        detail: `${row.status === 'Expired' ? 'expired' : 'expires'} ${formatDate(String(row.expires))}`,
+        aside: <StatusBadge status={String(row.status)} />,
+        actions: (
+          <Button size="sm" variant="outline" onClick={() => toast.success(`Refresher booked for ${row.employee}`, { description: `${row.course}, next available date at ${row.provider}.` })}>
+            Book refresher
+          </Button>
+        ),
+        roles: ['admin', 'operations', 'hr'],
+      })),
   ].filter((a) => a.roles.includes(role)).slice(0, 7)
 
   const today = new Date(`${TODAY}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -96,7 +113,7 @@ export default function Launchpad() {
                   <div className="grid min-w-0 flex-1 gap-0.5">
                     <h3 className="text-[13px] font-semibold">
                       {/* The whole tile is the link; the star sits above it. */}
-                      <button type="button" onClick={() => go(m.id, m.pages[0].id)} className="focus-visible:ring-ring/40 rounded text-left outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:ring-2">
+                      <button type="button" onClick={() => openModule(m)} className="focus-visible:ring-ring/40 rounded text-left outline-none after:absolute after:inset-0 after:rounded-lg focus-visible:ring-2">
                         {m.name}
                       </button>
                     </h3>
