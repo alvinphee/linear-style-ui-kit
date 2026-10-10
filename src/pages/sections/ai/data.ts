@@ -4,7 +4,7 @@ import {
   FileAttachmentIcon, FlashIcon, Globe02Icon, Invoice01Icon, Mail01Icon, QuillWrite01Icon, SourceCodeIcon,
   TaskDone01Icon, TextAlignLeftIcon, TranslateIcon, Alert02Icon,
 } from '@hugeicons/core-free-icons'
-import type { ChatType } from '@/blocks/ai/chat-history'
+import type { ChatType } from '@/blocks/ai/chat/chat-history'
 import { formatRelativeDate } from '@/lib/format'
 import { fileKind } from '@/components/file-chip'
 import type { FileRef, Model, ModelId } from './types'

@@ -4,10 +4,10 @@ import {
   Attachment01Icon, BookOpen01Icon, DatabaseIcon, FileTextIcon, FileViewIcon, Globe02Icon, InvoiceIcon,
   MailSend01Icon, PencilEdit02Icon, Search01Icon, SourceCodeIcon, Table01Icon,
 } from '@hugeicons/core-free-icons'
-import { ArtifactCard as ArtifactCardView, ErrorCard as ErrorCardView } from '@/blocks/ai/chat-message'
+import { ArtifactCard as ArtifactCardView, ErrorCard as ErrorCardView } from '@/blocks/ai/chat/chat-message'
 import {
   ApprovalCard as ApprovalCardView, ThinkingTrail, type ApprovalChange, type TrailStep, type TrailStepStatus,
-} from '@/blocks/ai/thinking-trail'
+} from '@/blocks/ai/reasoning/thinking-trail'
 import { UserAvatar } from '@/components/person'
 import { PriorityIcon } from '@/components/priority-icon'
 import { StatusIcon } from '@/components/status-icon'

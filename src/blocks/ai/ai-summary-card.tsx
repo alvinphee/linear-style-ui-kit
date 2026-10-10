@@ -2,12 +2,12 @@ import type { ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { Alert02Icon, Copy01Icon, RefreshIcon, StopIcon, ThumbsDownIcon, ThumbsUpIcon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
-import { AiLabel } from '@/components/ai-label'
+import { AiLabel } from '@/components/ai/ai-label'
 import { IconAction } from '@/components/icon-action'
-import { Thinking } from '@/components/thinking-indicator'
+import { Thinking } from '@/components/ai/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import type { Feedback } from './chat-message'
+import type { Feedback } from './chat/chat-message'
 
 // An AI summary card: a few points the AI wrote about a record or a day,
 // labelled as AI. It shows the four steps of writing one:

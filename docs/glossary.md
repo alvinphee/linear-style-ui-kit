@@ -28,7 +28,7 @@ used by most design systems).
 | Kitchen sink | One page that shows every component, to check they look right together. Often said loosely of a whole component explorer | All components |
 | Component page | One page of a component explorer, for one component family: its playgrounds, variant grids, states, then examples | `#/buttons`, `#/badges`… |
 | Component family | A component and its close relatives, documented on one page | Badges and labels: Badge, StatusBadge, DeltaBadge, LabelChip |
-| Component category | A heading that groups component pages by what they do, as Ant Design and Material group theirs | Actions, Inputs, Data display, Feedback, Overlays, Navigation, Layout, Charts, AI |
+| Component category | A heading that groups component pages by what they do, as Ant Design and Material group theirs | Actions, Inputs, Data display, Feedback, Overlays, Navigation, Layout, Charts |
 | Playground | A live preview of a component with a props pane and the generated code to copy. Storybook calls these the canvas and the controls | The first panels on a component page (`Playground` in `playground/Playground.tsx`) |
 | Props pane (controls) | The selects and switches beside a playground, one per prop, that change the preview | The right side of each playground |
 | Variant grid | Every value of one prop side by side, often crossed with another (variant × size). In Storybook each variant is a story | `Variants` in `playground/Playground.tsx` |
@@ -37,10 +37,23 @@ used by most design systems).
 | Registry | shadcn's list of installable parts, served as JSON, so another project can copy them in with `npx shadcn add` | `registry.json`, built to `public/r/` by `npm run registry` |
 | Registry item | One installable entry in a registry: its files, the npm packages it needs, and the other items it needs (its registry dependencies) | One per component, block and lib file, plus `tokens` |
 | Registry namespace | The short prefix a project uses to name a registry, set once in its `components.json` | `@kit`, as in `@kit/kanban-board` |
+| Registry category | A tag on a registry item (its `categories` field) that groups items across types | `ai` on every AI component and block |
+| Registry bundle | A registry item with no files of its own that installs a set of other items (`registry:item`) | `ai-kit`: `npx shadcn add @kit/ai-kit` |
+| Domain | A group of parts for one kind of product that cuts across the levels without being a level: each level keeps an `ai/` folder for it. Vercel's AI Elements is the same idea | The AI kit |
+| AI kit | The AI domain: `components/ai/`, `blocks/ai/`, the AI group in the sidebar and the `ai-kit` bundle. A part belongs only if it makes sense only in an AI product | `#/ai-overview` |
 
 ## Interface patterns
 | Term | Meaning |
 |---|---|
+| Deep link | An address that opens one thing inside an app (a chat, a settings section), so it can be bookmarked, shared and reached with the back button |
+| Two-step verification (2FA) | Signing in with a code from an authenticator app as well as the password. Set up by scanning a QR code or typing the setup key |
+| Recovery codes | One-time codes that sign you in if you lose the authenticator app |
+| Passkey | Signing in with the device's lock (fingerprint, face, PIN) instead of a password |
+| Signed-in devices (active sessions) | Every device signed in to the account, with its last activity, each one able to be signed out |
+| Quiet hours | A daily time when push notifications wait |
+| Notification channel | Where a notification goes: in app, email or push |
+| Danger zone | The settings group for actions that cannot be undone, such as deleting the account |
+| Typed confirmation | A destructive action enabled only once you type a word (DELETE) or the item's name |
 | Avatar | A person's picture, or their initials in a circle when there is none |
 | Person chip | An avatar with the person's name beside it |
 | Status badge | A small pill showing a record's status, coloured by tone (success, warning, danger…) |
@@ -186,6 +199,23 @@ used by most design systems).
 | Credits meter | How much of the plan's AI usage is left this month |
 
 ## Forms and checklists
+| Settings page | Settings as a page of their own, sections down the left, as Claude and Linear lay theirs out (ChatGPT uses a dialog). On a phone, a list of sections that drills into one |
+| Response style | How replies are written: Default, Concise, Explanatory or Formal |
+| Memory (assistant memory) | Facts the assistant keeps about you across chats, each with the chat it came from; you can see, edit and delete them |
+| Reference past chats | Lets the assistant search your earlier chats for context, as well as its saved memories |
+| Connector | An outside app the assistant can use through tools (read files, search mail, file an issue). Claude's and ChatGPT's name for it |
+| MCP server (Model Context Protocol) | The open standard a connector speaks: a server that offers tools to an AI app. A custom connector is a remote MCP server added by its URL |
+| Tool permission | Per tool of a connector: Always allow, Ask first (an approval card each time) or Off. Read-only tools look; write tools change things |
+| Scope (OAuth scope) | One thing an app asks to be allowed to do, listed on the consent step before you connect it |
+| Consent step | The screen before connecting an app that lists what it will be able to do |
+| Skill | A packaged set of instructions (and files) the assistant loads only when a task needs it, decided from its description. Built-in, yours or your organisation's |
+| SKILL.md | The file that holds a skill: front matter (name, description) then the instructions in Markdown |
+| Front matter | The name and description block at the top of a Markdown file, between `---` lines |
+| Extended thinking | The model reasons for longer before it answers; slower, better on hard problems |
+| Voice mode | Talking with the assistant out loud. The voice picker chooses its voice; auto-send (end-of-turn detection) sends when you pause |
+| Shared link | A read-only link to a chat; it can be revoked |
+| Archived chat | A chat taken out of the history without deleting it |
+| Data retention | How long chats are kept before they are deleted |
 The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
 `form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
 checklist, an expense claim and a survey are all forms to them.

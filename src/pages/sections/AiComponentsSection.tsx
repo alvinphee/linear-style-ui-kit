@@ -1,5 +1,5 @@
-import { AiLabel } from '@/components/ai-label'
-import { ShimmerText, StreamCaret, Thinking, TypingDots } from '@/components/thinking-indicator'
+import { AiLabel } from '@/components/ai/ai-label'
+import { ShimmerText, StreamCaret, Thinking, TypingDots } from '@/components/ai/thinking-indicator'
 import { Panel, Row, Section } from './shared'
 
 export default function AiComponentsSection() {

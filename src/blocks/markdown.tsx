@@ -4,7 +4,7 @@ import { Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { AiMotion, StreamCaret } from '@/components/thinking-indicator'
+import { AiMotion, StreamCaret } from '@/components/ai/thinking-indicator'
 import { copyText, useCopied } from '@/lib/clipboard'
 
 // Markdown rendered as the kit's typography: AI replies, artifacts, and the

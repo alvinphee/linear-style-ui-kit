@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { AiBrain01Icon, Folder01Icon, Globe02Icon, Task01Icon } from '@hugeicons/core-free-icons'
 import {
   PromptBox as PromptBoxBlock, type PromptBoxHandle, type PromptDictation, type PromptMode, type PromptSuggestion,
-} from '@/blocks/ai/prompt-box'
+} from '@/blocks/ai/chat/prompt-box'
 import { PEOPLE } from '../../data'
 import { useJobs } from '../../jobs-store'
 import { useActions } from './context'

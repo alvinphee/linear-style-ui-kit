@@ -1,14 +1,15 @@
 import { useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent, type RefObject } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowUpRight01Icon, SidebarLeftIcon } from '@hugeicons/core-free-icons'
+import { ArrowLeft01Icon, ArrowUpRight01Icon, SidebarLeftIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { ProjectPage } from '@/blocks/ai/project-page'
+import { ProjectPage } from '@/blocks/ai/projects/project-page'
 import { IconAction } from '@/components/icon-action'
-import { AiMotion } from '@/components/thinking-indicator'
+import { AiMotion } from '@/components/ai/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { downloadText } from '@/lib/download'
+import { navigate, readPath, usePath } from '@/lib/router'
 import { plural, slug } from '@/lib/text'
 import { PEOPLE } from '../data'
 import { useJobs } from '../jobs-store'
@@ -23,10 +24,11 @@ import {
   type Sink,
 } from './ai/engine'
 import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
-import { SettingsDialog } from './ai/SettingsDialog'
+import { isAppPath, parseRoute, pathFor, settingsPath } from './ai/routes'
+import { SettingsScreen } from './ai/settings/SettingsScreen'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
 import { clearSaved, initialState, loadState, reducer, saveState } from './ai/store'
-import type { Artifact, AssistantMessage, Chat, FileRef, Model, Modes, PartOf, Reply } from './ai/types'
+import type { Artifact, AssistantMessage, Chat, FileRef, Model, Modes, PartOf, Project, Reply, View } from './ai/types'
 import { Panel, Section } from './shared'
 
 // Widths of the card (not the window) at which the side areas fit inline.
@@ -54,13 +56,28 @@ function useWidth(ref: RefObject<HTMLElement | null>) {
 
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+// A view from an address, if what it names still exists.
+function validView(view: View | null, state: { chats: Chat[]; projects: Project[] }): View | null {
+  if (!view) return null
+  if (view.kind === 'chat') return state.chats.some((c) => c.id === view.chatId) ? view : null
+  const projectId = view.kind === 'project' || view.kind === 'new' ? view.projectId : null
+  if (projectId && !state.projects.some((p) => p.id === projectId)) return null
+  return view
+}
+
 // The workspace itself. In the kit it sits in a card; with `page` it fills
-// the window, as the full-page template at #/templates/ai-chat.
+// the window, as the full-page template at #/templates/ai-chat, and each
+// chat, project and settings section has its own address (ai/routes.ts).
 export function AiWorkspace({ page = false }: { page?: boolean }) {
   const jobsStore = useJobs()
   const storeRef = useRef(jobsStore)
   storeRef.current = jobsStore
-  const [state, dispatch] = useReducer(reducer, undefined, () => loadState(now()))
+  const [state, dispatch] = useReducer(reducer, undefined, () => {
+    const loaded = loadState(now())
+    // Full page, the address wins over the chat that was open last time.
+    const view = page ? validView(parseRoute(readPath()).view, loaded) : null
+    return view ? { ...loaded, view } : loaded
+  })
   const stateRef = useRef(state)
   stateRef.current = state
   const [modes, setModes] = useState<Modes>({ web: false, deep: false })
@@ -70,7 +87,11 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
   const [panelFocus, setPanelFocus] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Settings: undefined when closed, null for the list of sections (the
+  // first section on a wide screen). Full page, it lives in the address.
+  const path = usePath()
+  const [cardSettings, setCardSettings] = useState<string | null | undefined>(undefined)
+  const settings = page && isAppPath(path) ? parseRoute(path).settings : page ? undefined : cardSettings
   const [notice, setNotice] = useState('')
   const runRef = useRef<Run | null>(null)
   const cardRef = useRef<HTMLElement>(null)
@@ -437,8 +458,15 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         dispatch({ type: 'reset', state: initialState() })
         toast('Demo chats restored')
       },
-      openSettings() {
-        setSettingsOpen(true)
+      openSettings(section = null) {
+        closePanel(false)
+        setSheetOpen(false)
+        if (page) navigate(settingsPath(section))
+        else setCardSettings(section)
+      },
+      closeSettings() {
+        if (page) navigate(pathFor(stateRef.current.view))
+        else setCardSettings(undefined)
       },
       setDefaultModel(model) {
         dispatch({ type: 'model', model })
@@ -447,6 +475,30 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
     }
     return api
   }, [])
+
+  // Full page, a change of view goes into the address… Only a change of
+  // view: leaving Settings by the back button must not put the old view back.
+  useEffect(() => {
+    if (!page || !isAppPath(readPath()) || parseRoute(readPath()).settings !== undefined) return
+    const target = pathFor(state.view)
+    if (readPath() !== target) navigate(target)
+  }, [page, state.view])
+
+  // …and an address typed in, or the back button, opens what it names.
+  useEffect(() => {
+    // Leaving the app, the address is someone else's.
+    if (!page || !isAppPath(path)) return
+    const route = parseRoute(path)
+    if (route.settings !== undefined) return
+    const next = validView(route.view, stateRef.current)
+    // A deleted chat or an unknown address: show what is open, in place.
+    if (!next) window.location.replace(`#${pathFor(stateRef.current.view)}`)
+    if (!next || pathFor(next) === pathFor(stateRef.current.view)) return
+    if (next.kind === 'chat') actions.openChat(next.chatId)
+    else if (next.kind === 'project') actions.openProject(next.projectId)
+    else if (next.kind === 'library') actions.openLibrary()
+    else actions.newChat(next.projectId)
+  }, [page, path, actions])
 
   const { view } = state
   const chat = view.kind === 'chat' ? state.chats.find((c) => c.id === view.chatId) ?? null : null
@@ -562,14 +614,26 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
           page ? 'h-svh' : 'h-[46rem] rounded-lg border lg:col-span-2',
         )}
       >
-        {sidebarInline && (
+        {settings === undefined && sidebarInline && (
           <aside aria-label="Chats and projects" className="bg-subtle flex w-64 shrink-0 flex-col border-r">
             {sidebar(false)}
           </aside>
         )}
 
         <div className="flex min-w-0 flex-1 flex-col">
-          {view.kind === 'project' && project ? (
+          {settings !== undefined ? (
+            <SettingsScreen
+              active={settings}
+              onSelect={actions.openSettings}
+              start={<IconAction label="Back to chats" icon={ArrowLeft01Icon} onClick={actions.closeSettings} />}
+              model={state.model}
+              onModelChange={actions.setDefaultModel}
+              chatCount={kept.length}
+              credits={state.credits}
+              onExportAll={exportAll}
+              onResetDemo={actions.resetDemo}
+            />
+          ) : view.kind === 'project' && project ? (
             <ProjectPage
               project={project}
               chats={summaries.filter((c) => c.projectId === project.id)}
@@ -659,8 +723,6 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
           </SheetContent>
         </Sheet>
       )}
-
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} model={state.model} onExportAll={exportAll} />
     </ActionsContext.Provider>
   )
 }

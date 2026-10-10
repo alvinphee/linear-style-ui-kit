@@ -5,12 +5,12 @@ import {
   Mail01Icon, PackageIcon, ShoppingCart01Icon, SparklesIcon, Target02Icon, UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { Thinking } from '@/components/thinking-indicator'
-import { AssistantMessage, UserMessage } from '@/blocks/ai/chat-message'
-import { ChatHistory, type ChatType, type HistoryChat, type HistoryProject } from '@/blocks/ai/chat-history'
-import { ChatLibrary, type LibraryChat, type LibraryType } from '@/blocks/ai/chat-library'
-import { ChatThread, ChatWelcome, PromptStarters, type PromptStarter } from '@/blocks/ai/chat-thread'
-import { PromptBox } from '@/blocks/ai/prompt-box'
+import { Thinking } from '@/components/ai/thinking-indicator'
+import { AssistantMessage, UserMessage } from '@/blocks/ai/chat/chat-message'
+import { ChatHistory, type ChatType, type HistoryChat, type HistoryProject } from '@/blocks/ai/chat/chat-history'
+import { ChatLibrary, type LibraryChat, type LibraryType } from '@/blocks/ai/chat/chat-library'
+import { ChatThread, ChatWelcome, PromptStarters, type PromptStarter } from '@/blocks/ai/chat/chat-thread'
+import { PromptBox } from '@/blocks/ai/chat/prompt-box'
 import { Markdown } from '@/blocks/markdown'
 import { Demos, Gallery, Playground, bool, element, imports, indent, jsx, lit, pick, str, type Values } from './Playground'
 
@@ -126,8 +126,8 @@ function welcomeCode(v: Values) {
     // A Set, as the invoice icon can be both the welcome icon and a starter's.
     '@hugeicons/core-free-icons': [...new Set(pick(custom && icon.name, ...(starters ? items.map((s) => s.iconName) : [])))].sort(),
     sonner: starters || prompt ? ['toast'] : [],
-    '@/blocks/ai/chat-thread': starters ? ['ChatWelcome', 'PromptStarters'] : ['ChatWelcome'],
-    '@/blocks/ai/prompt-box': prompt ? ['PromptBox'] : [],
+    '@/blocks/ai/chat/chat-thread': starters ? ['ChatWelcome', 'PromptStarters'] : ['ChatWelcome'],
+    '@/blocks/ai/chat/prompt-box': prompt ? ['PromptBox'] : [],
   })
   const list = starters
     ? `const starters = [\n${items.map((s) => indent(`{ icon: ${s.iconName}, title: ${lit(s.title)}, hint: ${lit(s.hint)} },`)).join('\n')}\n]\n\n`
@@ -307,8 +307,8 @@ function ThreadPreview({ count, streaming }: { count: number; streaming: boolean
 
 function threadCode(streaming: boolean) {
   const head = imports({
-    '@/blocks/ai/chat-message': ['AssistantMessage', 'UserMessage'],
-    '@/blocks/ai/chat-thread': ['ChatThread'],
+    '@/blocks/ai/chat/chat-message': ['AssistantMessage', 'UserMessage'],
+    '@/blocks/ai/chat/chat-thread': ['ChatThread'],
     '@/blocks/markdown': ['Markdown'],
   })
   const reply = streaming
@@ -479,7 +479,7 @@ function HistoryDemos() {
         return [
           imports({
             '@hugeicons/core-free-icons': [bool(v, 'plus') && 'Add01Icon', bool(v, 'link') && 'IncognitoIcon'].filter((n): n is string => !!n),
-            '@/blocks/ai/chat-history': ['ChatHistory'],
+            '@/blocks/ai/chat/chat-history': ['ChatHistory'],
           }),
           '',
           '// chats: { id, title, updatedAt, pinned?, projectId?, type?, icon?, iconColour? }[]',
@@ -561,7 +561,7 @@ function LibraryDemos() {
         )
       }}
       code={(v) => [
-        imports({ '@/blocks/ai/chat-library': ['ChatLibrary', 'type LibraryChat', 'type LibraryType'] }),
+        imports({ '@/blocks/ai/chat/chat-library': ['ChatLibrary', 'type LibraryChat', 'type LibraryType'] }),
         '',
         bool(v, 'types') && "const types: LibraryType[] = [{ value: 'sales', label: 'Sales', icon: ShoppingCart01Icon, colour: 'var(--chart-2)' }, …]",
         "// chats: { id, title, updatedAt, pinned?, running?, type?, preview?, project? }[]",

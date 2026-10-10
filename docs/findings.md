@@ -693,7 +693,7 @@ ChatGPT, Claude and Gemini open a project as a screen of its own: title,
 custom instructions, project knowledge (the files) and the chats in it. The
 ERP + AI edition had a two-field dialog instead, with no files at all, while
 the AI chat template already had a page written inside its kit section. The
-page is now a block (`src/blocks/ai/project-page.tsx`) and both apps render
+page is now a block (`src/blocks/ai/projects/project-page.tsx`) and both apps render
 it; the ERP got a `files` field on its projects and a `/home/project/<id>`
 route, so a project can be linked and the breadcrumb ends with its name.
 What stays a dialog is quick create: name it in the sidebar, then land on
@@ -838,3 +838,24 @@ behaviour without knowing about it. The page's last cards need room to
 scroll out from under the bar (`pb-28`), and the floating New button sits
 above it.
 
+
+## Syncing an app's view with its address (added 2026-10-10)
+The AI chat app keeps its open view (chat, project, library) in a reducer
+and, full page, in the address too. Two effects keep them together: a new
+view goes into the address, and a new address (typed, or the back button)
+opens its view. Three traps came up:
+- Read the address when the state is first made, not in an effect, or the
+  chat that was open last time wins over the link that was followed.
+- The "view into address" effect must run on a change of view only. Run
+  also when Settings closed, it put the old chat back before the back
+  button's address could open the new one, and the two effects bounced.
+- The workspace is still mounted for a moment after the address leaves the
+  app, so both effects ignore addresses outside it (`isAppPath`), or
+  following a link to the kit sends you straight back into the app.
+
+## A domain across the levels (added 2026-10-10)
+Gathering every AI part in one place did not need a sixth level. Each level
+keeps an `ai/` folder, the sidebar has an AI group, and the registry tags
+the items `categories: ["ai"]` with an `ai-kit` bundle, as Vercel's AI
+Elements does for shadcn. The level rule and `npm run check` stay as they
+were. The test for what goes in: it makes sense only in an AI product.

@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { AiLabel } from '@/components/ai-label'
-import { IncognitoToggle } from '@/components/incognito-toggle'
+import { AiLabel } from '@/components/ai/ai-label'
+import { IncognitoToggle } from '@/components/ai/incognito-toggle'
 import {
   ActivityLine, Elapsed, PulseDot, ShimmerText, StreamCaret, Thinking, TypingDots, type ThinkingIndicator,
-} from '@/components/thinking-indicator'
+} from '@/components/ai/thinking-indicator'
 import { CodeBlock, Demos, Gallery, Playground, bool, component, imports, jsx, str, unless } from './Playground'
 
 // The small AI components: the AI label, the thinking indicator and its
@@ -89,7 +89,7 @@ function ThinkingDemos() {
           const label = str(v, 'label')
           const head = imports({
             react: elapsed ? ['useState'] : [],
-            '@/components/thinking-indicator': ['Thinking'],
+            '@/components/ai/thinking-indicator': ['Thinking'],
           })
           const body = jsx('Thinking', {
             indicator: unless(str(v, 'indicator'), 'sparkle'),
@@ -102,7 +102,7 @@ function ThinkingDemos() {
 
       <Gallery
         title="Working signs"
-        note="The pieces Thinking is made of, from @/components/thinking-indicator"
+        note="The pieces Thinking is made of, from @/components/ai/thinking-indicator"
         items={[
           { label: 'ShimmerText', node: <ShimmerText className="text-xs font-medium">Searching customer invoices…</ShimmerText> },
           { label: 'PulseDot', node: <span className="flex h-5 items-center"><PulseDot /></span> },
@@ -137,7 +137,7 @@ function IncognitoDemos() {
           label: 'code',
           node: (
             <CodeBlock
-              code={"import { IncognitoToggle } from '@/components/incognito-toggle'\n\n<IncognitoToggle pressed={incognito} onPressedChange={setIncognito} />"}
+              code={"import { IncognitoToggle } from '@/components/ai/incognito-toggle'\n\n<IncognitoToggle pressed={incognito} onPressedChange={setIncognito} />"}
               className="w-[min(30rem,80vw)]"
             />
           ),

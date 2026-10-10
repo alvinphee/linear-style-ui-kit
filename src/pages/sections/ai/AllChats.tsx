@@ -1,7 +1,7 @@
 import { useMemo, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { LibraryIcon } from '@hugeicons/core-free-icons'
-import { ChatLibrary, type LibraryChat } from '@/blocks/ai/chat-library'
+import { ChatLibrary, type LibraryChat } from '@/blocks/ai/chat/chat-library'
 import { useActions } from './context'
 import { CHAT_TYPES, now } from './data'
 import { chatTypeOf } from './engine'

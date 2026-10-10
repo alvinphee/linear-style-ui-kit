@@ -158,6 +158,39 @@
           "::selection": {
             "background": "color-mix(in oklch, var(--brand) 30%, transparent)"
           }
+        },
+        "@keyframes menu-cascade-in": {
+          "from": {
+            "opacity": "0",
+            "transform": "translateY(0.75rem)"
+          },
+          "to": {
+            "opacity": "1",
+            "transform": "none"
+          }
+        },
+        ".menu-cascade > div > section": {
+          "animation": "menu-cascade-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both"
+        },
+        ".menu-cascade > div > section:nth-child(2)": {
+          "animation-delay": "45ms"
+        },
+        ".menu-cascade > div > section:nth-child(3)": {
+          "animation-delay": "90ms"
+        },
+        ".menu-cascade > div > section:nth-child(4)": {
+          "animation-delay": "135ms"
+        },
+        ".menu-cascade > div > section:nth-child(5)": {
+          "animation-delay": "180ms"
+        },
+        ".menu-cascade > div > section:nth-child(n + 6)": {
+          "animation-delay": "225ms"
+        },
+        "@media (prefers-reduced-motion: reduce)": {
+          ".menu-cascade > div > section": {
+            "animation": "none"
+          }
         }
       }
     },
@@ -1104,9 +1137,12 @@
       "registryDependencies": [
         "@kit/tokens"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/components/ai-label.tsx",
+          "path": "src/components/ai/ai-label.tsx",
           "type": "registry:component"
         }
       ]
@@ -1298,9 +1334,12 @@
         "@kit/toggle",
         "@kit/tooltip"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/components/incognito-toggle.tsx",
+          "path": "src/components/ai/incognito-toggle.tsx",
           "type": "registry:component"
         }
       ]
@@ -1727,9 +1766,12 @@
         "@kit/spinner",
         "@kit/tokens"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/components/thinking-indicator.tsx",
+          "path": "src/components/ai/thinking-indicator.tsx",
           "type": "registry:component"
         }
       ]
@@ -1831,6 +1873,9 @@
         "@kit/thinking-indicator",
         "@kit/tokens"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
           "path": "src/blocks/ai/ai-summary-card.tsx",
@@ -1859,11 +1904,14 @@
         "@kit/tabs",
         "@kit/text"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/artifact-panel.tsx",
+          "path": "src/blocks/ai/artifacts/artifact-panel.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/artifact-panel.tsx"
+          "target": "@components/blocks/ai/artifacts/artifact-panel.tsx"
         }
       ]
     },
@@ -1891,11 +1939,14 @@
         "@kit/spinner",
         "@kit/text"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/chat-history.tsx",
+          "path": "src/blocks/ai/chat/chat-history.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/chat-history.tsx"
+          "target": "@components/blocks/ai/chat/chat-history.tsx"
         }
       ]
     },
@@ -1917,11 +1968,14 @@
         "@kit/spinner",
         "@kit/text"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/chat-library.tsx",
+          "path": "src/blocks/ai/chat/chat-library.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/chat-library.tsx"
+          "target": "@components/blocks/ai/chat/chat-library.tsx"
         }
       ]
     },
@@ -1947,11 +2001,14 @@
         "@kit/textarea",
         "@kit/tokens"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/chat-message.tsx",
+          "path": "src/blocks/ai/chat/chat-message.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/chat-message.tsx"
+          "target": "@components/blocks/ai/chat/chat-message.tsx"
         }
       ]
     },
@@ -1969,11 +2026,132 @@
         "@kit/button",
         "@kit/tokens"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/chat-thread.tsx",
+          "path": "src/blocks/ai/chat/chat-thread.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/chat-thread.tsx"
+          "target": "@components/blocks/ai/chat/chat-thread.tsx"
+        }
+      ]
+    },
+    {
+      "name": "connector-card",
+      "type": "registry:block",
+      "title": "Connector card",
+      "description": "an app the assistant can use: mark, status (connected, needs reconnecting, admin disabled), Connect or Manage",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/mark",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/connectors/connector-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/connectors/connector-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "connector-catalogue",
+      "type": "registry:block",
+      "title": "Connector catalogue",
+      "description": "connectors to pick from: search, filter chips by category, grid or list, add custom",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/connector-card",
+        "@kit/empty",
+        "@kit/search-field",
+        "@kit/toggle-group"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/connectors/connector-catalogue.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/connectors/connector-catalogue.tsx"
+        }
+      ]
+    },
+    {
+      "name": "connector-dialog",
+      "type": "registry:block",
+      "title": "Connector dialog",
+      "description": "connect (consent step, scopes) or manage a connector: account, tool permissions (Always allow, Ask first, Off), disconnect",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/connector-card",
+        "@kit/delete-confirm",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/format",
+        "@kit/spinner",
+        "@kit/text",
+        "@kit/toggle-group",
+        "@kit/tokens",
+        "@kit/use-timers"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/connectors/connector-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/connectors/connector-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "custom-connector-dialog",
+      "type": "registry:block",
+      "title": "Custom connector dialog",
+      "description": "add a remote MCP server: name, URL, authentication (none, OAuth, API key header)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/input",
+        "@kit/radio-group",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/connectors/custom-connector-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/connectors/custom-connector-dialog.tsx"
         }
       ]
     },
@@ -2516,6 +2694,36 @@
       ]
     },
     {
+      "name": "memory-manager",
+      "type": "registry:block",
+      "title": "Memory manager",
+      "description": "what the assistant remembers: search, edit in place, delete, clear all, off state",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/empty",
+        "@kit/format",
+        "@kit/search-field",
+        "@kit/text",
+        "@kit/textarea"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/memory/memory-manager.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/memory/memory-manager.tsx"
+        }
+      ]
+    },
+    {
       "name": "mobile-shell",
       "type": "registry:block",
       "title": "Mobile shell",
@@ -2527,6 +2735,7 @@
       ],
       "registryDependencies": [
         "@kit/button",
+        "@kit/person",
         "@kit/sheet",
         "@kit/text",
         "@kit/tokens"
@@ -2613,11 +2822,14 @@
         "@kit/icon-action",
         "@kit/textarea"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/project-page.tsx",
+          "path": "src/blocks/ai/projects/project-page.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/project-page.tsx"
+          "target": "@components/blocks/ai/projects/project-page.tsx"
         }
       ]
     },
@@ -2647,11 +2859,14 @@
         "@kit/tokens",
         "@kit/tooltip"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/prompt-box.tsx",
+          "path": "src/blocks/ai/chat/prompt-box.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/prompt-box.tsx"
+          "target": "@components/blocks/ai/chat/prompt-box.tsx"
         }
       ]
     },
@@ -2682,6 +2897,53 @@
       ]
     },
     {
+      "name": "session-list",
+      "type": "registry:block",
+      "title": "Session list",
+      "description": "signed-in devices: device, browser, place, last active, sign out one or all others",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/format",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/session-list.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/session-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "settings-page",
+      "type": "registry:block",
+      "title": "Settings page",
+      "description": "settings page: sections down the left (a list that drills in when narrow), SettingsHeader, SettingsGroup, SettingsRow",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/field"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/settings-page.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/settings-page.tsx"
+        }
+      ]
+    },
+    {
       "name": "sign-in",
       "type": "registry:block",
       "title": "Sign in",
@@ -2700,13 +2962,162 @@
         "@kit/mark",
         "@kit/person",
         "@kit/spinner",
-        "@kit/tokens"
+        "@kit/tokens",
+        "@kit/use-media-query"
       ],
       "files": [
         {
           "path": "src/blocks/sign-in.tsx",
           "type": "registry:component",
           "target": "@components/blocks/sign-in.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skill-card",
+      "type": "registry:block",
+      "title": "Skill card",
+      "description": "a skill: icon, source (built-in, yours, organisation), on/off, menu",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/dropdown-menu",
+        "@kit/mark",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/skills/skill-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/skills/skill-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skill-detail",
+      "type": "registry:block",
+      "title": "Skill detail",
+      "description": "a skill's SKILL.md, files and where it is used, in a sheet",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/markdown",
+        "@kit/sheet",
+        "@kit/skill-card",
+        "@kit/switch",
+        "@kit/text"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/skills/skill-detail.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/skills/skill-detail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skill-editor",
+      "type": "registry:block",
+      "title": "Skill editor",
+      "description": "create or edit a skill: name, when to use it, instructions (Markdown, preview), files",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/input",
+        "@kit/markdown",
+        "@kit/skill-card",
+        "@kit/tabs",
+        "@kit/textarea"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/skills/skill-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/skills/skill-editor.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skill-list",
+      "type": "registry:block",
+      "title": "Skill list",
+      "description": "skills to manage: search, filter chips, cards, create and upload",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/empty",
+        "@kit/search-field",
+        "@kit/skill-card",
+        "@kit/text"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/skills/skill-list.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/skills/skill-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "skill-upload",
+      "type": "registry:block",
+      "title": "Skill upload",
+      "description": "upload a skill as a .zip or .md file",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dialog",
+        "@kit/file-chip",
+        "@kit/skill-card",
+        "@kit/skill-editor",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/skills/skill-upload.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/skills/skill-upload.tsx"
         }
       ]
     },
@@ -2758,11 +3169,39 @@
         "@kit/thinking-indicator",
         "@kit/tokens"
       ],
+      "categories": [
+        "ai"
+      ],
       "files": [
         {
-          "path": "src/blocks/ai/thinking-trail.tsx",
+          "path": "src/blocks/ai/reasoning/thinking-trail.tsx",
           "type": "registry:component",
-          "target": "@components/blocks/ai/thinking-trail.tsx"
+          "target": "@components/blocks/ai/reasoning/thinking-trail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voice-picker",
+      "type": "registry:block",
+      "title": "Voice picker",
+      "description": "voices as radio cards with a sample to play and an equaliser",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/radio-group",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/voice/voice-picker.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/voice/voice-picker.tsx"
         }
       ]
     },
@@ -2787,6 +3226,40 @@
           "type": "registry:component",
           "target": "@components/blocks/workspace-switcher.tsx"
         }
+      ]
+    },
+    {
+      "name": "ai-kit",
+      "type": "registry:item",
+      "title": "AI kit",
+      "description": "Every AI component and block at once (every item in the \"ai\" category), with what they need",
+      "registryDependencies": [
+        "@kit/ai-label",
+        "@kit/ai-summary-card",
+        "@kit/artifact-panel",
+        "@kit/chat-history",
+        "@kit/chat-library",
+        "@kit/chat-message",
+        "@kit/chat-thread",
+        "@kit/connector-card",
+        "@kit/connector-catalogue",
+        "@kit/connector-dialog",
+        "@kit/custom-connector-dialog",
+        "@kit/incognito-toggle",
+        "@kit/memory-manager",
+        "@kit/project-page",
+        "@kit/prompt-box",
+        "@kit/skill-card",
+        "@kit/skill-detail",
+        "@kit/skill-editor",
+        "@kit/skill-list",
+        "@kit/skill-upload",
+        "@kit/thinking-indicator",
+        "@kit/thinking-trail",
+        "@kit/voice-picker"
+      ],
+      "categories": [
+        "ai"
       ]
     }
   ]

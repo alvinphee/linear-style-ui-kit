@@ -2,7 +2,7 @@ import { Fragment, memo, useState } from 'react'
 import { toast } from 'sonner'
 import {
   AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, StoppedNote, UserMessage,
-} from '@/blocks/ai/chat-message'
+} from '@/blocks/ai/chat/chat-message'
 import { copyText } from '@/lib/clipboard'
 import { formatDuration } from '@/lib/format'
 import { useActions } from './context'

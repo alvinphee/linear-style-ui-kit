@@ -6,9 +6,9 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { AiLabel } from '@/components/ai-label'
+import { AiLabel } from '@/components/ai/ai-label'
 import { Shortcut, ariaKeyShortcuts } from '@/components/shortcut'
-import { Thinking } from '@/components/thinking-indicator'
+import { Thinking } from '@/components/ai/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger,

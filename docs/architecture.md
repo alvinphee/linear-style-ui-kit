@@ -64,6 +64,28 @@ Sample data may use kit vocabulary (a job's status is the kit's
 `WorkflowStatus`), never the other way round: components and blocks never
 import from `src/pages/` or `src/templates/`.
 
+## Domains: the AI kit
+
+A domain groups the parts of one kind of product across the levels. It is
+not a level: each part still sits at its level and follows the level rule.
+The AI kit is the first one.
+
+- **The test:** a part goes in the AI kit only if it makes sense only in an
+  AI product (thinking indicator, AI label, incognito chat toggle, prompt
+  box, thinking trail). Generic parts that AI screens also use stay where
+  they are: file chip, mention, icon action, usage meter, comment box.
+- **Folders:** an `ai/` folder inside each level. Components in
+  `src/components/ai/`; blocks in `src/blocks/ai/`, one subfolder per area
+  (`chat/`, `projects/`, `artifacts/`, `reasoning/`…), with parts that fit
+  no area (`ai-summary-card.tsx`) at its top.
+- **Kitchen sink:** its own sidebar group, AI, after Layouts. Overview (the
+  whole kit, how to install it, the templates), then its pages under the
+  level as the heading (Components, Blocks). AI components also show on
+  All components.
+- **Registry:** every item from those folders has `categories: ["ai"]`,
+  and the `ai-kit` item (registry:item, no files of its own) depends on all
+  of them, so `npx shadcn add @kit/ai-kit` installs the lot.
+
 ## Templates and editions
 
 A template is a whole app made from layouts, blocks and components. Two
@@ -112,7 +134,9 @@ part with `npx shadcn add @kit/<name>` and get everything it needs with it:
 | Tokens (`styles.css`) | `tokens` (registry:theme) | the project's CSS file |
 | `src/components/ui/` | one registry:ui per file | its ui folder |
 | `src/components/` | one registry:component per file | its components folder |
+| `src/components/ai/` | one registry:component per file, category `ai` | its components folder |
 | `src/blocks/` | one registry:block per file, or per folder (`data-table/`) | `components/blocks/` |
+| `src/blocks/ai/` | one registry:block per file, in any subfolder, category `ai` | `components/blocks/ai/…` |
 | `src/lib/` | one registry:lib per file | its lib folder |
 
 `scripts/build-registry.mjs` reads each part's imports to list its npm

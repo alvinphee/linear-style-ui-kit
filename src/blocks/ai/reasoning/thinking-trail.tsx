@@ -7,7 +7,7 @@ import {
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { AiMotion, Elapsed, PulseDot, StreamCaret } from '@/components/thinking-indicator'
+import { AiMotion, Elapsed, PulseDot, StreamCaret } from '@/components/ai/thinking-indicator'
 import { formatDuration } from '@/lib/format'
 import { plural } from '@/lib/text'
 

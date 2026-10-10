@@ -11,10 +11,10 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
-import { ThinkingTrail, type TrailStep, type TrailStepStatus } from '@/blocks/ai/thinking-trail'
-import { AiLabel } from '@/components/ai-label'
+import { ThinkingTrail, type TrailStep, type TrailStepStatus } from '@/blocks/ai/reasoning/thinking-trail'
+import { AiLabel } from '@/components/ai/ai-label'
 import { IconAction } from '@/components/icon-action'
-import { ShimmerText } from '@/components/thinking-indicator'
+import { ShimmerText } from '@/components/ai/thinking-indicator'
 import { copyText } from '@/lib/clipboard'
 import { formatDuration, formatTime, formatTimer } from '@/lib/format'
 import { Panel } from '../shared'

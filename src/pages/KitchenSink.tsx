@@ -22,7 +22,11 @@ import ShortcutsDialog from './ShortcutsDialog'
 import ShowcaseSidebar from './ShowcaseSidebar'
 import AccordionSection from './sections/AccordionSection'
 import AiComponentsSection from './sections/AiComponentsSection'
+import AiConnectorsSection from './sections/AiConnectorsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
+import AiOverviewSection from './sections/AiOverviewSection'
+import AiSettingsSection from './sections/AiSettingsSection'
+import AiSkillsSection from './sections/AiSkillsSection'
 import AiWorkspaceSection from './sections/AiWorkspaceSection'
 import AlertsSection from './sections/AlertsSection'
 import AppShellSection from './sections/AppShellSection'
@@ -162,14 +166,22 @@ export default function KitchenSink() {
     pricing: () => <PricingSection />,
     onboarding: () => <OnboardingSection />,
     'sign-in': () => <SignInSection />,
+    'ai-overview': () => <AiOverviewSection />,
     'ai-workspace': () => <AiWorkspaceSection />,
     'ai-features': () => <AiFeaturesSection />,
+    'ai-connectors': () => <AiConnectorsSection />,
+    'ai-settings': () => <AiSettingsSection />,
+    'ai-skills': () => <AiSkillsSection />,
     icons: () => <IconsSection part="icons" />,
     props: () => <IconsSection part="props" />,
     'all-icons': () => <IconsSection part="all-icons" />,
   }
   const Demos = DEMOS[page.id]
-  const components = NAV_GROUPS.find((g) => g.title === 'Components')?.items ?? []
+  // The AI group's component pages count as components here too.
+  const components = [
+    ...(NAV_GROUPS.find((g) => g.title === 'Components')?.items ?? []),
+    ...(NAV_GROUPS.find((g) => g.title === 'AI')?.items.filter((i) => i.category === 'Components') ?? []),
+  ]
 
   // Every component on one long page, as the kit was before it had one page
   // per section. Each section links to its own page for the playground; a

@@ -8,13 +8,17 @@
 //
 //   src/components/ui/*   registry:ui         one item per file
 //   src/components/*      registry:component  one item per file
-//   src/blocks/*          registry:block      one per file, or per folder
-//                                             (data-table/…); blocks/ai/* one per file
+//   src/components/ai/*   registry:component  one item per file, category "ai"
+//   src/blocks/*          registry:block      one per file, or per folder (data-table/…)
+//   src/blocks/ai/**      registry:block      one per file, in any subfolder, category "ai"
 //   src/lib/*             registry:lib        one item per file, except KIT_ONLY
 //   src/styles.css        registry:theme      "tokens": colours, radius, type
+//   (no files)            registry:item       "ai-kit": every "ai" item at once
 //
 // Blocks install into components/blocks/, where the shadcn CLI points their
-// `@/blocks/…` imports.
+// `@/blocks/…` imports. AI is a domain, not a level: its parts sit in an ai/
+// folder inside their level, and the "ai" category and the ai-kit bundle let
+// another project find and install them together.
 import { existsSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { basename, dirname, extname, join, relative, resolve, sep } from 'node:path'
 
@@ -81,14 +85,14 @@ for (const abs of filesIn(join(src, 'components', 'ui'))) {
   const name = nameOf(abs)
   addItem(name, 'registry:ui', [{ abs, type: 'registry:ui' }], `shadcn/ui ${titleOf(name).toLowerCase()}, in the kit's compact style`)
 }
-for (const abs of filesIn(join(src, 'components'))) {
+for (const abs of [...filesIn(join(src, 'components')), ...filesIn(join(src, 'components', 'ai'))]) {
   addItem(nameOf(abs), 'registry:component', [{ abs, type: 'registry:component' }])
 }
 const blockFile = (abs) => ({ abs, type: 'registry:component', target: `@components/blocks/${posix(relative(join(src, 'blocks'), abs))}` })
 for (const entry of readdirSync(join(src, 'blocks'))) {
   const abs = join(src, 'blocks', entry)
   if (statSync(abs).isFile()) addItem(nameOf(abs), 'registry:block', [blockFile(abs)])
-  else if (entry === 'ai') for (const f of filesIn(abs)) addItem(nameOf(f), 'registry:block', [blockFile(f)])
+  else if (entry === 'ai') for (const f of walk(abs).filter((p) => /\.tsx?$/.test(p))) addItem(nameOf(f), 'registry:block', [blockFile(f)])
   else addItem(entry, 'registry:block', walk(abs).map(blockFile))
 }
 for (const abs of filesIn(join(src, 'lib'))) {
@@ -186,6 +190,10 @@ for (const b of parseBlocks(styles)) {
   else tokens.css[b.selector] = declarations(b.body)
 }
 
+const AI_DIRS = [join(src, 'components', 'ai') + sep, join(src, 'blocks', 'ai') + sep]
+const isAi = (item) => item.files.every((f) => AI_DIRS.some((d) => f.abs.startsWith(d)))
+const aiNames = [...items.values()].filter(isAi).map((i) => i.name).sort()
+
 const ORDER = ['registry:theme', 'registry:lib', 'registry:ui', 'registry:component', 'registry:block']
 const registry = {
   $schema: 'https://ui.shadcn.com/schema/registry.json',
@@ -210,8 +218,17 @@ const registry = {
         description: item.description ?? DESCRIPTIONS[item.name] ?? titleOf(item.name),
         ...(item.dependencies.size && { dependencies: [...item.dependencies].sort() }),
         ...(item.registryDependencies.size && { registryDependencies: [...item.registryDependencies].sort() }),
+        ...(isAi(item) && { categories: ['ai'] }),
         files: item.files.map(({ abs, type, target }) => ({ path: rel(abs), type, ...(target && { target }) })),
       })),
+    {
+      name: 'ai-kit',
+      type: 'registry:item',
+      title: 'AI kit',
+      description: 'Every AI component and block at once (every item in the "ai" category), with what they need',
+      registryDependencies: aiNames.map((n) => `${NAMESPACE}/${n}`),
+      categories: ['ai'],
+    },
   ],
 }
 const json = JSON.stringify(registry, null, 2) + '\n'
@@ -236,6 +253,6 @@ if (process.argv.includes('--check')) {
   const count = (type) => registry.items.filter((i) => i.type === type).length
   console.log(
     `Registry: ${registry.items.length} items (${count('registry:ui')} ui, ${count('registry:component')} components, ` +
-      `${count('registry:block')} blocks, ${count('registry:lib')} lib, 1 theme) → registry.json`,
+      `${count('registry:block')} blocks, ${count('registry:lib')} lib, 1 theme, 1 bundle; ${aiNames.length} in "ai") → registry.json`,
   )
 }

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { AccountMenu } from '@/blocks/account-menu'
 import {
   ChatHistory, ChatMenuItems as ChatMenu, DeleteChatDialog as DeleteChatConfirm, type HistoryChat,
-} from '@/blocks/ai/chat-history'
+} from '@/blocks/ai/chat/chat-history'
 import type { MenuKit } from '@/components/menu-kit'
 import { Shortcut } from '@/components/shortcut'
 import { UsageMeter } from '@/components/usage-meter'
@@ -111,10 +111,10 @@ export const Sidebar = memo(function Sidebar({
             className="px-1.5 pt-1"
           />
           <AccountMenu name={USER.name} detail={USER.plan} label={USER.email}>
-            <DropdownMenuItem onSelect={actions.openSettings}>
+            <DropdownMenuItem onSelect={() => actions.openSettings()}>
               <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => toast('Upgrade plan', { description: 'Demo only.' })}>
+            <DropdownMenuItem onSelect={() => actions.openSettings('billing')}>
               <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} /> Upgrade plan
             </DropdownMenuItem>
             <DropdownMenuSeparator />

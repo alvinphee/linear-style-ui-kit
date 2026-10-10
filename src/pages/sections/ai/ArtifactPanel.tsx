@@ -1,5 +1,5 @@
 import { useMemo, type Ref } from 'react'
-import { ArtifactPanel as ArtifactPanelBlock, parseCsv } from '@/blocks/ai/artifact-panel'
+import { ArtifactPanel as ArtifactPanelBlock, parseCsv } from '@/blocks/ai/artifacts/artifact-panel'
 import { CodeBlock } from '@/blocks/markdown'
 import { formatWhen } from './data'
 import { artifactFileName } from './helpers'

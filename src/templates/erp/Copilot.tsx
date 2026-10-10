@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowExpand01Icon, Cancel01Icon, PencilEdit02Icon, SparklesIcon } from '@hugeicons/core-free-icons'
-import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat-thread'
+import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat/chat-thread'
 import { DockedPanel } from '@/blocks/docked-panel'
 import { IconAction } from '@/components/icon-action'
 import { IconMark } from '@/components/mark'

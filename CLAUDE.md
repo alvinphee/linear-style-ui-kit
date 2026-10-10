@@ -74,15 +74,30 @@ linear-style-ui-kit/
     ├── styles.css             Tailwind + the Linear-style colour tokens
     ├── shadcn-default.css     shadcn's default theme, used only by the theme comparison
     ├── blocks/                reusable blocks: props in, no sample data
-    │   ├── ai/                prompt box, chat history (projects, pinned, chats by
-    │   │                      date or as one list), chat library (All chats:
-    │   │                      search, filter by type), project page (a project's
-    │   │                      name, custom instructions, project knowledge and
-    │   │                      chats), artifact panel, thinking trail, chat
-    │   │                      message, markdown, chat thread (with the welcome
-    │   │                      screen and prompt starters), AI summary card (the
-    │   │                      AI workspace, AI in the product and both ERP
-    │   │                      templates share them)
+    │   ├── ai/                the AI kit's blocks (the AI domain, registry category "ai"; the
+    │   │                      AI workspace, AI in the product and both ERP templates share them)
+    │   │   ├── ai-summary-card.tsx  AI summary card
+    │   │   ├── chat/          prompt box, chat message, chat thread (welcome screen, prompt
+    │   │   │                  starters), chat history (projects, pinned, chats by date or as one
+    │   │   │                  list), chat library (All chats: search, filter by type)
+    │   │   ├── projects/      project page (name, custom instructions, project knowledge, chats)
+    │   │   ├── artifacts/     artifact panel
+    │   │   ├── reasoning/     thinking trail
+    │   │   ├── connectors/    let the assistant use other apps:
+    │   │   │   ├── connector-card.tsx  an app the assistant can use: mark, status (connected, needs reconnecting, admin disabled), Connect or Manage
+    │   │   │   ├── connector-catalogue.tsx  connectors to pick from: search, filter chips by category, grid or list, add custom
+    │   │   │   ├── connector-dialog.tsx  connect (consent step, scopes) or manage a connector: account, tool permissions (Always allow, Ask first, Off), disconnect
+    │   │   │   └── custom-connector-dialog.tsx  add a remote MCP server: name, URL, authentication (none, OAuth, API key header)
+    │   │   ├── skills/        instructions the assistant loads when a task needs them:
+    │   │   │   ├── skill-card.tsx  a skill: icon, source (built-in, yours, organisation), on/off, menu
+    │   │   │   ├── skill-list.tsx  skills to manage: search, filter chips, cards, create and upload
+    │   │   │   ├── skill-editor.tsx  create or edit a skill: name, when to use it, instructions (Markdown, preview), files
+    │   │   │   ├── skill-detail.tsx  a skill's SKILL.md, files and where it is used, in a sheet
+    │   │   │   └── skill-upload.tsx  upload a skill as a .zip or .md file
+    │   │   ├── memory/        what the assistant remembers about you
+    │   │   │   └── memory-manager.tsx  what the assistant remembers: search, edit in place, delete, clear all, off state
+    │   │   └── voice/         voice mode
+    │   │       └── voice-picker.tsx  voices as radio cards with a sample to play and an equaliser
     │   ├── account-menu.tsx   who is signed in, with their menu: a row at a sidebar's foot, or the avatar in a header
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
@@ -119,6 +134,8 @@ linear-style-ui-kit/
     │   │                      beside it, shrinking while you scroll down, as iOS 26's works)
     │   ├── notifications-menu.tsx  the bell's popover
     │   ├── period-picker.tsx  period switch, compare, date range picker
+    │   ├── session-list.tsx   signed-in devices: device, browser, place, last active, sign out one or all others
+    │   ├── settings-page.tsx  settings page: sections down the left (a list that drills in when narrow), SettingsHeader, SettingsGroup, SettingsRow
     │   ├── record-sheet.tsx   record peek: one record in a centred modal (center peek) or a panel from the right (side peek)
     │   ├── sign-in.tsx        sign-in page parts: form, SSO, aside, footer
     │   ├── submission-feed.tsx  submissions as cards by day (score bar, failed checks, who, when)
@@ -126,6 +143,10 @@ linear-style-ui-kit/
     │   └── workspace-switcher.tsx  workspace or company switcher
     ├── components/
     │   ├── ui/                shadcn components (ours to edit)
+    │   ├── ai/                the AI kit's components (registry category "ai")
+    │   │   ├── ai-label.tsx   "AI" tag for AI-made content
+    │   │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
+    │   │   └── incognito-toggle.tsx  incognito (temporary) chat switch for an AI chat
     │   ├── person.tsx         UserAvatar (initials), Person (avatar and name), NoAssignee
     │   ├── status-badge.tsx   status pill with a tone and a dot
     │   ├── status-icon.tsx    workflow status icon (backlog, todo, in progress, done…)
@@ -139,15 +160,12 @@ linear-style-ui-kit/
     │   ├── nav-item.tsx       sidebar row (also rail), NavHeading, NavGroup
     │   ├── search-trigger.tsx button that looks like search and opens the palette
     │   ├── shortcut.tsx       keyboard keys, ⌘ or Ctrl by platform
-    │   ├── ai-label.tsx       "AI" tag for AI-made content
     │   ├── check-item.tsx     one line of a checklist: a statement and its outcome (Pass / Fail / N/A, Yes / No)
     │   ├── rating.tsx         star rating
     │   ├── signature-pad.tsx  sign by hand on a canvas, kept as a picture
     │   ├── qr-scanner.tsx     reads a QR code with the camera (BarcodeDetector), or takes it typed
-    │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
     │   ├── icon-action.tsx    icon button with a tooltip and shortcut (copy, retry…)
     │   ├── theme-toggle.tsx   light / dark button for a header
-    │   ├── incognito-toggle.tsx  incognito (temporary) chat switch for an AI chat
     │   ├── file-chip.tsx      attached file: icon, name, size, remove
     │   ├── label-dot.tsx      LabelDot, LabelChip
     │   ├── mention.tsx        @mention pill
@@ -198,7 +216,7 @@ linear-style-ui-kit/
             ├── shared.tsx            Section and Panel wrappers
             ├── ThemeSection.tsx      presets and the theme mixer
             ├── <Page>Section.tsx     one per Components page, named after its id: ButtonsSection,
-            │                         TextFieldsSection, QrCodeSection… (39, listed in nav.ts)
+            │                         TextFieldsSection, QrCodeSection… (38, listed in nav.ts)
             ├── FormsSection.tsx      whole forms, inline and in dialogs, sheets and a wizard;
             │                         exports QuickCreateDialog (the C shortcut)
             ├── DataTableSection.tsx  TanStack table: sort, filter, paginate, export
@@ -226,8 +244,15 @@ linear-style-ui-kit/
             ├── PricingSection.tsx    plans, yearly switch, comparison table
             ├── OnboardingSection.tsx
             ├── SignInSection.tsx
-            ├── AiWorkspaceSection.tsx AI chat workspace: projects, history, agent, artifacts
-            ├── ai/                    its engine, scripted scenarios, parts, All chats and SettingsDialog
+            ├── AiOverviewSection.tsx  the AI kit: install, every AI item from the registry, templates
+            ├── AiWorkspaceSection.tsx AI chat workspace: projects, history, agent, artifacts, and in the
+            │                         full-page app its addresses (chat, project, library, settings)
+            ├── ai/                    its engine, scripted scenarios, parts, All chats, routes.ts
+            │   └── settings/          the full-page Settings: SettingsScreen (its sections), one tab per
+            │                         file, prefs.ts (useAiPrefs, useStoredState: kept in the browser)
+            │                         and the connectors', skills' and memories' sample data
+            ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx  their kit pages
+            ├── ai-settings/           those pages' panels (account, models and voice, connectors, skills)
             ├── AiFeaturesSection.tsx  inline AI, summary, triage, AI search and more
             ├── ai-features/           its panels and scripted helpers
             └── IconsSection.tsx
@@ -242,13 +267,13 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **Components:** single building blocks, restyled, each with its
   playground and variants. One page per component family: a component and
   its close relatives (Badges and labels: Badge, StatusBadge, DeltaBadge,
-  LabelChip). 39 pages under category headings: Actions, Inputs, Data
-  display, Feedback, Overlays, Navigation, Layout, Charts, AI. Every part a
+  LabelChip). 38 pages under category headings: Actions, Inputs, Data
+  display, Feedback, Overlays, Navigation, Layout, Charts. Every part a
   block uses has its own demo here. A new component joins its family's
   page; a new family gets its own page (see below).
 - **Blocks:** whole screens built from components, as shadcn calls them
   (list, board, issue detail, inbox, roadmap, dock schedule, settings,
-  onboarding, sign-in, the AI workspace, AI in the product…)
+  onboarding, sign-in…)
 - **Layouts:** the frame pages sit in (App shells): the desktop shells, mixed
   live, and the phone app (PWA) layout in a phone-sized frame. Its controls:
   opened in a browser tab or installed (standalone), navigation (tab bar,
@@ -257,6 +282,11 @@ levels, smallest first (definitions in `docs/glossary.md`):
   bar), and Offline, which keeps changes
   on the phone until you reconnect. It runs on the same jobs, so an edit in
   the phone shows in the desktop frame above it
+- **AI:** the AI kit, a domain across the levels rather than a level (see
+  "Domains" in `docs/architecture.md`): Overview (install the AI kit, every
+  AI item read from the registry, the AI templates); Components: AI
+  components; Blocks: AI workspace, AI in the product, Connectors, Settings
+  page, Skills and memory. An AI-only part goes in its level's `ai/` folder
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
 
@@ -295,6 +325,14 @@ template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
   icon beside it. Incognito is the toggle at the top right of the chat, not
   in the sidebar: those chats are never saved and are deleted when you
   leave them; opening a kept chat, a project or All chats ends incognito.
+  Each view has its own address (`ai/routes.ts`): `/chat/<id>`,
+  `/project/<id>`, `/project/<id>/new`, `/library`, and the base for a new
+  chat, so the back button and a reload work. Settings is a full page at
+  `/settings/<section>` (the account menu, or Upgrade plan for Billing):
+  Profile, Appearance, Personalisation, Notifications, Security; Models and
+  features, Memory, Connectors, Skills, Voice; Data controls, Billing and
+  usage. Its choices are kept in the browser (`ai/settings/prefs.ts`). In the
+  kit the workspace sits in a card and Settings opens inside it.
 - `#/templates/erp`: the ERP app, below.
 - `#/templates/erp-ai`: the same ERP with the AI assistant built in, below.
 
@@ -496,9 +534,12 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 128 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
-components, 34 blocks and 9 lib files. Which level becomes which item:
-`docs/architecture.md`.
+needs. 142 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
+components, 47 blocks, 9 lib files and the `ai-kit` bundle. Which level
+becomes which item: `docs/architecture.md`.
+- Items from `components/ai/` and `blocks/ai/**` have `categories: ["ai"]`;
+  `ai-kit` (a `registry:item` with no files) depends on all of them:
+  `npx shadcn add @kit/ai-kit`.
 - `npm run registry` runs `scripts/build-registry.mjs` (writes
   `registry.json` from each part's imports), then `shadcn build` (writes
   `public/r/<name>.json`). The dev server serves them at

@@ -1,19 +1,20 @@
 import type { IconSvgElement } from '@hugeicons/react'
 import { navigate } from '@/lib/router'
 import {
-  AiBrain01Icon, AiChat02Icon, AiMagicIcon, Alert02Icon, AppWindowIcon, ArrowLeftRightIcon, ArrowRightDoubleIcon,
+  AiBrain01Icon, AiChat02Icon, AiInnovation01Icon, AiMagicIcon, Alert02Icon, AppWindowIcon, ArrowLeftRightIcon, ArrowRightDoubleIcon,
   Audit01Icon, Building06Icon, Calendar01Icon, Calendar03Icon, ChartAreaIcon, ChartGanttIcon,
   CheckmarkSquare02Icon, ClipboardCheckIcon, CommandIcon, Comment01Icon, Compass01Icon, CursorPointer02Icon, DashboardSquare01Icon,
   DragDropVerticalIcon, DropdownFieldTypeIcon, FileEmpty02Icon, FileUploadIcon, Flag02Icon, FormIcon,
   GitCompareIcon, GridViewIcon, Heading01Icon, HorizontalResizeIcon, InboxIcon, InputTextIcon, KanbanIcon,
   KeyboardIcon, LayoutGridIcon, LayoutPanelTopIcon, LeftToRightListBulletIcon, ListCollapseIcon, Loading03Icon,
   Login01Icon, MenuSquareIcon, Money03Icon, NoteEditIcon, NotebookTabsIcon, PaintBoardIcon, PanelRightIcon,
-  PencilEdit02Icon, ProgressIcon, QrCodeIcon, Rocket01Icon, ScrollVerticalIcon, Search01Icon, Settings01Icon, Settings02Icon,
+  PencilEdit02Icon, Plug01Icon, ProgressIcon, PuzzleIcon, QrCodeIcon, Rocket01Icon, ScrollVerticalIcon, Search01Icon, Settings01Icon, Settings02Icon,
   SidebarLeftIcon, SlidersHorizontalIcon, SolidLine01Icon, SparklesIcon, Table01Icon, Tag01Icon, Task01Icon,
   TaskDone01Icon, TimelineIcon, UserGroupIcon, WarehouseIcon,
 } from '@hugeicons/core-free-icons'
 
-// `category` sorts a group's pages under small headings (Components only).
+// `category` sorts a group's pages under small headings (Components, and
+// the AI group's Components and Blocks).
 export type NavItem = { id: string; label: string; icon: IconSvgElement; category?: string }
 
 // The kit in five levels, smallest first: tokens (Theme), components,
@@ -21,6 +22,8 @@ export type NavItem = { id: string; label: string; icon: IconSvgElement; categor
 // and templates (whole apps, listed in TEMPLATES below). Each item is a page.
 // Components get one page per family (a component and its close relatives,
 // such as Badge, StatusBadge and DeltaBadge), A to Z within each category.
+// AI is a domain across the levels, not a level: its pages have one group of
+// their own, after Layouts, with the level as the heading.
 export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Get started',
@@ -79,8 +82,6 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 
       { id: 'charts', label: 'Charts', icon: ChartAreaIcon, category: 'Charts' },
       { id: 'gantt', label: 'Gantt parts', icon: ChartGanttIcon, category: 'Charts' },
-
-      { id: 'ai-components', label: 'AI components', icon: AiMagicIcon, category: 'AI' },
     ],
   },
   {
@@ -101,13 +102,23 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'pricing', label: 'Pricing', icon: Money03Icon },
       { id: 'onboarding', label: 'Onboarding', icon: Rocket01Icon },
       { id: 'sign-in', label: 'Sign-in page', icon: Login01Icon },
-      { id: 'ai-workspace', label: 'AI workspace', icon: AiChat02Icon },
-      { id: 'ai-features', label: 'AI in the product', icon: SparklesIcon },
     ],
   },
   {
     title: 'Layouts',
     items: [{ id: 'app-shell', label: 'App shells', icon: SidebarLeftIcon }],
+  },
+  {
+    title: 'AI',
+    items: [
+      { id: 'ai-overview', label: 'Overview', icon: AiInnovation01Icon },
+      { id: 'ai-components', label: 'AI components', icon: AiMagicIcon, category: 'Components' },
+      { id: 'ai-workspace', label: 'AI workspace', icon: AiChat02Icon, category: 'Blocks' },
+      { id: 'ai-features', label: 'AI in the product', icon: SparklesIcon, category: 'Blocks' },
+      { id: 'ai-connectors', label: 'Connectors', icon: Plug01Icon, category: 'Blocks' },
+      { id: 'ai-settings', label: 'Settings page', icon: Settings01Icon, category: 'Blocks' },
+      { id: 'ai-skills', label: 'Skills and memory', icon: PuzzleIcon, category: 'Blocks' },
+    ],
   },
   {
     title: 'Icons',

@@ -5,16 +5,16 @@ import {
   Globe02Icon, Search01Icon, SparklesIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { StreamCaret } from '@/components/thinking-indicator'
+import { StreamCaret } from '@/components/ai/thinking-indicator'
 import { Button } from '@/components/ui/button'
 import { AiSummaryCard, SummaryBullets, type SummaryPhase } from '@/blocks/ai/ai-summary-card'
 import {
   AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, UserMessage, type Feedback,
-} from '@/blocks/ai/chat-message'
-import { PromptBox, type PromptMode, type PromptModel } from '@/blocks/ai/prompt-box'
+} from '@/blocks/ai/chat/chat-message'
+import { PromptBox, type PromptMode, type PromptModel } from '@/blocks/ai/chat/prompt-box'
 import {
   ApprovalCard, ThinkingTrail, type ApprovalChange, type ApprovalDecision, type TrailStep,
-} from '@/blocks/ai/thinking-trail'
+} from '@/blocks/ai/reasoning/thinking-trail'
 import { Markdown, type Citation } from '@/blocks/markdown'
 import { copyText } from '@/lib/clipboard'
 import {
@@ -145,7 +145,7 @@ function trailCode(state: TrailState, count: number, io: boolean, reasoning: boo
   const head = imports({
     react: trail.live ? ['useState'] : [],
     '@hugeicons/core-free-icons': pick(...icons).sort(),
-    '@/blocks/ai/thinking-trail': ['ThinkingTrail', 'type TrailStep'],
+    '@/blocks/ai/reasoning/thinking-trail': ['ThinkingTrail', 'type TrailStep'],
   })
   const steps = `const steps: TrailStep[] = [\n${trail.steps.map((s) => indent(`${stepCode(s)},`)).join('\n')}\n]`
   const body = jsx('div', { className: '@container' }, jsx('ThinkingTrail', {
@@ -246,7 +246,7 @@ function TrailDemos() {
           const count = Number(str(v, 'changes'))
           const head = imports({
             react: ['useState'],
-            '@/blocks/ai/thinking-trail': ['ApprovalCard', 'type ApprovalDecision'],
+            '@/blocks/ai/reasoning/thinking-trail': ['ApprovalCard', 'type ApprovalDecision'],
           })
           const body = element('ApprovalCard', [
             'title="Send payment reminders?"',
@@ -378,7 +378,7 @@ function summaryCode(phase: SummaryPhase, stale: boolean, footerAction: boolean,
     react: done ? ['useState'] : [],
     '@hugeicons/react': idle ? ['HugeiconsIcon'] : [],
     '@hugeicons/core-free-icons': idle ? ['SparklesIcon'] : [],
-    '@/components/thinking-indicator': streaming ? ['StreamCaret'] : [],
+    '@/components/ai/thinking-indicator': streaming ? ['StreamCaret'] : [],
     '@/components/ui/button': idle || footerAction ? ['Button'] : [],
     '@/blocks/ai/ai-summary-card': done || streaming ? ['AiSummaryCard', 'SummaryBullets'] : ['AiSummaryCard'],
   })
@@ -541,10 +541,10 @@ function ChatPreview() {
 
 const CHAT_CODE = `${imports({
   react: ['useState'],
-  '@/blocks/ai/chat-message': [
+  '@/blocks/ai/chat/chat-message': [
     'AssistantMessage', 'FeedbackDialog', 'FollowUps', 'MessageActions', 'SourcesRow', 'UserMessage', 'type Feedback',
   ],
-  '@/blocks/ai/thinking-trail': ['ThinkingTrail'],
+  '@/blocks/ai/reasoning/thinking-trail': ['ThinkingTrail'],
   '@/blocks/markdown': ['Markdown'],
 })}
 
@@ -808,7 +808,7 @@ function PromptBoxDemos() {
             modes && 'AiBrain01Icon', models && 'AiBrain02Icon', models && 'BalanceScaleIcon', models && 'FlashIcon', modes && 'Globe02Icon',
           ),
           sonner: ['toast'],
-          '@/blocks/ai/prompt-box': models ? ['PromptBox', 'type PromptModel'] : ['PromptBox'],
+          '@/blocks/ai/chat/prompt-box': models ? ['PromptBox', 'type PromptModel'] : ['PromptBox'],
         })
         const modelList = models
           ? `const models: PromptModel[] = [\n${PROMPT_MODELS.map((m) => indent(`${modelCode(m)},`)).join('\n')}\n]\n\n`
