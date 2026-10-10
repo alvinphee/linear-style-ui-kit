@@ -3,7 +3,6 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowUpRight01Icon, SidebarLeftIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { ProjectPage } from '@/blocks/ai/projects/project-page'
 import { IconAction } from '@/components/icon-action'
 import { AiMotion } from '@/components/ai/thinking-indicator'
 import { Button } from '@/components/ui/button'
@@ -24,6 +23,7 @@ import {
   type Sink,
 } from './ai/engine'
 import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
+import { ProjectView } from './ai/ProjectView'
 import { isAppPath, parseRoute, pathFor, settingsPath } from './ai/routes'
 import { SettingsScreen } from './ai/settings/SettingsScreen'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
@@ -247,14 +247,16 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
     }
 
     const api: WorkspaceActions = {
-      send(text, attachments) {
+      send(text, attachments, inProject) {
         const s = stateRef.current
         const at = now()
-        let chat = s.view.kind === 'chat' ? chatById(s.view.chatId) : undefined
+        // With inProject, always a new chat in that project (the project page's box).
+        let chat = s.view.kind === 'chat' && inProject === undefined ? chatById(s.view.chatId) : undefined
         stopRun(false)
         if (chat) settleApproval(chat)
         else {
-          const projectId = s.view.kind === 'new' || s.view.kind === 'project' ? s.view.projectId : null
+          const projectId = inProject !== undefined ? inProject
+            : s.view.kind === 'new' || s.view.kind === 'project' ? s.view.projectId : null
           chat = {
             id: uid('c'), title: titleFor(text), projectId, pinned: false, updatedAt: at, model: s.model, messages: [],
             temporary: s.incognito || undefined,
@@ -362,11 +364,15 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         dispatch({ type: 'view', view: { kind: 'new', projectId } })
         setFocusKey((k) => k + 1)
       },
-      openProject(id) {
-        stopRun()
-        closePanel(false)
-        endIncognito()
-        dispatch({ type: 'view', view: { kind: 'project', projectId: id } })
+      openProject(id, tab) {
+        const { view } = stateRef.current
+        // Another tab of the open project: nothing else changes.
+        if (!(view.kind === 'project' && view.projectId === id)) {
+          stopRun()
+          closePanel(false)
+          endIncognito()
+        }
+        dispatch({ type: 'view', view: { kind: 'project', projectId: id, tab } })
       },
       openLibrary() {
         stopRun()
@@ -427,6 +433,22 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         return id
       },
       patchProject: (id, patch) => dispatch({ type: 'project/patch', id, patch }),
+      // A patch made from the project as it is when it lands, for changes
+      // that finish later (a scheduled task's run).
+      patchProjectWith(id, update) {
+        const project = stateRef.current.projects.find((p) => p.id === id)
+        if (project) dispatch({ type: 'project/patch', id, patch: update(project) })
+      },
+      duplicateProject(id) {
+        const project = stateRef.current.projects.find((p) => p.id === id)
+        if (!project) return
+        const copy = {
+          ...structuredClone(project), id: uid('p'), name: `${project.name} (copy)`, starred: false, archived: false,
+          sharing: undefined,
+        }
+        dispatch({ type: 'project/add', project: copy })
+        toast(`Duplicated “${project.name}”`, { action: { label: 'Open', onClick: () => api.openProject(copy.id) } })
+      },
       deleteProject(id) {
         dispatch({ type: 'project/delete', id })
         toast('Project deleted', { description: 'Its chats moved to your history.' })
@@ -495,7 +517,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
     if (!next) window.location.replace(`#${pathFor(stateRef.current.view)}`)
     if (!next || pathFor(next) === pathFor(stateRef.current.view)) return
     if (next.kind === 'chat') actions.openChat(next.chatId)
-    else if (next.kind === 'project') actions.openProject(next.projectId)
+    else if (next.kind === 'project') actions.openProject(next.projectId, next.tab)
     else if (next.kind === 'library') actions.openLibrary()
     else actions.newChat(next.projectId)
   }, [page, path, actions])
@@ -634,18 +656,12 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
               onResetDemo={actions.resetDemo}
             />
           ) : view.kind === 'project' && project ? (
-            <ProjectPage
+            <ProjectView
               project={project}
               chats={summaries.filter((c) => c.projectId === project.id)}
-              now={now}
-              filesHint="Files the assistant draws on in every chat in this project. They stay in this browser only."
-              onChange={(patch) => actions.patchProject(project.id, patch)}
-              onAddFiles={(files) => actions.addProjectFiles(project.id, files.map(toFileRef))}
-              onRemoveFile={(fileId) => actions.removeProjectFile(project.id, fileId)}
-              onNewChat={() => actions.newChat(project.id)}
-              onOpenChat={actions.openChat}
-              onDelete={() => actions.deleteProject(project.id)}
+              tab={view.tab}
               start={sidebarToggle}
+              key={project.id}
             />
           ) : view.kind === 'library' ? (
             <AllChats chats={kept} projects={state.projects} runningChatId={runningChatId} sidebarToggle={sidebarToggle} />

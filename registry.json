@@ -1321,6 +1321,28 @@
       ]
     },
     {
+      "name": "icon-colour-picker",
+      "type": "registry:component",
+      "title": "Icon colour picker",
+      "description": "pick an icon and a colour (a project's look); IconColourSwatch",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/mark",
+        "@kit/popover",
+        "@kit/search-field"
+      ],
+      "files": [
+        {
+          "path": "src/components/icon-colour-picker.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "incognito-toggle",
       "type": "registry:component",
       "title": "Incognito toggle",
@@ -1594,6 +1616,29 @@
       "files": [
         {
           "path": "src/components/rating.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "recurrence-picker",
+      "type": "registry:component",
+      "title": "Recurrence picker",
+      "description": "how often something repeats (once, daily, weekdays, weekly, monthly), at what time, in which time zone",
+      "dependencies": [
+        "cn@^0.4.0",
+        "date-fns@^4.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/field",
+        "@kit/input",
+        "@kit/select",
+        "@kit/toggle-group",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/components/recurrence-picker.tsx",
           "type": "registry:component"
         }
       ]
@@ -1937,7 +1982,8 @@
         "@kit/nav-item",
         "@kit/search-field",
         "@kit/spinner",
-        "@kit/text"
+        "@kit/text",
+        "@kit/tokens"
       ],
       "categories": [
         "ai"
@@ -2749,6 +2795,36 @@
       ]
     },
     {
+      "name": "new-project-dialog",
+      "type": "registry:block",
+      "title": "New project dialog",
+      "description": "new project from a template, or edit its details: name, icon and colour, description, instructions",
+      "dependencies": [
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/icon-colour-picker",
+        "@kit/input",
+        "@kit/mark",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/projects/new-project-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/projects/new-project-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "notifications-menu",
       "type": "registry:block",
       "title": "Notifications menu",
@@ -2806,7 +2882,7 @@
       "name": "project-page",
       "type": "registry:block",
       "title": "Project page",
-      "description": "Project page: a project's instructions, knowledge (files) and chats, on a page of its own",
+      "description": "Project page: a project as a workspace, with its header (icon, star, share), tabs, instructions, knowledge and chats",
       "dependencies": [
         "@hugeicons/core-free-icons@^4.3.5",
         "@hugeicons/react@^1.1.10",
@@ -2820,7 +2896,9 @@
         "@kit/file-chip",
         "@kit/format",
         "@kit/icon-action",
-        "@kit/textarea"
+        "@kit/tabs",
+        "@kit/textarea",
+        "@kit/tokens"
       ],
       "categories": [
         "ai"
@@ -2830,6 +2908,69 @@
           "path": "src/blocks/ai/projects/project-page.tsx",
           "type": "registry:component",
           "target": "@components/blocks/ai/projects/project-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "project-sharing",
+      "type": "registry:block",
+      "title": "Project sharing",
+      "description": "a project's Sharing tab: who has access, general access, chat visibility, what members can do",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/field",
+        "@kit/person",
+        "@kit/radio-group",
+        "@kit/share-dialog",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/projects/project-sharing.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/projects/project-sharing.tsx"
+        }
+      ]
+    },
+    {
+      "name": "project-tools",
+      "type": "registry:block",
+      "title": "Project tools",
+      "description": "a project's Tools tab: connectors and skills it may use, and project memory",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/collapsible",
+        "@kit/connector-card",
+        "@kit/connector-dialog",
+        "@kit/memory-manager",
+        "@kit/settings-page",
+        "@kit/skill-card",
+        "@kit/switch",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/projects/project-tools.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/projects/project-tools.tsx"
         }
       ]
     },
@@ -2897,6 +3038,73 @@
       ]
     },
     {
+      "name": "scheduled-task-dialog",
+      "type": "registry:block",
+      "title": "Scheduled task dialog",
+      "description": "create or edit a scheduled task: prompt, recurrence, next runs, model, delivery",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "date-fns@^4.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/input",
+        "@kit/recurrence-picker",
+        "@kit/select",
+        "@kit/switch",
+        "@kit/textarea"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/schedules/scheduled-task-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/schedules/scheduled-task-dialog.tsx"
+        }
+      ]
+    },
+    {
+      "name": "scheduled-task-list",
+      "type": "registry:block",
+      "title": "Scheduled task list",
+      "description": "scheduled tasks: schedule, next run, last run, pause, Run now",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/dropdown-menu",
+        "@kit/empty",
+        "@kit/format",
+        "@kit/mark",
+        "@kit/recurrence-picker",
+        "@kit/scheduled-task-dialog",
+        "@kit/spinner",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/schedules/scheduled-task-list.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/schedules/scheduled-task-list.tsx"
+        }
+      ]
+    },
+    {
       "name": "session-list",
       "type": "registry:block",
       "title": "Session list",
@@ -2940,6 +3148,36 @@
           "path": "src/blocks/settings-page.tsx",
           "type": "registry:component",
           "target": "@components/blocks/settings-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "share-dialog",
+      "type": "registry:block",
+      "title": "Share dialog",
+      "description": "share anything: invite people with a role, people with access, general access, copy link; ShareSummary, ShareButton",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/person",
+        "@kit/popover",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/share-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/share-dialog.tsx"
         }
       ]
     },
@@ -3152,6 +3390,37 @@
       ]
     },
     {
+      "name": "task-run-history",
+      "type": "registry:block",
+      "title": "Task run history",
+      "description": "a scheduled task's runs, inline or in a sheet",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/empty",
+        "@kit/format",
+        "@kit/scheduled-task-dialog",
+        "@kit/sheet",
+        "@kit/spinner",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/schedules/task-run-history.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/schedules/task-run-history.tsx"
+        }
+      ]
+    },
+    {
       "name": "thinking-trail",
       "type": "registry:block",
       "title": "Thinking trail",
@@ -3247,13 +3516,19 @@
         "@kit/custom-connector-dialog",
         "@kit/incognito-toggle",
         "@kit/memory-manager",
+        "@kit/new-project-dialog",
         "@kit/project-page",
+        "@kit/project-sharing",
+        "@kit/project-tools",
         "@kit/prompt-box",
+        "@kit/scheduled-task-dialog",
+        "@kit/scheduled-task-list",
         "@kit/skill-card",
         "@kit/skill-detail",
         "@kit/skill-editor",
         "@kit/skill-list",
         "@kit/skill-upload",
+        "@kit/task-run-history",
         "@kit/thinking-indicator",
         "@kit/thinking-trail",
         "@kit/voice-picker"

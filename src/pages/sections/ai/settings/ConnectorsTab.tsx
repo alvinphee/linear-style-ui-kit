@@ -77,11 +77,11 @@ function customConnector(c: StoredCustom): Connector {
   }
 }
 
-export function ConnectorsTab() {
+// Every connector as the user has it now (connected or not, their tool
+// permissions, their custom ones). Projects read the same, so a connector
+// connected here can be switched on in a project at once.
+export function useConnectors() {
   const [state, setState] = useStoredState<ConnectorsState>(CONNECTORS_KEY, INITIAL)
-  const [openId, setOpenId] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
-
   const connectors = useMemo(() => {
     const withPermissions = (c: Connector): Connector => {
       const chosen = state.permissions[c.id]
@@ -99,6 +99,13 @@ export function ConnectorsTab() {
     })
     return [...builtIn, ...state.custom.map((c) => withPermissions(customConnector(c)))]
   }, [state])
+  return { connectors, state, setState }
+}
+
+export function ConnectorsTab() {
+  const { connectors, setState } = useConnectors()
+  const [openId, setOpenId] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
 
   const open = connectors.find((c) => c.id === openId) ?? null
 

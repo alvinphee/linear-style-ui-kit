@@ -859,3 +859,12 @@ keeps an `ai/` folder, the sidebar has an AI group, and the registry tags
 the items `categories: ["ai"]` with an `ai-kit` bundle, as Vercel's AI
 Elements does for shadcn. The level rule and `npm run check` stay as they
 were. The test for what goes in: it makes sense only in an AI product.
+
+## A percentage max-width can widen a whole sidebar (added 2026-10-10)
+The "Shared with me" rows put the owner's name in `max-w-[45%]`. Inside the
+NavGroup's grid, whose one column was implicit (`auto`), the percentage
+could not be resolved while sizing, so the column grew to the row's full
+text and the sidebar scrolled sideways. NavGroup now sets
+`grid-cols-[minmax(0,1fr)]`, the same fix as the rule for page grids, and
+the owner's name has a fixed cap. Any grid that lists rows of text needs
+the explicit column.

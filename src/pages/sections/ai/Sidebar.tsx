@@ -4,7 +4,7 @@ import { Add01Icon, DashboardSquare01Icon, Logout01Icon, RefreshIcon, Settings01
 import { toast } from 'sonner'
 import { AccountMenu } from '@/blocks/account-menu'
 import {
-  ChatHistory, ChatMenuItems as ChatMenu, DeleteChatDialog as DeleteChatConfirm, type HistoryChat,
+  ChatHistory, ChatMenuItems as ChatMenu, DeleteChatDialog as DeleteChatConfirm, type HistoryChat, type HistoryProject,
 } from '@/blocks/ai/chat/chat-history'
 import type { MenuKit } from '@/components/menu-kit'
 import { Shortcut } from '@/components/shortcut'
@@ -12,6 +12,8 @@ import { UsageMeter } from '@/components/usage-meter'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
 import { useActions } from './context'
 import { CHAT_TYPES, USER, now } from './data'
+import { projectIcon } from './projects/templates'
+import { SHARED_WITH_ME } from './projects/tools-data'
 import type { Chat, Project, View } from './types'
 
 // The workspace's sidebar: the chat-history block wired to the workspace's
@@ -24,6 +26,13 @@ import type { Chat, Project, View } from './types'
 // A chat as the sidebar shows it, with its type (chatTypeOf) and that type's icon.
 export type ChatSummary = Pick<Chat, 'id' | 'title' | 'projectId' | 'pinned' | 'updatedAt'>
   & Pick<HistoryChat, 'type' | 'icon' | 'iconColour'>
+
+// Projects as the history block draws them: the saved icon id as an icon,
+// shared when anyone else is in it.
+export const toHistoryProjects = (projects: Project[]): HistoryProject[] => projects.map((p) => ({
+  id: p.id, name: p.name, colour: p.colour, icon: projectIcon(p.icon), starred: p.starred, archived: p.archived,
+  shared: (p.sharing?.members.length ?? 1) > 1 || (p.sharing?.access ?? 'restricted') !== 'restricted',
+}))
 
 // The same actions in the hover menu, the right-click menu and the chat header.
 export function ChatMenuItems({ kit, chat, projects, onRename, onDelete, extra }: {
@@ -39,7 +48,7 @@ export function ChatMenuItems({ kit, chat, projects, onRename, onDelete, extra }
     <ChatMenu
       kit={kit}
       chat={chat}
-      projects={projects}
+      projects={toHistoryProjects(projects)}
       onPin={(pinned) => actions.pinChat(chat.id, pinned)}
       onRename={onRename}
       onMove={(projectId) => actions.moveChat(chat.id, projectId)}
@@ -67,6 +76,7 @@ export const Sidebar = memo(function Sidebar({
   kitLink?: boolean
 }) {
   const actions = useActions()
+  const history = useMemo(() => toHistoryProjects(projects), [projects])
   const rows = useMemo(
     (): HistoryChat[] => chats.map((c) => (c.id === runningChatId ? { ...c, running: true } : c)),
     [chats, runningChatId],
@@ -75,7 +85,8 @@ export const Sidebar = memo(function Sidebar({
   return (
     <ChatHistory
       chats={rows}
-      projects={projects}
+      projects={history}
+      sharedProjects={SHARED_WITH_ME}
       activeChatId={view.kind === 'chat' ? view.chatId : null}
       activeProjectId={view.kind === 'project' ? view.projectId : null}
       now={now}
@@ -85,11 +96,23 @@ export const Sidebar = memo(function Sidebar({
       types={CHAT_TYPES}
       onNewChat={() => actions.newChat(null)}
       onOpenChat={actions.openChat}
-      onOpenProject={actions.openProject}
+      onOpenProject={(id) => (SHARED_WITH_ME.some((p) => p.id === id)
+        ? toast('Shared with you', { description: 'Demo only. Projects others share open once the app has a server.' })
+        : actions.openProject(id))}
       // A new project opens on its page, where its instructions and files go.
       onCreateProject={(name) => actions.openProject(actions.createProject(name))}
       onNewChatInProject={(id) => actions.newChat(id)}
-      onEditProject={actions.openProject}
+      onEditProject={(id) => actions.openProject(id, 'settings')}
+      onStarProject={(id, starred) => actions.patchProject(id, { starred })}
+      onShareProject={(id) => actions.openProject(id, 'sharing')}
+      onDuplicateProject={actions.duplicateProject}
+      onArchiveProject={(id) => {
+        actions.patchProject(id, { archived: true })
+        toast('Project archived', {
+          description: 'It is hidden from your sidebar.',
+          action: { label: 'Undo', onClick: () => actions.patchProject(id, { archived: false }) },
+        })
+      }}
       onDeleteProject={actions.deleteProject}
       onViewAll={actions.openLibrary}
       viewAllActive={view.kind === 'library'}

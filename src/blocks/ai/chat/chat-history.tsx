@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  ArrowDown01Icon, ArrowRight01Icon, BubbleChatIcon, Add01Icon, Cancel01Icon, CopyPlusIcon, Delete02Icon,
+  Archive02Icon, ArrowDown01Icon, ArrowRight01Icon, BubbleChatIcon, Add01Icon, Cancel01Icon, CopyPlusIcon, Delete02Icon,
   Download01Icon, Edit02Icon, Folder01Icon, FolderAddIcon, FolderEditIcon, FolderOpenIcon, FolderRemoveIcon,
   FolderTransferIcon, LibraryIcon, MessageAdd01Icon, MoreHorizontalIcon, PencilEdit02Icon, PinIcon, PinOffIcon,
-  Search01Icon, SlidersHorizontalIcon, Tick02Icon,
+  Search01Icon, Share08Icon, SlidersHorizontalIcon, StarIcon, StarOffIcon, Tick02Icon, UserGroupIcon,
 } from '@hugeicons/core-free-icons'
 import { startOfDay, subDays } from 'date-fns'
 import { cn } from 'cn'
@@ -33,7 +33,13 @@ import { plural } from '@/lib/text'
 //   Projects   folders of chats, each folding open on its chats. + starts
 //              one: named in place (onCreateProject) or your own setup
 //              (onNewProject), such as a dialog with its instructions. A
-//              project's menu offers a new chat in it, edit and delete.
+//              project's menu offers a new chat in it, star, edit, share,
+//              duplicate, archive and delete. Starred projects come first,
+//              then the rest A to Z; archived ones are not listed. A row
+//              can show the project's own icon, a people icon when it is
+//              shared, and a count of results not opened yet.
+//   Shared with me  projects colleagues shared with you (sharedProjects),
+//              with their owner's name
 //   Pinned     pinned chats
 //   Chats      the rest, newest first in one list. Its options button groups
 //              them under Today, Yesterday, Previous 7 days, Older (or a
@@ -80,6 +86,8 @@ export type HistoryChat = {
   iconColour?: string
   // A ChatType's `value`, for the Chats filter.
   type?: string
+  // Has something not opened yet, such as a scheduled task's result: a dot.
+  unread?: boolean
 }
 
 export type HistoryProject = {
@@ -87,6 +95,18 @@ export type HistoryProject = {
   name: string
   // A CSS colour for the folder, built from theme tokens: var(--chart-2).
   colour?: string
+  // Shown in place of the folder.
+  icon?: IconSvgElement
+  // Listed first, with a star.
+  starred?: boolean
+  // Not listed.
+  archived?: boolean
+  // Shared with other people: a people icon after the name.
+  shared?: boolean
+  // Results not opened yet, such as from scheduled tasks: a count.
+  unread?: number
+  // Who shared it with you, for the Shared with me group.
+  owner?: string
 }
 
 // Today, Yesterday, Previous 7 days or Older, in calendar days from `now`.
@@ -264,10 +284,15 @@ export function DeleteChatDialog({ open, title, onClose, onConfirm, onDeleted }:
 }
 
 // A project's actions, for its row's … menu and its right-click menu.
-function ProjectMenuItems({ kit, onNewChat, onEdit, onDelete }: {
+function ProjectMenuItems({ kit, starred, onNewChat, onStar, onEdit, onShare, onDuplicate, onArchive, onDelete }: {
   kit: MenuKit
+  starred?: boolean
   onNewChat?: () => void
+  onStar?: (starred: boolean) => void
   onEdit?: () => void
+  onShare?: () => void
+  onDuplicate?: () => void
+  onArchive?: () => void
   onDelete?: () => void
 }) {
   const K = kit
@@ -279,15 +304,39 @@ function ProjectMenuItems({ kit, onNewChat, onEdit, onDelete }: {
           New chat in project
         </K.Item>
       )}
+      {onStar && (
+        <K.Item onSelect={() => onStar(!starred)}>
+          <HugeiconsIcon icon={starred ? StarOffIcon : StarIcon} strokeWidth={2} />
+          {starred ? 'Unstar' : 'Star'}
+        </K.Item>
+      )}
       {onEdit && (
         <K.Item onSelect={onEdit}>
           <HugeiconsIcon icon={FolderEditIcon} strokeWidth={2} />
           Edit project
         </K.Item>
       )}
+      {onShare && (
+        <K.Item onSelect={onShare}>
+          <HugeiconsIcon icon={Share08Icon} strokeWidth={2} />
+          Share
+        </K.Item>
+      )}
+      {onDuplicate && (
+        <K.Item onSelect={onDuplicate}>
+          <HugeiconsIcon icon={CopyPlusIcon} strokeWidth={2} />
+          Duplicate
+        </K.Item>
+      )}
+      {onArchive && (
+        <K.Item onSelect={onArchive}>
+          <HugeiconsIcon icon={Archive02Icon} strokeWidth={2} />
+          Archive
+        </K.Item>
+      )}
       {onDelete && (
         <>
-          {(onNewChat || onEdit) && <K.Separator />}
+          {(onNewChat || onStar || onEdit || onShare || onDuplicate || onArchive) && <K.Separator />}
           <K.Item variant="destructive" onSelect={onDelete}>
             <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
             Delete project
@@ -377,10 +426,15 @@ function ChatRow({ chat, active, onOpen, actions }: {
             className={cn('size-3.5 shrink-0', !chat.iconColour && 'opacity-60')}
             style={{ color: chat.iconColour }}
           />
-          <span className="min-w-0 truncate">{chat.title}</span>
+          <span className={cn('min-w-0 truncate', chat.unread && 'font-medium')}>{chat.title}</span>
+          {chat.unread && (
+            <span className="bg-brand ml-auto size-1.5 shrink-0 rounded-full">
+              <span className="sr-only">Unread</span>
+            </span>
+          )}
         </button>
       )}
-      {chat.running && <Spinner className="text-muted-foreground mr-1 size-3" aria-label="Replying" />}
+      {chat.running &&<Spinner className="text-muted-foreground mr-1 size-3" aria-label="Replying" />}
       {!renaming && hasMenu && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -428,9 +482,10 @@ function TypeMark({ type }: { type: ChatType }) {
 const MORE_AFTER = 4
 
 export function ChatHistory({
-  chats, projects, activeChatId = null, activeProjectId = null, now, onNewChat, newChatLabel = 'New chat',
+  chats, projects, sharedProjects = [], activeChatId = null, activeProjectId = null, now, onNewChat, newChatLabel = 'New chat',
   newChatIcon = PencilEdit02Icon, newChatShortcut, newChatRef, links = [], onOpenChat, onOpenProject, onCreateProject,
-  onNewProject, onNewChatInProject, onEditProject, onDeleteProject, onRenameChat, onPinChat, onMoveChat,
+  onNewProject, onNewChatInProject, onEditProject, onDeleteProject, onStarProject, onShareProject, onDuplicateProject,
+  onArchiveProject, onRenameChat, onPinChat, onMoveChat,
   onDuplicateChat, onExportChat, onDeleteChat, onNavigate, onClose, historyLabel = 'Chats', groupByDate,
   onGroupByDateChange, types = [], onViewAll, viewAllLabel = 'All chats', viewAllActive = false,
   searchLabel = 'Search chats', searchPlaceholder = 'Search chats', emptyText = 'No chats yet. Start one above.',
@@ -439,6 +494,9 @@ export function ChatHistory({
   chats: HistoryChat[]
   // Shows the Projects group (with New project, given onCreateProject or onNewProject).
   projects?: HistoryProject[]
+  // Projects colleagues shared with you, each with its `owner`: the Shared
+  // with me group, after Projects. They open like your own.
+  sharedProjects?: HistoryProject[]
   activeChatId?: string | null
   activeProjectId?: string | null
   // The time the date groups count from: a number or a clock. Defaults to now.
@@ -463,6 +521,11 @@ export function ChatHistory({
   onNewChatInProject?: (id: string) => void
   onEditProject?: (id: string) => void
   onDeleteProject?: (id: string) => void
+  // More of a project's menu: star or unstar, share, duplicate, archive.
+  onStarProject?: (id: string, starred: boolean) => void
+  onShareProject?: (id: string) => void
+  onDuplicateProject?: (id: string) => void
+  onArchiveProject?: (id: string) => void
   onRenameChat?: (id: string, title: string) => void
   onPinChat?: (id: string, pinned: boolean) => void
   onMoveChat?: (id: string, projectId: string | null) => void
@@ -522,6 +585,14 @@ export function ChatHistory({
   const results = q ? sorted.filter((c) => c.title.toLowerCase().includes(q)) : []
   const toDelete = chats.find((c) => c.id === deleteId)
   const projectToDelete = projects?.find((p) => p.id === deleteProjectId)
+  // Archived projects are not listed. Once any is starred, starred ones come
+  // first, then the rest A to Z; otherwise they keep the order given.
+  const listedProjects = useMemo(() => {
+    const live = (projects ?? []).filter((p) => !p.archived)
+    if (!live.some((p) => p.starred)) return live
+    return [...live].sort((a, b) => Number(!!b.starred) - Number(!!a.starred) || a.name.localeCompare(b.name))
+  }, [projects])
+  const sharedListed = sharedProjects.filter((p) => !p.archived)
   // Keeps the project's name on screen while its dialog animates closed.
   const deletingProject = useRef({ name: '', chats: 0 })
   if (projectToDelete) {
@@ -559,7 +630,7 @@ export function ChatHistory({
       active={chat.id === activeChatId}
       onOpen={() => go(() => onOpenChat(chat.id))}
       actions={{
-        projects,
+        projects: projects && listedProjects,
         onRename: onRenameChat && ((title) => onRenameChat(chat.id, title)),
         onPin: onPinChat && ((value) => onPinChat(chat.id, value)),
         onMove: onMoveChat && ((projectId) => onMoveChat(chat.id, projectId)),
@@ -570,19 +641,25 @@ export function ChatHistory({
     />
   )
 
-  const projectRow = (project: HistoryProject) => {
+  // A project's row, folding open on its chats. One shared with you offers
+  // only a new chat in it, star and duplicate: the rest is its owner's.
+  const projectRow = (project: HistoryProject, sharedWithMe = false) => {
     const mine = sorted.filter((c) => c.projectId === project.id)
     const open = !collapsed.includes(project.id)
     const toggle = () => setCollapsed((c) => (open ? [...c, project.id] : c.filter((id) => id !== project.id)))
-    const hasMenu = !!(onNewChatInProject || onEditProject || onDeleteProject)
-    const menu = (kit: MenuKit) => (
-      <ProjectMenuItems
-        kit={kit}
-        onNewChat={onNewChatInProject && (() => go(() => onNewChatInProject(project.id)))}
-        onEdit={onEditProject && (() => onEditProject(project.id))}
-        onDelete={onDeleteProject && (() => setDeleteProjectId(project.id))}
-      />
-    )
+    const own = <T,>(fn: T) => (sharedWithMe ? undefined : fn)
+    const actions = {
+      onNewChat: onNewChatInProject && (() => go(() => onNewChatInProject(project.id))),
+      onStar: onStarProject && ((value: boolean) => onStarProject(project.id, value)),
+      onEdit: own(onEditProject && (() => onEditProject(project.id))),
+      onShare: own(onShareProject && (() => onShareProject(project.id))),
+      onDuplicate: onDuplicateProject && (() => onDuplicateProject(project.id)),
+      onArchive: own(onArchiveProject && (() => onArchiveProject(project.id))),
+      onDelete: own(onDeleteProject && (() => setDeleteProjectId(project.id))),
+    }
+    const hasMenu = Object.values(actions).some(Boolean)
+    const menu = (kit: MenuKit) => <ProjectMenuItems kit={kit} starred={project.starred} {...actions} />
+    const unread = project.unread ?? 0
     // The folder turns into the fold chevron on hover.
     const head = (
       <div
@@ -597,7 +674,7 @@ export function ChatHistory({
           className="focus-visible:ring-ring/40 grid size-7 shrink-0 place-items-center rounded-md outline-none focus-visible:ring-2"
         >
           <HugeiconsIcon
-            icon={open && mine.length ? FolderOpenIcon : Folder01Icon}
+            icon={project.icon ?? (open && mine.length ? FolderOpenIcon : Folder01Icon)}
             strokeWidth={2}
             className="size-3.5 group-hover/row:hidden group-focus-within/row:hidden"
             style={{ color: project.colour }}
@@ -612,12 +689,33 @@ export function ChatHistory({
           type="button"
           onClick={onOpenProject ? () => go(() => onOpenProject(project.id)) : toggle}
           aria-current={project.id === activeProjectId ? 'page' : undefined}
+          title={project.owner ? `${project.name}, shared by ${project.owner}` : project.name}
           className={cn(
-            'focus-visible:ring-ring/40 flex h-7 min-w-0 flex-1 items-center gap-2 rounded-md text-left text-xs outline-none focus-visible:ring-2',
+            'focus-visible:ring-ring/40 flex h-7 min-w-0 flex-1 items-center gap-1.5 rounded-md text-left text-xs outline-none focus-visible:ring-2',
             hasMenu ? 'pr-1' : 'pr-2',
           )}
         >
-          <span className="min-w-0 flex-1 truncate">{project.name}</span>
+          <span className={cn('min-w-0 truncate', unread > 0 && 'font-medium')}>{project.name}</span>
+          {project.starred && (
+            <HugeiconsIcon icon={StarIcon} strokeWidth={2} role="img" aria-label="Starred" className="text-status-progress size-3 shrink-0" />
+          )}
+          {project.shared && !sharedWithMe && (
+            <HugeiconsIcon icon={UserGroupIcon} strokeWidth={2} role="img" aria-label="Shared" className="text-muted-foreground size-3 shrink-0" />
+          )}
+          {sharedWithMe && project.owner && (
+            <span className="text-muted-foreground max-w-20 min-w-0 shrink truncate text-[11px]">
+              <span className="sr-only">shared by </span>{project.owner}
+            </span>
+          )}
+          <span aria-hidden className="flex-1" />
+          {unread > 0 && (
+            <span
+              aria-label={`${unread} not opened`}
+              className="bg-brand/15 text-brand grid h-4 min-w-4 shrink-0 place-items-center rounded-full px-1 text-[10px] font-medium tabular-nums"
+            >
+              {unread}
+            </span>
+          )}
           <span className="text-muted-foreground text-[11px] tabular-nums" aria-label={plural(mine.length, 'chat')}>{mine.length}</span>
         </button>
         {hasMenu && (
@@ -749,7 +847,7 @@ export function ChatHistory({
           </section>
         ) : (
           <>
-            {projects && (projects.length > 0 || canCreate) && (
+            {projects && (listedProjects.length > 0 || canCreate) && (
               <section aria-label="Projects">
                 <NavGroup
                   title="Projects"
@@ -770,10 +868,18 @@ export function ChatHistory({
                       />
                     </div>
                   )}
-                  {projects.map(projectRow)}
-                  {!projects.length && !creating && (
+                  {listedProjects.map((p) => projectRow(p))}
+                  {!listedProjects.length && !creating && (
                     <NavItem icon={FolderAddIcon} label="Group chats into a project" onClick={startProject} className="text-muted-foreground" />
                   )}
+                </NavGroup>
+              </section>
+            )}
+
+            {sharedListed.length > 0 && (
+              <section aria-label="Shared with me">
+                <NavGroup title="Shared with me" count={sharedListed.length}>
+                  {sharedListed.map((p) => projectRow(p, true))}
                 </NavGroup>
               </section>
             )}

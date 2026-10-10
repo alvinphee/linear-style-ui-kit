@@ -53,6 +53,13 @@ used by most design systems).
 | Quiet hours | A daily time when push notifications wait |
 | Notification channel | Where a notification goes: in app, email or push |
 | Danger zone | The settings group for actions that cannot be undone, such as deleting the account |
+| Share dialog | Where you give people access to something: invite with a role, change or remove access, general access, copy link (Google Docs, Notion, Figma) |
+| General access | Who can open something without being added: only people added (restricted), everyone in the organisation, or anyone with the link |
+| Role (sharing) | What a person may do with what is shared: Can view, Can chat, Can edit |
+| Pending invite | Someone invited who has not joined yet; the invite can be sent again or cancelled |
+| Avatar stack | Overlapping avatars of the people something is shared with, then +N |
+| Icon and colour picker | Chooses an item's icon and colour from fixed sets, as Notion and Linear do for pages and teams |
+| Stat tile | A small box with one number and its label, for an overview |
 | Typed confirmation | A destructive action enabled only once you type a word (DELETE) or the item's name |
 | Avatar | A person's picture, or their initials in a circle when there is none |
 | Person chip | An avatar with the person's name beside it |
@@ -197,8 +204,6 @@ used by most design systems).
 | Chat library (All chats) | A page of every chat, with a search and filters by type |
 | Incognito chat (temporary chat) | A chat that is not kept in the history and is deleted when you leave it |
 | Credits meter | How much of the plan's AI usage is left this month |
-
-## Forms and checklists
 | Settings page | Settings as a page of their own, sections down the left, as Claude and Linear lay theirs out (ChatGPT uses a dialog). On a phone, a list of sections that drills into one |
 | Response style | How replies are written: Default, Concise, Explanatory or Formal |
 | Memory (assistant memory) | Facts the assistant keeps about you across chats, each with the chat it came from; you can see, edit and delete them |
@@ -218,6 +223,17 @@ used by most design systems).
 | Data retention | How long chats are kept before they are deleted |
 The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
 `form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
+| Project workspace | A project's page with tabs (Overview, Chats, Knowledge, Tools, Schedules, Sharing, Settings), as Claude and ChatGPT open a project |
+| Project template | A starting point for a new project: its icon, colour and instructions (Research, Writing, Customer support…) |
+| Starred project | A project pinned to the top of the Projects list |
+| Archived project | A project hidden from the sidebar, kept with its chats; restored from its page |
+| Shared with me | Projects other people shared with you, listed apart from your own |
+| Project memory | What the assistant learns in one project, kept apart from your personal memory |
+| Scheduled task | A prompt the assistant runs on its own on a schedule; each run's result arrives as a new chat in the project (ChatGPT Tasks, Claude's scheduled tasks) |
+| Run (scheduled task) | One time a scheduled task ran: running, succeeded or failed, with its result. The list of them is the run history |
+| Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
+
+## Forms and checklists
 checklist, an expense claim and a survey are all forms to them.
 
 | Term | Meaning |

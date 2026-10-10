@@ -135,7 +135,7 @@ export function NavGroup({ title, count, action, open, defaultOpen = true, onOpe
         )}
         {action}
       </div>
-      {isOpen && <div className="mt-0.5 grid gap-px">{children}</div>}
+      {isOpen && <div className="mt-0.5 grid grid-cols-[minmax(0,1fr)] gap-px">{children}</div>}
     </div>
   )
 }

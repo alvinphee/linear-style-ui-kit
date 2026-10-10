@@ -5,7 +5,7 @@ import type { View } from './types'
 //   #/templates/ai-chat                       a new chat
 //   #/templates/ai-chat/project/<id>/new      a new chat in a project
 //   #/templates/ai-chat/chat/<id>             a chat
-//   #/templates/ai-chat/project/<id>          a project's page
+//   #/templates/ai-chat/project/<id>[/<tab>]  a project's page, at a tab
 //   #/templates/ai-chat/library               All chats
 //   #/templates/ai-chat/settings[/<section>]  Settings
 // Only the full-page app uses them; in the kit the workspace sits in a card.
@@ -27,7 +27,8 @@ export function parseRoute(path: string): AppRoute {
   const view: View | null =
     !kind ? { kind: 'new', projectId: null }
       : kind === 'chat' && id ? { kind: 'chat', chatId: id }
-        : kind === 'project' && id ? (extra === 'new' ? { kind: 'new', projectId: id } : { kind: 'project', projectId: id })
+        : kind === 'project' && id
+          ? (extra === 'new' ? { kind: 'new', projectId: id } : { kind: 'project', projectId: id, tab: extra || undefined })
           : kind === 'library' ? { kind: 'library' }
             : null
   return { view, settings: undefined }
@@ -36,7 +37,10 @@ export function parseRoute(path: string): AppRoute {
 export function pathFor(view: View) {
   switch (view.kind) {
     case 'chat': return `${APP_BASE}/chat/${encodeURIComponent(view.chatId)}`
-    case 'project': return `${APP_BASE}/project/${encodeURIComponent(view.projectId)}`
+    case 'project': {
+      const base = `${APP_BASE}/project/${encodeURIComponent(view.projectId)}`
+      return view.tab && view.tab !== 'overview' ? `${base}/${encodeURIComponent(view.tab)}` : base
+    }
     case 'library': return `${APP_BASE}/library`
     case 'new': return view.projectId ? `${APP_BASE}/project/${encodeURIComponent(view.projectId)}/new` : APP_BASE
   }

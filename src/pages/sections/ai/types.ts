@@ -1,5 +1,9 @@
 import type { Job } from '../../data'
 import type { FileKind } from '@/components/file-chip'
+import type { Memory } from '@/blocks/ai/memory/memory-manager'
+import type { ProjectChatVisibility, ProjectMemberPermission } from '@/blocks/ai/projects/project-sharing'
+import type { ScheduledTask } from '@/blocks/ai/schedules/scheduled-task-dialog'
+import type { ShareAccess, ShareMember } from '@/blocks/share-dialog'
 
 export type ModelId = 'swift' | 'balanced' | 'depth' | 'depth-max'
 
@@ -32,6 +36,29 @@ export type Project = {
   description: string
   instructions: string
   files: FileRef[]
+  // The rest is optional, so projects saved before it existed still load
+  // (ai/projects/defaults.ts fills it in).
+  // An icon id from ai/projects/templates.ts.
+  icon?: string
+  starred?: boolean
+  archived?: boolean
+  // Connectors and skills this project may use, by id.
+  connectors?: Record<string, boolean>
+  skills?: Record<string, boolean>
+  memoryOn?: boolean
+  memories?: Memory[]
+  schedules?: ScheduledTask[]
+  sharing?: ProjectSharing
+}
+
+// Who a project is shared with, as the share dialog edits it.
+export type ProjectSharing = {
+  members: ShareMember[]
+  access: ShareAccess
+  // What everyone in the organisation may do, when access is 'organisation'.
+  accessRole: string
+  chats: ProjectChatVisibility
+  membersCan: ProjectMemberPermission
 }
 
 export type StepState = 'pending' | 'running' | 'done' | 'failed'
@@ -154,6 +181,7 @@ export type Artifact = {
 export type View =
   | { kind: 'chat'; chatId: string }
   | { kind: 'new'; projectId: string | null }
-  | { kind: 'project'; projectId: string }
+  // A project's page, at one of its tabs (Overview when left out).
+  | { kind: 'project'; projectId: string; tab?: string }
   // All chats: the chat library.
   | { kind: 'library' }

@@ -4,7 +4,8 @@ import type { FileRef, ModelId, Modes, Project } from './types'
 // Every action the workspace offers. The object is stable for the life of
 // the section, so memoised children do not re-render on each streamed chunk.
 export type WorkspaceActions = {
-  send: (text: string, attachments: FileRef[]) => void
+  // inProject: a new chat in that project, whatever is open.
+  send: (text: string, attachments: FileRef[], inProject?: string | null) => void
   stop: () => void
   regenerate: (chatId: string, messageId: string) => void
   selectVersion: (chatId: string, messageId: string, index: number) => void
@@ -15,7 +16,8 @@ export type WorkspaceActions = {
   closeArtifact: () => void
   openChat: (id: string) => void
   newChat: (projectId?: string | null) => void
-  openProject: (id: string) => void
+  // A project's page, at a tab (Overview when left out).
+  openProject: (id: string, tab?: string) => void
   // All chats: the chat library.
   openLibrary: () => void
   // Incognito on or off; either way a new chat starts.
@@ -30,6 +32,8 @@ export type WorkspaceActions = {
   exportChat: (id: string) => void
   createProject: (name: string) => string
   patchProject: (id: string, patch: Partial<Omit<Project, 'id'>>) => void
+  patchProjectWith: (id: string, update: (project: Project) => Partial<Omit<Project, 'id'>>) => void
+  duplicateProject: (id: string) => void
   deleteProject: (id: string) => void
   addProjectFiles: (id: string, files: FileRef[]) => void
   removeProjectFile: (id: string, fileId: string) => void

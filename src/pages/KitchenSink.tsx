@@ -25,6 +25,7 @@ import AiComponentsSection from './sections/AiComponentsSection'
 import AiConnectorsSection from './sections/AiConnectorsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
 import AiOverviewSection from './sections/AiOverviewSection'
+import AiProjectsSection from './sections/AiProjectsSection'
 import AiSettingsSection from './sections/AiSettingsSection'
 import AiSkillsSection from './sections/AiSkillsSection'
 import AiWorkspaceSection from './sections/AiWorkspaceSection'
@@ -170,6 +171,7 @@ export default function KitchenSink() {
     'ai-workspace': () => <AiWorkspaceSection />,
     'ai-features': () => <AiFeaturesSection />,
     'ai-connectors': () => <AiConnectorsSection />,
+    'ai-projects': () => <AiProjectsSection />,
     'ai-settings': () => <AiSettingsSection />,
     'ai-skills': () => <AiSkillsSection />,
     icons: () => <IconsSection part="icons" />,

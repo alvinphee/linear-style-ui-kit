@@ -80,7 +80,15 @@ linear-style-ui-kit/
     │   │   ├── chat/          prompt box, chat message, chat thread (welcome screen, prompt
     │   │   │                  starters), chat history (projects, pinned, chats by date or as one
     │   │   │                  list), chat library (All chats: search, filter by type)
-    │   │   ├── projects/      project page (name, custom instructions, project knowledge, chats)
+    │   │   ├── projects/      a project as a workspace:
+    │   │   │   ├── project-page.tsx  project page: header (icon, star, share, menu), tabs, and its parts (overview header, start chat, stats, instructions, knowledge, chats)
+    │   │   │   ├── new-project-dialog.tsx  new project from a template, or edit its details: name, icon and colour, description, instructions
+    │   │   │   ├── project-sharing.tsx  a project's Sharing tab: who has access, general access, chat visibility, what members can do
+    │   │   │   └── project-tools.tsx  a project's Tools tab: connectors and skills it may use, and project memory
+    │   │   ├── schedules/     prompts the assistant runs on its own:
+    │   │   │   ├── scheduled-task-list.tsx  scheduled tasks: schedule, next run, last run, pause, Run now
+    │   │   │   ├── scheduled-task-dialog.tsx  create or edit a scheduled task: prompt, recurrence, next runs, model, delivery
+    │   │   │   └── task-run-history.tsx  a scheduled task's runs, inline or in a sheet
     │   │   ├── artifacts/     artifact panel
     │   │   ├── reasoning/     thinking trail
     │   │   ├── connectors/    let the assistant use other apps:
@@ -134,6 +142,7 @@ linear-style-ui-kit/
     │   │                      beside it, shrinking while you scroll down, as iOS 26's works)
     │   ├── notifications-menu.tsx  the bell's popover
     │   ├── period-picker.tsx  period switch, compare, date range picker
+    │   ├── share-dialog.tsx   share anything: invite people with a role, people with access, general access, copy link; ShareSummary, ShareButton
     │   ├── session-list.tsx   signed-in devices: device, browser, place, last active, sign out one or all others
     │   ├── settings-page.tsx  settings page: sections down the left (a list that drills in when narrow), SettingsHeader, SettingsGroup, SettingsRow
     │   ├── record-sheet.tsx   record peek: one record in a centred modal (center peek) or a panel from the right (side peek)
@@ -153,6 +162,8 @@ linear-style-ui-kit/
     │   ├── priority-icon.tsx  priority icon (no priority, low… urgent)
     │   ├── label-dot.tsx      a label's colour dot
     │   ├── mark.tsx           LetterMark, IconMark
+    │   ├── icon-colour-picker.tsx  pick an icon and a colour (a project's look); IconColourSwatch
+    │   ├── recurrence-picker.tsx  how often something repeats (once, daily, weekdays, weekly, monthly), at what time, in which time zone
     │   ├── delta-badge.tsx    the change on the period before
     │   ├── sparkline.tsx      tiny line chart
     │   ├── page-header.tsx    title, description, actions
@@ -247,12 +258,16 @@ linear-style-ui-kit/
             ├── AiOverviewSection.tsx  the AI kit: install, every AI item from the registry, templates
             ├── AiWorkspaceSection.tsx AI chat workspace: projects, history, agent, artifacts, and in the
             │                         full-page app its addresses (chat, project, library, settings)
-            ├── ai/                    its engine, scripted scenarios, parts, All chats, routes.ts
+            ├── ai/                    its engine, scripted scenarios, parts, All chats, routes.ts,
+            │                         ProjectView (a project's tabs, wired to the workspace)
+            │   ├── projects/          sample templates, icons, people, tools, schedules, and the
+            │                         defaults a saved project is filled in with (defaults.ts)
             │   └── settings/          the full-page Settings: SettingsScreen (its sections), one tab per
             │                         file, prefs.ts (useAiPrefs, useStoredState: kept in the browser)
             │                         and the connectors', skills' and memories' sample data
-            ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx  their kit pages
+            ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx, AiProjectsSection.tsx  kit pages
             ├── ai-settings/           those pages' panels (account, models and voice, connectors, skills)
+            ├── ai-projects/           the Projects page's panels (workspace, tools, schedules, sharing)
             ├── AiFeaturesSection.tsx  inline AI, summary, triage, AI search and more
             ├── ai-features/           its panels and scripted helpers
             └── IconsSection.tsx
@@ -285,8 +300,8 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **AI:** the AI kit, a domain across the levels rather than a level (see
   "Domains" in `docs/architecture.md`): Overview (install the AI kit, every
   AI item read from the registry, the AI templates); Components: AI
-  components; Blocks: AI workspace, AI in the product, Connectors, Settings
-  page, Skills and memory. An AI-only part goes in its level's `ai/` folder
+  components; Blocks: AI workspace, AI in the product, Connectors, Projects,
+  Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
 
@@ -326,8 +341,16 @@ template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
   in the sidebar: those chats are never saved and are deleted when you
   leave them; opening a kept chat, a project or All chats ends incognito.
   Each view has its own address (`ai/routes.ts`): `/chat/<id>`,
-  `/project/<id>`, `/project/<id>/new`, `/library`, and the base for a new
-  chat, so the back button and a reload work. Settings is a full page at
+  `/project/<id>[/<tab>]`, `/project/<id>/new`, `/library`, and the base for
+  a new chat, so the back button and a reload work. A project is a workspace
+  with tabs (`ai/ProjectView.tsx`): Overview (start a chat in it, stats,
+  instructions, recent chats), Chats, Knowledge, Tools (which connected
+  connectors and skills it may use, project memory), Schedules (scheduled
+  tasks; Run now shows a run, and opening its result starts a chat with the
+  task's prompt), Sharing (the share dialog: people, roles, general access)
+  and Settings (details, duplicate, archive, delete). Projects can be
+  starred (first in the sidebar) and archived (hidden); colleagues' projects
+  are under Shared with me (demo only). Settings is a full page at
   `/settings/<section>` (the account menu, or Upgrade plan for Billing):
   Profile, Appearance, Personalisation, Notifications, Security; Models and
   features, Memory, Connectors, Skills, Voice; Data controls, Billing and
@@ -534,8 +557,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 142 items: `tokens` (the whole theme from `styles.css`), 47 ui, 37
-components, 47 blocks, 9 lib files and the `ai-kit` bundle. Which level
+needs. 151 items: `tokens` (the whole theme from `styles.css`), 47 ui, 39
+components, 54 blocks, 9 lib files and the `ai-kit` bundle. Which level
 becomes which item: `docs/architecture.md`.
 - Items from `components/ai/` and `blocks/ai/**` have `categories: ["ai"]`;
   `ai-kit` (a `registry:item` with no files) depends on all of them:

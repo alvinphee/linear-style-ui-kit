@@ -5,6 +5,7 @@ import { seedState } from './seed'
 import type {
   Artifact, AssistantMessage, Chat, Message, ModelId, Part, Project, Reply, ReplyStatus, View,
 } from './types'
+import { withProjectDefaults } from './projects/defaults'
 
 export type State = {
   projects: Project[]
@@ -226,7 +227,9 @@ export function loadState(at: number): State {
       return fallback
     }
     const chats = saved.chats.filter(validChat).filter((c) => !c.temporary).map((c) => settle(c, at))
-    const projects = saved.projects.filter((p): p is Project => isObject(p) && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.files))
+    const projects = saved.projects
+      .filter((p): p is Project => isObject(p) && typeof p.id === 'string' && typeof p.name === 'string' && Array.isArray(p.files))
+      .map(withProjectDefaults)
     const artifacts = saved.artifacts.filter((a): a is Artifact => isObject(a) && typeof a.id === 'string' && Array.isArray(a.versions) && a.versions.length > 0)
     const view = isObject(saved.view) && saved.view.kind === 'chat' && chats.some((c) => c.id === (saved.view as { chatId?: string }).chatId)
       ? saved.view as View

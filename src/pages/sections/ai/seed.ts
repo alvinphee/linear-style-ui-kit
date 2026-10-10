@@ -2,6 +2,7 @@ import { JOBS, type Job } from '../../data'
 import { DEFAULT_MODEL, MINUTE, at, modelById, uid } from './data'
 import { buildScript, continueAfterApproval, materialise, type Sink } from './engine'
 import { artifactRef, lastArtifactIn, withArtifact } from './helpers'
+import { withProjectDefaults } from './projects/defaults'
 import type {
   Artifact, AssistantMessage, Chat, FileRef, Message, ModelId, Modes, Part, PartOf, Project, Reply,
 } from './types'
@@ -57,7 +58,7 @@ type Seed = { projects: Project[]; chats: Chat[]; artifacts: Artifact[] }
 
 export function seedState(): Seed {
   let artifacts: Artifact[] = []
-  const projects = SEED_PROJECTS.map((p) => ({ ...p, files: p.files.map((f) => ({ ...f })) }))
+  const projects = SEED_PROJECTS.map((p) => withProjectDefaults({ ...p, files: p.files.map((f) => ({ ...f })) }))
 
   function collect(reply: Reply): Sink {
     return {
