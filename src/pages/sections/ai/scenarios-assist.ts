@@ -3,6 +3,7 @@ import { plural } from '@/lib/text'
 import { PRIORITY_RANK, dueRank, type Job } from '../../data'
 import { isOpen, jobDetail, jobRow, mdTable, quote, short, stepsSummary } from './scenario-helpers'
 import { emailBody, reportMarkdown } from './scenarios-jobs'
+import { searchProjectKnowledge } from './scenarios-knowledge'
 import { readFile, type AgentContext, type Builder } from './script'
 import type { ArtifactKind, EmailTone, FileRef, Source } from './types'
 
@@ -202,15 +203,6 @@ function genericTopic(prompt: string): Topic {
   }
 }
 
-function searchKnowledge(b: Builder, ctx: AgentContext) {
-  const files = ctx.project?.files ?? []
-  if (!files.length) return
-  const hits = files.slice(0, 2)
-  b.tool('search_knowledge', { project: ctx.project!.name, query: short(ctx.prompt, 40) }, {
-    output: hits.map((f) => ({ name: f.name, size: formatFileSize(f.size), match: 'partial' })), summary: plural(hits.length, 'file'),
-  }, 'Searching project files…')
-}
-
 export function research(b: Builder, ctx: AgentContext) {
   const p = ctx.prompt.toLowerCase()
   const topic = TOPICS.find((t) => t.match.test(p)) ?? genericTopic(ctx.prompt)
@@ -223,7 +215,7 @@ export function research(b: Builder, ctx: AgentContext) {
     'Where sources disagree I should say so rather than pick one.',
     'If a job in the workspace is affected, I should point it out.',
   ])
-  searchKnowledge(b, ctx)
+  searchProjectKnowledge(b, ctx)
   b.tool('web_search', { query: topic.query }, {
     output: topic.sources.slice(0, 3).map(({ title, url }) => ({ title, url })), summary: plural(3, 'result'),
   }, 'Searching the web…')
@@ -439,7 +431,7 @@ export function general(b: Builder, ctx: AgentContext) {
     hello ? 'A greeting. I should say hello and show what I can do.' : `The question is “${short(ctx.prompt)}”. None of my scripted skills matches it closely.`,
     'I will answer briefly and point to what works in this workspace.',
   ])
-  searchKnowledge(b, ctx)
+  searchProjectKnowledge(b, ctx)
   b.say([
     hello ? 'Hi! Here is what I can do in this workspace:' : 'I do not have a scripted answer for that, since this demo has no real model behind it. Here is what I can do:', '',
     '- **Summarise** open and urgent jobs, straight from the job list',

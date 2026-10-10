@@ -6,11 +6,13 @@ import {
 } from '@hugeicons/core-free-icons'
 import { ArtifactCard as ArtifactCardView, ErrorCard as ErrorCardView } from '@/blocks/ai/chat/chat-message'
 import {
-  ApprovalCard as ApprovalCardView, ThinkingTrail, type ApprovalChange, type TrailStep, type TrailStepStatus,
+  ApprovalCard as ApprovalCardView, ThinkingTrail, type ApprovalChange, type TrailResult, type TrailStep, type TrailStepStatus,
 } from '@/blocks/ai/reasoning/thinking-trail'
+import { FILE_KIND_ICONS, type FileKind } from '@/components/file-chip'
 import { UserAvatar } from '@/components/person'
 import { PriorityIcon } from '@/components/priority-icon'
 import { StatusIcon } from '@/components/status-icon'
+import { plural } from '@/lib/text'
 import { PRIORITY, STATUS, type Priority, type Status } from '../../data'
 import { now } from './data'
 import type { ApprovalRequest, ArtifactKind, Change, PartOf, StepState, ToolName } from './types'
@@ -67,6 +69,29 @@ function inputHint(input: unknown) {
     .join(' · ')
 }
 
+type FoundPassage = { document: string; kind?: FileKind; page?: number; score: number }
+
+// A knowledge search: where it looked ("Customer support files") and the
+// documents it matched, best first, each with its pages and best score.
+function knowledgeSearch(tool: PartOf<'tool'>): { where?: string; results?: TrailResult[] } {
+  const where = (tool.input as { in?: unknown } | null)?.in
+  const passages = (tool.output as { passages?: unknown } | undefined)?.passages
+  if (!Array.isArray(passages)) return { where: typeof where === 'string' ? where : undefined }
+  const byDocument = new Map<string, FoundPassage[]>()
+  for (const p of passages as FoundPassage[]) byDocument.set(p.document, [...(byDocument.get(p.document) ?? []), p])
+  const results = [...byDocument].map(([document, found]): TrailResult => {
+    const pages = [...new Set(found.map((f) => f.page).filter((n): n is number => n !== undefined))].sort((a, b) => a - b)
+    return {
+      id: document,
+      title: document,
+      meta: [pages.length && `p. ${pages.join(', ')}`, plural(found.length, 'passage')].filter(Boolean).join(' · '),
+      icon: FILE_KIND_ICONS[found[0].kind ?? 'other'],
+      score: Math.max(...found.map((f) => f.score)),
+    }
+  }).sort((a, b) => (b.score ?? 0) - (a.score ?? 0))
+  return { where: typeof where === 'string' ? where : undefined, results }
+}
+
 // The reply's first thinking and first plan, then every tool call.
 function trailSteps(thinking: PartOf<'thinking'> | undefined, plan: PartOf<'plan'> | undefined, tools: PartOf<'tool'>[]): TrailStep[] {
   const steps: TrailStep[] = []
@@ -77,11 +102,17 @@ function trailSteps(thinking: PartOf<'thinking'> | undefined, plan: PartOf<'plan
     steps.push({ id: `${plan.id}-${i}`, kind: 'plan', label: step.label, status: STEP_STATUS[step.state], ms: step.ms, startedAt: step.startedAt })
   })
   for (const tool of tools) {
-    const [running, done] = TOOL_VERBS[tool.name]
+    let [running, done] = TOOL_VERBS[tool.name]
+    let results: TrailResult[] | undefined
+    if (tool.name === 'search_knowledge') {
+      const search = knowledgeSearch(tool)
+      if (search.where) [running, done] = [`Searching ${search.where}`, `Searched ${search.where}`]
+      results = search.results
+    }
     steps.push({
       id: tool.id, kind: 'tool', label: done, activeLabel: running, detail: inputHint(tool.input), icon: TOOL_ICONS[tool.name],
       status: tool.state, ms: tool.ms, startedAt: tool.startedAt, name: tool.name, input: tool.input, output: tool.output,
-      error: tool.error, summary: tool.summary,
+      error: tool.error, summary: tool.summary, results,
     })
   }
   return steps

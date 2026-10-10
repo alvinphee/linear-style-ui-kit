@@ -15,7 +15,10 @@ import { plural } from '@/lib/text'
 // quiet line. While it works the line shimmers ("Searching jobs…") with a
 // timer; once done it folds to "Worked for 8s · 3 steps · 2 tools ›", and the
 // reasoning, plan steps and tool calls (with their input and output) stay
-// one click away. Claude and ChatGPT show their reasoning the same way.
+// one click away. Claude and ChatGPT show their reasoning the same way. A
+// tool call can list what it found (`results`): a knowledge search reads
+// "Searched Customer support files · 3 passages from 2 documents" and opens
+// to the matched documents with their scores.
 //
 // Also here: ApprovalCard, the agent asking before it changes anything.
 //
@@ -50,6 +53,21 @@ export type TrailStep = {
   error?: string
   // tool: a short result shown beside the time ("12 jobs").
   summary?: string
+  // tool: what it found, listed when the call is opened, in place of the raw
+  // output: the documents a knowledge search matched, the pages a web search
+  // found. Best first.
+  results?: TrailResult[]
+}
+
+// One thing a tool call found: a document and the pages it matched on, with
+// how well it matched (0 to 1).
+export type TrailResult = {
+  id: string
+  title: string
+  // A second line: "p. 2, 4 · 2 passages", a site.
+  meta?: string
+  icon?: IconSvgElement
+  score?: number
 }
 
 const STEP_LABEL: Record<TrailStepStatus, string> = {
@@ -182,6 +200,36 @@ function JsonBlock({ label, value, max }: { label: string; value: unknown; max?:
   )
 }
 
+// What a tool found, best first: a knowledge search's documents with their
+// relevance scores.
+function ResultList({ results }: { results: TrailResult[] }) {
+  return (
+    <div className="grid min-w-0 gap-1">
+      <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">Found</span>
+      <ul className="grid min-w-0 gap-0.5">
+        {results.map((result) => (
+          <li key={result.id} className="flex min-w-0 items-center gap-2 py-0.5 text-xs">
+            {result.icon && <HugeiconsIcon icon={result.icon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" />}
+            <span className="grid min-w-0 flex-1">
+              <span className="truncate">{result.title}</span>
+              {result.meta && <span className="text-muted-foreground truncate text-[11px]">{result.meta}</span>}
+            </span>
+            {result.score !== undefined && (
+              <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-[11px] tabular-nums">
+                <span aria-hidden="true" className="bg-muted hidden h-1 w-10 overflow-hidden rounded-full @sm:block">
+                  <span className="bg-brand/70 block h-full rounded-full" style={{ width: `${Math.round(Math.min(1, Math.max(0, result.score)) * 100)}%` }} />
+                </span>
+                <span className="sr-only">Relevance </span>
+                {result.score.toFixed(2)}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 function ToolStatus({ step, clock }: { step: TrailStep; clock?: () => number }) {
   if (step.status === 'running') {
     return (
@@ -208,7 +256,8 @@ function TrailTool({ step, clock }: { step: TrailStep; clock?: () => number }) {
   const running = step.status === 'running'
   const label = running ? step.activeLabel ?? step.label : step.label
   const state = step.status === 'error' ? 'failed' : step.status
-  const hasDetails = !!step.name || step.input !== undefined || step.output !== undefined || !!step.error
+  const results = step.results?.length ? step.results : null
+  const hasDetails = !!step.name || step.input !== undefined || step.output !== undefined || !!step.error || !!results
   return (
     <Collapsible open={open && hasDetails} onOpenChange={setOpen} className="ai-in min-w-0">
       <CollapsibleTrigger
@@ -240,8 +289,9 @@ function TrailTool({ step, clock }: { step: TrailStep; clock?: () => number }) {
       <CollapsibleContent className="data-open:animate-collapsible-down data-closed:animate-collapsible-up overflow-hidden">
         <div className="bg-muted/40 my-1 grid min-w-0 gap-2 rounded-md p-2.5">
           {step.name && <p className="text-muted-foreground font-mono text-[10px]">{step.name}</p>}
+          {results && <ResultList results={results} />}
           {step.input !== undefined && <JsonBlock label="Input" value={step.input} />}
-          {step.error ? (
+          {results && !step.error ? null : step.error ? (
             <div className="grid gap-1">
               <span className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">Error</span>
               <p className="text-destructive bg-destructive/5 rounded-md px-2.5 py-2 font-mono text-[11px]">{step.error}</p>

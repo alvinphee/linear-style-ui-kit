@@ -273,6 +273,18 @@
       ]
     },
     {
+      "name": "token-estimate",
+      "type": "registry:lib",
+      "title": "Token estimate",
+      "description": "rough token counts for text and files, formatTokens",
+      "files": [
+        {
+          "path": "src/lib/token-estimate.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-media-query",
       "type": "registry:lib",
       "title": "Use media query",
@@ -1218,6 +1230,32 @@
       "files": [
         {
           "path": "src/components/comment-box.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
+      "name": "context-meter",
+      "type": "registry:component",
+      "title": "Context meter",
+      "description": "how much of a project's context its knowledge uses, and the Full context / Search mode badge",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/progress",
+        "@kit/token-estimate",
+        "@kit/tokens",
+        "@kit/tooltip"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/components/ai/context-meter.tsx",
           "type": "registry:component"
         }
       ]
@@ -2173,6 +2211,40 @@
       ]
     },
     {
+      "name": "create-knowledge-base-dialog",
+      "type": "registry:block",
+      "title": "Create knowledge base dialog",
+      "description": "new knowledge base: name, what is in it, icon, access, what to start with",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/icon-colour-picker",
+        "@kit/input",
+        "@kit/knowledge-base-settings",
+        "@kit/knowledge-types",
+        "@kit/select",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/create-knowledge-base-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/create-knowledge-base-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "custom-connector-dialog",
       "type": "registry:block",
       "title": "Custom connector dialog",
@@ -2693,6 +2765,220 @@
       ]
     },
     {
+      "name": "knowledge-base-list",
+      "type": "registry:block",
+      "title": "Knowledge base list",
+      "description": "knowledge bases to open: search, grid or list, size, index health, sources, access",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/empty",
+        "@kit/format",
+        "@kit/knowledge-documents",
+        "@kit/knowledge-sources",
+        "@kit/knowledge-types",
+        "@kit/mark",
+        "@kit/search-field",
+        "@kit/spinner",
+        "@kit/text",
+        "@kit/token-estimate",
+        "@kit/tokens",
+        "@kit/view-switch"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/knowledge-base-list.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/knowledge-base-list.tsx"
+        }
+      ]
+    },
+    {
+      "name": "knowledge-base-page",
+      "type": "registry:block",
+      "title": "Knowledge base page",
+      "description": "one knowledge base: header, summary numbers, indexing progress, tabs",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/dropdown-menu",
+        "@kit/format",
+        "@kit/knowledge-base-list",
+        "@kit/knowledge-documents",
+        "@kit/knowledge-types",
+        "@kit/progress",
+        "@kit/spinner",
+        "@kit/status-badge",
+        "@kit/tabs",
+        "@kit/text",
+        "@kit/token-estimate",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/knowledge-base-page.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/knowledge-base-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "knowledge-base-settings",
+      "type": "registry:block",
+      "title": "Knowledge base settings",
+      "description": "retrieval settings (chunk size, overlap, embedding model, hybrid search, reranking, top-K, cut-off) and access",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/field",
+        "@kit/format",
+        "@kit/knowledge-types",
+        "@kit/person",
+        "@kit/radio-group",
+        "@kit/select",
+        "@kit/settings-page",
+        "@kit/share-dialog",
+        "@kit/slider",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/knowledge-base-settings.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/knowledge-base-settings.tsx"
+        }
+      ]
+    },
+    {
+      "name": "knowledge-documents",
+      "type": "registry:block",
+      "title": "Knowledge documents",
+      "description": "a knowledge base's documents: status (queued, processing, indexed, failed), filters, bulk re-index and remove, upload",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/delete-confirm",
+        "@kit/empty",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/icon-action",
+        "@kit/knowledge-sources",
+        "@kit/knowledge-types",
+        "@kit/progress",
+        "@kit/search-field",
+        "@kit/select",
+        "@kit/status-badge",
+        "@kit/text",
+        "@kit/token-estimate",
+        "@kit/tokens",
+        "@kit/tooltip"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/knowledge-documents.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/knowledge-documents.tsx"
+        }
+      ]
+    },
+    {
+      "name": "knowledge-sources",
+      "type": "registry:block",
+      "title": "Knowledge sources",
+      "description": "where documents come from (upload, website, connected app, text), sync schedules, the add source dialog",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/connector-card",
+        "@kit/delete-confirm",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/empty",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/icon-action",
+        "@kit/input",
+        "@kit/knowledge-types",
+        "@kit/recurrence-picker",
+        "@kit/spinner",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/toggle-group",
+        "@kit/token-estimate",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/knowledge-sources.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/knowledge-sources.tsx"
+        }
+      ]
+    },
+    {
+      "name": "knowledge-types",
+      "type": "registry:block",
+      "title": "Knowledge types",
+      "description": "the shapes the knowledge blocks share: knowledge base, source, document, chunk, citation",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/file-chip"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/knowledge-types.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/knowledge-types.ts"
+        }
+      ]
+    },
+    {
       "name": "kpi-card",
       "type": "registry:block",
       "title": "KPI card",
@@ -2727,6 +3013,8 @@
       "registryDependencies": [
         "@kit/button",
         "@kit/clipboard",
+        "@kit/file-chip",
+        "@kit/hover-card",
         "@kit/thinking-indicator",
         "@kit/tokens",
         "@kit/tooltip"
@@ -2875,6 +3163,46 @@
           "path": "src/blocks/period-picker.tsx",
           "type": "registry:component",
           "target": "@components/blocks/period-picker.tsx"
+        }
+      ]
+    },
+    {
+      "name": "project-knowledge",
+      "type": "registry:block",
+      "title": "Project knowledge",
+      "description": "a project's knowledge: context meter and mode, files (in or out), pasted text, web pages, linked knowledge bases",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/command",
+        "@kit/context-meter",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/empty",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/icon-action",
+        "@kit/input",
+        "@kit/knowledge-types",
+        "@kit/spinner",
+        "@kit/switch",
+        "@kit/textarea",
+        "@kit/token-estimate",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/project-knowledge.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/project-knowledge.tsx"
         }
       ]
     },
@@ -3034,6 +3362,41 @@
           "path": "src/blocks/record-sheet.tsx",
           "type": "registry:component",
           "target": "@components/blocks/record-sheet.tsx"
+        }
+      ]
+    },
+    {
+      "name": "retrieval-tester",
+      "type": "registry:block",
+      "title": "Retrieval tester",
+      "description": "test retrieval: a question, the chunks it would fetch with scores and highlights, what the model would see",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/input",
+        "@kit/knowledge-types",
+        "@kit/label",
+        "@kit/select",
+        "@kit/skeleton",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/knowledge/retrieval-tester.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/knowledge/retrieval-tester.tsx"
         }
       ]
     },
@@ -3360,6 +3723,35 @@
       ]
     },
     {
+      "name": "source-panel",
+      "type": "registry:block",
+      "title": "Source panel",
+      "description": "a reply's sources, the active one with its cited passage; SourceSheet on narrow screens",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/icon-action",
+        "@kit/knowledge-types",
+        "@kit/markdown",
+        "@kit/sheet",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/citations/source-panel.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/citations/source-panel.tsx"
+        }
+      ]
+    },
+    {
       "name": "submission-feed",
       "type": "registry:block",
       "title": "Submission feed",
@@ -3513,14 +3905,24 @@
         "@kit/connector-card",
         "@kit/connector-catalogue",
         "@kit/connector-dialog",
+        "@kit/context-meter",
+        "@kit/create-knowledge-base-dialog",
         "@kit/custom-connector-dialog",
         "@kit/incognito-toggle",
+        "@kit/knowledge-base-list",
+        "@kit/knowledge-base-page",
+        "@kit/knowledge-base-settings",
+        "@kit/knowledge-documents",
+        "@kit/knowledge-sources",
+        "@kit/knowledge-types",
         "@kit/memory-manager",
         "@kit/new-project-dialog",
+        "@kit/project-knowledge",
         "@kit/project-page",
         "@kit/project-sharing",
         "@kit/project-tools",
         "@kit/prompt-box",
+        "@kit/retrieval-tester",
         "@kit/scheduled-task-dialog",
         "@kit/scheduled-task-list",
         "@kit/skill-card",
@@ -3528,6 +3930,7 @@
         "@kit/skill-editor",
         "@kit/skill-list",
         "@kit/skill-upload",
+        "@kit/source-panel",
         "@kit/task-run-history",
         "@kit/thinking-indicator",
         "@kit/thinking-trail",

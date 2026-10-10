@@ -3,16 +3,20 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { Copy01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { AiMotion, StreamCaret } from '@/components/ai/thinking-indicator'
+import { FILE_KIND_ICONS, type FileKind } from '@/components/file-chip'
 import { copyText, useCopied } from '@/lib/clipboard'
 
 // Markdown rendered as the kit's typography: AI replies, artifacts, and the
 // preview of anything people write (a description, a comment, release notes).
 // Headings, paragraphs, lists and task lists, quotes, code blocks with a Copy
 // button, tables (numbers right-aligned), bold, italic, strikethrough, inline
-// code, links and citations. A citation is "[2]" in the text and opens
-// sources[1].
+// code, links and citations. A citation is "[2]" in the text and points at
+// sources[1]: a web page (a link, its title in a tooltip) or a passage of a
+// document (a hover card shows the passage; a click calls `onCite(1)`, for a
+// source panel).
 //
 // It builds React elements and never injects HTML: anything it does not
 // understand is shown as plain text. A line break inside a paragraph stays a
@@ -24,8 +28,48 @@ import { copyText, useCopied } from '@/lib/clipboard'
 // (it gets the href, "#board"); without it they change the hash. Other links
 // (https:, mailto: and paths such as "/docs") open in a new tab.
 
-// A source a citation points at: shown in its tooltip, opened on click.
-export type Citation = { title: string; url: string; domain: string; snippet?: string }
+// A source a citation points at: a web page (the default), or a document from
+// a project's files or a knowledge base, with the passage the reply used.
+export type Citation = {
+  // web: the page's title. document: the file name.
+  title: string
+  // web: the page's address. document: a link that opens it, or '' for none.
+  url: string
+  // web: the site. document: where it lives, when `from` is not given.
+  domain: string
+  snippet?: string
+  kind?: 'web' | 'document'
+  // document: the exact text the reply used.
+  passage?: string
+  page?: number
+  // document: where it lives ("Customer support files", a knowledge base).
+  from?: string
+  documentKind?: FileKind
+}
+
+export const isDocumentCitation = (source: Citation) => source.kind === 'document'
+
+// The line under a source's title: its site, or the page and where it lives.
+export function citationMeta(source: Citation) {
+  if (!isDocumentCitation(source)) return source.domain
+  return [source.page !== undefined && `p. ${source.page}`, source.from ?? source.domain].filter(Boolean).join(' · ')
+}
+
+// A source's mark: the site's first letter, or the document's file icon.
+export function SourceMark({ source, className }: { source: Citation; className?: string }) {
+  if (isDocumentCitation(source)) {
+    return (
+      <span aria-hidden="true" className={cn('bg-muted text-muted-foreground grid size-4 shrink-0 place-items-center rounded-[4px] [&_svg]:size-3', className)}>
+        <HugeiconsIcon icon={FILE_KIND_ICONS[source.documentKind ?? 'other']} strokeWidth={2} />
+      </span>
+    )
+  }
+  return (
+    <span aria-hidden="true" className={cn('bg-muted text-muted-foreground grid size-4 shrink-0 place-items-center rounded-[4px] text-[9px] font-semibold uppercase', className)}>
+      {source.domain[0]}
+    </span>
+  )
+}
 
 // How a table column lines up, from the ":" in its separator row.
 export type Align = 'left' | 'right' | 'center'
@@ -168,7 +212,7 @@ function heal(src: string) {
 // may be https:, mailto:, "#…" or a path ("/docs", never "//host").
 const INLINE = /(`[^`\n]+`)|(\*\*(?=\S)[\s\S]*?\S\*\*)|(\[[^\]\n]+\]\((?:https?:\/\/|mailto:|#|\/(?!\/))[^)\s]*\))|(\[\d{1,2}\])|((?<![*\w])\*(?=\S)[^*\n]*?\S\*(?![*\w]))|((?<![\w_])_(?=\S)[^_\n]*?\S_(?![\w_]))|(~~(?=\S)[\s\S]*?\S~~)/g
 
-type Ctx = { sources?: Citation[]; onLink?: (href: string) => void }
+type Ctx = { sources?: Citation[]; onLink?: (href: string) => void; onCite?: (index: number) => void }
 
 function withBreaks(text: string, key: string): ReactNode[] {
   const parts = text.split('\n')
@@ -194,7 +238,8 @@ function renderInline(text: string, ctx: Ctx, prefix = 'i'): ReactNode[] {
     } else if (m[4]) {
       const number = Number(token.slice(1, -1))
       const source = ctx.sources?.[number - 1]
-      out.push(source ? <Cite key={key} n={number} source={source} /> : token)
+      const onCite = ctx.onCite
+      out.push(source ? <Cite key={key} n={number} source={source} onOpen={onCite && (() => onCite(number - 1))} /> : token)
     } else if (m[7]) {
       out.push(<del key={key} className="text-muted-foreground">{renderInline(token.slice(2, -2), ctx, key)}</del>)
     } else {
@@ -224,8 +269,42 @@ function MdLink({ href, onLink, children }: { href: string; onLink?: (href: stri
   )
 }
 
-// A numbered citation chip; the tooltip names the source.
-export function Cite({ n, source }: { n: number; source: Citation }) {
+const CHIP = 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded px-1 align-[1px] text-[10px] leading-none font-medium tabular-nums no-underline'
+
+// A numbered citation chip. A web source is a link, and its tooltip names the
+// page. A document shows a hover card with the passage, and a click calls
+// `onOpen` (to show it in a source panel); without it, a click does nothing.
+export function Cite({ n, source, onOpen }: { n: number; source: Citation; onOpen?: () => void }) {
+  if (isDocumentCitation(source)) {
+    const meta = citationMeta(source)
+    const passage = source.passage ?? source.snippet
+    return (
+      <HoverCard openDelay={150} closeDelay={100}>
+        <HoverCardTrigger asChild>
+          <button
+            type="button"
+            aria-label={`Source ${n}: ${source.title}${meta ? `, ${meta}` : ''}`}
+            aria-haspopup={onOpen ? 'dialog' : undefined}
+            onClick={onOpen}
+            className={cn(CHIP, 'focus-visible:ring-ring/40 outline-none focus-visible:ring-2', !onOpen && 'cursor-default')}
+          >
+            {n}
+          </button>
+        </HoverCardTrigger>
+        <HoverCardContent side="top" className="grid w-72 max-w-[calc(100vw-2rem)] gap-2">
+          <span className="flex min-w-0 items-center gap-2">
+            <SourceMark source={source} className="size-6 rounded-md [&_svg]:size-3.5" />
+            <span className="grid min-w-0">
+              <span className="truncate font-medium">{source.title}</span>
+              {meta && <span className="text-muted-foreground truncate text-[11px]">{meta}</span>}
+            </span>
+          </span>
+          {passage && <span className="border-l-brand/60 text-muted-foreground line-clamp-4 border-l-2 pl-2.5">{passage}</span>}
+          {onOpen && <span className="text-muted-foreground/80 text-[11px]">Click to see it in the document</span>}
+        </HoverCardContent>
+      </HoverCard>
+    )
+  }
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -234,7 +313,7 @@ export function Cite({ n, source }: { n: number; source: Citation }) {
           target="_blank"
           rel="noreferrer noopener"
           aria-label={`Source ${n}: ${source.title}`}
-          className="bg-muted text-muted-foreground hover:bg-accent hover:text-foreground mx-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded px-1 align-[1px] text-[10px] leading-none font-medium tabular-nums no-underline"
+          className={CHIP}
         >
           {n}
         </a>
@@ -326,15 +405,16 @@ function TableView({ header, rows, align, ctx, cursor }: {
 }
 
 // A table whose cells take inline Markdown. Columns of numbers align right.
-export function MdTable({ header, rows, align, sources, onLink, cursor }: {
+export function MdTable({ header, rows, align, sources, onLink, onCite, cursor }: {
   header: string[]
   rows: string[][]
   align?: Align[]
   sources?: Citation[]
   onLink?: (href: string) => void
+  onCite?: (index: number) => void
   cursor?: boolean
 }) {
-  return <TableView header={header} rows={rows} align={align} ctx={{ sources, onLink }} cursor={cursor} />
+  return <TableView header={header} rows={rows} align={align} ctx={{ sources, onLink, onCite }} cursor={cursor} />
 }
 
 function BlockView({ block, ctx, cursor }: { block: MdBlock; ctx: Ctx; cursor: boolean }) {
@@ -406,16 +486,19 @@ function Blocks({ text, ctx, cursor, className }: { text: string; ctx: Ctx; curs
 
 // Renders a Markdown text. Pass `streaming` while an AI reply is still being
 // written; leave it out for finished text.
-export function Markdown({ text, streaming, sources, onLink, className }: {
+export function Markdown({ text, streaming, sources, onLink, onCite, className }: {
   text: string
   streaming?: boolean
   // What "[1]", "[2]"… in the text point at.
   sources?: Citation[]
   onLink?: (href: string) => void
+  // A document citation was clicked: its index in `sources` ("[2]" is 1).
+  // Web citations stay links.
+  onCite?: (index: number) => void
   className?: string
 }) {
   const source = streaming ? heal(text) : text
-  const ctx = useMemo(() => ({ sources, onLink }), [sources, onLink])
+  const ctx = useMemo(() => ({ sources, onLink, onCite }), [sources, onLink, onCite])
   return (
     <>
       <AiMotion />

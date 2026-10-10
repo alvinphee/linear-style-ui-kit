@@ -1,6 +1,7 @@
 import type { Job } from '../../data'
 import type { FileKind } from '@/components/file-chip'
 import type { Memory } from '@/blocks/ai/memory/memory-manager'
+import type { ProjectKnowledgeLink, ProjectKnowledgeText } from '@/blocks/ai/knowledge/project-knowledge'
 import type { ProjectChatVisibility, ProjectMemberPermission } from '@/blocks/ai/projects/project-sharing'
 import type { ScheduledTask } from '@/blocks/ai/schedules/scheduled-task-dialog'
 import type { ShareAccess, ShareMember } from '@/blocks/share-dialog'
@@ -49,6 +50,12 @@ export type Project = {
   memories?: Memory[]
   schedules?: ScheduledTask[]
   sharing?: ProjectSharing
+  // Project knowledge beyond its files: pasted text, web pages, files left
+  // out of the context, and the knowledge bases it searches (by id).
+  texts?: ProjectKnowledgeText[]
+  links?: ProjectKnowledgeLink[]
+  excludedFiles?: string[]
+  knowledgeBases?: string[]
 }
 
 // Who a project is shared with, as the share dialog edits it.
@@ -69,7 +76,19 @@ export type ToolName =
   | 'search_invoices' | 'send_reminders'
 type ToolState = 'running' | 'done' | 'error' | 'stopped'
 
-export type Source = { title: string; url: string; domain: string; snippet: string }
+// A web page, or (kind 'document') a passage of a project file, as the
+// Markdown block's Citation describes it.
+export type Source = {
+  title: string
+  url: string
+  domain: string
+  snippet: string
+  kind?: 'web' | 'document'
+  passage?: string
+  page?: number
+  from?: string
+  documentKind?: FileKind
+}
 
 export type JobPatch = Partial<Pick<Job, 'status' | 'priority' | 'driver'>>
 export type Change = { jobId: string; title: string; field: 'Status' | 'Priority' | 'Assignee'; from: string; to: string }
@@ -185,3 +204,5 @@ export type View =
   | { kind: 'project'; projectId: string; tab?: string }
   // All chats: the chat library.
   | { kind: 'library' }
+  // Knowledge bases: the library, or one at a tab.
+  | { kind: 'knowledge'; baseId?: string; tab?: string }

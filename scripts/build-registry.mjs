@@ -70,6 +70,8 @@ const owners = new Map() // absolute file path → item name
 
 function addItem(name, type, files, description) {
   if (items.has(name)) fail(`two parts are both called "${name}". Rename one.`)
+  // The theme is added apart from the parts, under this name.
+  if (name === 'tokens') fail(`a part is called "tokens", the theme item's name. Rename it.`)
   items.set(name, { name, type, files, description, dependencies: new Set(), registryDependencies: new Set() })
   for (const f of files) owners.set(f.abs, name)
 }

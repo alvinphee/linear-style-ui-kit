@@ -868,3 +868,11 @@ text and the sidebar scrolled sideways. NavGroup now sets
 `grid-cols-[minmax(0,1fr)]`, the same fix as the rule for page grids, and
 the owner's name has a fixed cap. Any grid that lists rows of text needs
 the explicit column.
+
+## A part named like the theme overwrote it in the registry (added 2026-10-11)
+A new lib file, `src/lib/tokens.ts`, would have become the registry item
+`tokens`, the theme's own name. The theme is added apart from the parts, so
+the duplicate check missed it, and `public/r/tokens.json` would have held
+whichever came last: installing the theme could have installed a token
+counter. The file is now `token-estimate.ts`, and the registry script stops
+if any part is called `tokens`.

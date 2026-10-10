@@ -85,16 +85,6 @@ export function VoiceTab() {
   const { prefs, set } = useAiPrefs()
   const [language, setLanguage] = useStoredState('linear-kit:ai-voice-language:v1', 'auto')
   const [playingId, play] = useVoiceSample(prefs.voiceSpeed)
-  const speedRef = useRef<HTMLSpanElement>(null)
-
-  // The slider's thumb is the control screen readers land on, and the kit's
-  // Slider doesn't pass a name to it, so name it here.
-  useEffect(() => {
-    const thumb = speedRef.current?.querySelector('[role=slider]')
-    thumb?.setAttribute('aria-label', 'Speaking speed')
-    thumb?.setAttribute('aria-valuetext', formatSpeed(prefs.voiceSpeed))
-  }, [prefs.voiceSpeed])
-
   return (
     <>
       <SettingsHeader title="Voice" description="How the assistant sounds in voice mode, and how a spoken turn is sent." />
@@ -117,7 +107,8 @@ export function VoiceTab() {
           <div className="grid gap-1.5">
             <div className="flex items-center gap-3">
               <Slider
-                ref={speedRef}
+                thumbLabel="Speaking speed"
+                thumbValueText={formatSpeed(prefs.voiceSpeed)}
                 min={SPEED_MIN}
                 max={SPEED_MAX}
                 step={0.05}

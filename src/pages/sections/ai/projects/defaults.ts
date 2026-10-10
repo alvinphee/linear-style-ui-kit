@@ -17,6 +17,13 @@ export const PRIVATE_SHARING: ProjectSharing = {
   members: ONLY_YOU, access: 'restricted', accessRole: 'chat', chats: 'shared', membersCan: 'edit',
 }
 
+// The sample knowledge bases (knowledge/bases-data.ts) each project searches.
+const SEED_BASES: Record<string, string[]> = {
+  'p-q4': ['kb-hr'],
+  'p-support': ['kb-docs', 'kb-support'],
+  'p-ops': ['kb-hr', 'kb-customs'],
+}
+
 const SEED_SHARING: Record<string, ProjectSharing> = {
   'p-support': { ...PRIVATE_SHARING, members: SAMPLE_MEMBERS },
 }
@@ -31,6 +38,10 @@ export function withProjectDefaults(project: Project): Project {
     memories: tools.memories,
     schedules: scheduledTasksFor(project.id),
     sharing: SEED_SHARING[project.id] ?? PRIVATE_SHARING,
+    texts: [],
+    links: [],
+    excludedFiles: [],
+    knowledgeBases: SEED_BASES[project.id] ?? [],
     ...project,
   }
 }

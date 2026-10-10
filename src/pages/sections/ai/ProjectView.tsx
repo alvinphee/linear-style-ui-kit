@@ -3,9 +3,10 @@ import {
   BubbleChatIcon, Calendar03Icon, File01Icon, Home01Icon, Plug01Icon, Settings01Icon, UserGroupIcon, Wrench01Icon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
+import { ProjectKnowledge } from '@/blocks/ai/knowledge/project-knowledge'
 import { NewProjectDialog } from '@/blocks/ai/projects/new-project-dialog'
 import {
-  ProjectChatList, ProjectInstructions, ProjectKnowledgeList, ProjectOverviewHeader, ProjectPage, ProjectStartChat,
+  ProjectChatList, ProjectInstructions, ProjectOverviewHeader, ProjectPage, ProjectStartChat,
   ProjectStats, type ProjectPageTab,
 } from '@/blocks/ai/projects/project-page'
 import { ProjectSharing } from '@/blocks/ai/projects/project-sharing'
@@ -18,9 +19,11 @@ import { ShareDialog, shareSummaryLabel, type ShareMember } from '@/blocks/share
 import { DeleteConfirm } from '@/components/delete-confirm'
 import { IconColourSwatch } from '@/components/icon-colour-picker'
 import { Button } from '@/components/ui/button'
+import { estimateFileTokens, estimateTokens } from '@/lib/token-estimate'
 import { plural } from '@/lib/text'
 import { useActions } from './context'
 import { now, toFileRef, uid } from './data'
+import { useKnowledge } from './knowledge/context'
 import { PRIVATE_SHARING } from './projects/defaults'
 import { ORGANISATION, PEOPLE, PROJECT_ROLES } from './projects/people'
 import { SAMPLE_RUN_SUMMARIES, SCHEDULE_MODELS } from './projects/schedules-data'
@@ -35,6 +38,10 @@ import type { Project, ProjectSharing as Sharing } from './types'
 // skills, project memory), Schedules (scheduled tasks), Sharing and Settings.
 // The tab is in the address (#/templates/ai-chat/project/<id>/<tab>).
 
+// The project's context: how many tokens its knowledge may use before the
+// assistant switches to searching it. A typical long-context model's window.
+const CONTEXT_LIMIT = 200_000
+
 export const PROJECT_TABS = ['overview', 'chats', 'knowledge', 'tools', 'schedules', 'sharing', 'settings'] as const
 
 const colourId = (value: string) => PROJECT_COLOURS.find((c) => c.value === value)?.id ?? PROJECT_COLOURS[0].id
@@ -48,6 +55,7 @@ export function ProjectView({ project, chats, tab, start }: {
   const actions = useActions()
   const { connectors } = useConnectors()
   const { skills } = useSkills()
+  const knowledge = useKnowledge()
   const [sharing, setSharing] = useState(false)
   const [editing, setEditing] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -70,6 +78,25 @@ export function ProjectView({ project, chats, tab, start }: {
   const go = (next: string) => actions.openProject(id, next)
   const startChat = (text: string) => actions.send(text, [], id)
   const others = share.members.filter((m) => !m.isYou)
+  const excluded = project.excludedFiles ?? []
+  const linkedIds = project.knowledgeBases ?? []
+  const baseSummaries = knowledge.bases.map((b) => ({
+    id: b.id, name: b.name, icon: b.icon, colour: b.colour,
+    documentCount: b.documents.length, tokens: b.documents.reduce((n, d) => n + d.tokens, 0),
+  }))
+  const linkedBases = baseSummaries.filter((b) => linkedIds.includes(b.id))
+
+  // A web page is read in the background: queued, then indexed (or, for an
+  // address with "fail" in it, a failed read).
+  function addLink(url: string) {
+    const lid = uid('l')
+    patch({ links: [...(project.links ?? []), { id: lid, url, status: 'queued' }] })
+    window.setTimeout(() => actions.patchProjectWith(id, (p) => ({
+      links: (p.links ?? []).map((l) => (l.id !== lid ? l : /fail/i.test(url)
+        ? { ...l, status: 'failed', error: 'The page could not be read. It may need a sign-in.' }
+        : { ...l, status: 'indexed', title: new URL(url).hostname, tokens: estimateTokens(url) * 400 })),
+    })), 1500)
+  }
 
   function saveTask(draft: ScheduledTaskDraft) {
     const editingId = task?.id
@@ -153,13 +180,31 @@ export function ProjectView({ project, chats, tab, start }: {
       id: 'knowledge',
       label: 'Knowledge',
       icon: File01Icon,
-      count: project.files.length,
+      count: project.files.length + (project.texts?.length ?? 0) + (project.links?.length ?? 0) + linkedIds.length || undefined,
       content: (
-        <ProjectKnowledgeList
-          files={project.files}
-          hint="Files the assistant draws on in every chat in this project. They stay in this browser only."
+        <ProjectKnowledge
+          files={project.files.map((f) => ({ ...f, tokens: estimateFileTokens(f.size, f.kind), included: !excluded.includes(f.id) }))}
+          texts={project.texts ?? []}
+          links={project.links ?? []}
+          bases={linkedBases}
+          availableBases={baseSummaries.filter((b) => !linkedIds.includes(b.id))}
+          limit={CONTEXT_LIMIT}
+          hint="Files, text and pages the assistant draws on in every chat in this project. They stay in this browser only."
           onAddFiles={(files) => actions.addProjectFiles(id, files.map(toFileRef))}
           onRemoveFile={(fileId) => actions.removeProjectFile(id, fileId)}
+          onToggleFile={(fileId, included) => patch({
+            excludedFiles: included ? excluded.filter((x) => x !== fileId) : [...excluded, fileId],
+          })}
+          onAddText={({ title, text }) => patch({ texts: [...(project.texts ?? []), { id: uid('t'), title, text }] })}
+          onRemoveText={(tid) => patch({ texts: (project.texts ?? []).filter((t) => t.id !== tid) })}
+          onAddLink={addLink}
+          onRemoveLink={(lid) => patch({ links: (project.links ?? []).filter((l) => l.id !== lid) })}
+          onLinkBase={(ids) => {
+            patch({ knowledgeBases: [...linkedIds, ...ids.filter((x) => !linkedIds.includes(x))] })
+            toast(`Linked ${plural(ids.length, 'knowledge base')}`, { description: 'The assistant searches it when a question needs it.' })
+          }}
+          onUnlinkBase={(bid) => patch({ knowledgeBases: linkedIds.filter((x) => x !== bid) })}
+          onOpenBase={(bid) => actions.openKnowledge(bid)}
         />
       ),
     },

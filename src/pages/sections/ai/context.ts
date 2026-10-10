@@ -20,6 +20,8 @@ export type WorkspaceActions = {
   openProject: (id: string, tab?: string) => void
   // All chats: the chat library.
   openLibrary: () => void
+  // Knowledge bases: the library, or one at a tab (Documents when left out).
+  openKnowledge: (baseId?: string, tab?: string) => void
   // Incognito on or off; either way a new chat starts.
   setIncognito: (on: boolean) => void
   // The history's chats by date, or one list.

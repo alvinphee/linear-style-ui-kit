@@ -42,6 +42,8 @@ const DEMO_PAGE: Record<string, string> = {
 const DEMO_FOLDER: Record<string, string> = {
   connectors: 'ai-connectors',
   projects: 'ai-projects',
+  knowledge: 'ai-knowledge',
+  citations: 'ai-knowledge',
   schedules: 'ai-projects',
   skills: 'ai-skills',
   memory: 'ai-skills',

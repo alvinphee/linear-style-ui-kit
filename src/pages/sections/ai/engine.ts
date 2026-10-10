@@ -1,9 +1,10 @@
 import { now, uid } from './data'
 import { code, files, general, plan, research, revise, translate } from './scenarios-assist'
 import { continueReminders, reminders } from './scenarios-invoices'
+import { knowledge, knowledgeTopic } from './scenarios-knowledge'
 import { compare, continueUpdate, email, summary, update } from './scenarios-jobs'
 import { Builder, type AgentContext, type ArtifactDraft, type BuilderContext, type ScriptEvent } from './script'
-import type { ApprovalRequest, Chat, Model, Part, PartOf, PlanStep } from './types'
+import type { ApprovalRequest, Chat, Model, Part, PartOf, PlanStep, Project } from './types'
 
 // The scripted agent. Nothing here calls a model: a prompt is matched to a
 // scenario by keywords, the scenario writes a script of events (script.ts),
@@ -13,9 +14,11 @@ export type { AgentContext, ArtifactDraft, ScriptEvent } from './script'
 
 export type Intent =
   | 'summary' | 'email' | 'update' | 'reminders' | 'compare' | 'code' | 'research' | 'translate' | 'plan' | 'revise' | 'files'
-  | 'general'
+  | 'knowledge' | 'general'
 
-function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastArtifact' | 'attachments'>): Intent {
+// `project` is left out where only the prompt is known (a chat's type), so a
+// question about a project's files is typed by its other words there.
+function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastArtifact' | 'attachments'> & { project?: Project | null }): Intent {
   const p = ctx.prompt.toLowerCase()
   const command = p.match(/^\/(\w+)/)?.[1]
   if (ctx.attachments.length && !command && /\b(attach\w*|files?|documents?|look at|read (this|these|it))\b/.test(p)) return 'files'
@@ -27,6 +30,8 @@ function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastArtifact
   if (ctx.lastArtifact && /\b(shorter|shorten|condense|tighten|trim|longer|expand|more detail|formal|polite|warmer|friendlier|revise|rewrite|add a|add an)\b/.test(p)) {
     return 'revise'
   }
+  // A question the project's files answer, unless it asks for a draft.
+  if (!command && knowledgeTopic(ctx.project ?? null, p) && !/\b(draft|e-?mail|write (to|a|an|the)|letter)\b/.test(p)) return 'knowledge'
   if (/\b(invoices?|unpaid|payment reminders?|late payments?)\b|\boverdue\b(?! (jobs?|deliver))|\bremind\w*\b.*\bpay/.test(p)) {
     return 'reminders'
   }
@@ -43,7 +48,7 @@ function detectIntent(ctx: Pick<AgentContext, 'prompt' | 'modes' | 'lastArtifact
 }
 
 const SCENARIOS: Record<Intent, (b: Builder, ctx: AgentContext) => void> = {
-  summary, email, update, reminders, compare, code, research, translate, plan, revise, files, general,
+  summary, email, update, reminders, compare, code, research, translate, plan, revise, files, knowledge, general,
 }
 
 export function buildScript(ctx: AgentContext) {
@@ -62,7 +67,8 @@ export function continueAfterApproval(request: ApprovalRequest, decision: 'appro
 // prompt asked for.
 const INTENT_TYPE: Record<Intent, string> = {
   summary: 'jobs', update: 'jobs', compare: 'jobs', email: 'writing', translate: 'writing', revise: 'writing',
-  research: 'research', reminders: 'invoices', code: 'code', plan: 'planning', files: 'files', general: 'general',
+  research: 'research', reminders: 'invoices', code: 'code', plan: 'planning', files: 'files', knowledge: 'files',
+  general: 'general',
 }
 
 export function chatTypeOf(chat: Pick<Chat, 'messages'>) {

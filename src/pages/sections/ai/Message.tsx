@@ -3,12 +3,14 @@ import { toast } from 'sonner'
 import {
   AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, StoppedNote, UserMessage,
 } from '@/blocks/ai/chat/chat-message'
+import { SourceSheet } from '@/blocks/ai/citations/source-panel'
+import { Markdown } from '@/blocks/markdown'
 import { copyText } from '@/lib/clipboard'
 import { formatDuration } from '@/lib/format'
+import { goTo } from '../../nav'
 import { useActions } from './context'
 import { modelById } from './data'
 import { currentReply, replyText } from './helpers'
-import { Markdown } from './markdown'
 import { ApprovalCard, ArtifactCard, ErrorCard, ProcessTrail, type ProcessPart } from './parts'
 import type { AssistantMessage as AssistantMessageData, Part, PartOf, UserMessage as UserMessageData } from './types'
 
@@ -18,6 +20,9 @@ import type { AssistantMessage as AssistantMessageData, Part, PartOf, UserMessag
 
 // The Copy buttons show their own tick, so no toast.
 const copy = (text: string) => copyText(text, { success: false, error: false })
+
+// Links to "#board" in a reply open that kit page, as in ./markdown.tsx.
+const openKitPage = (href: string) => goTo(href.slice(1))
 
 export const UserMessageView = memo(function UserMessageView({ chatId, message, mentions }: {
   chatId: string
@@ -64,6 +69,13 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
 }) {
   const actions = useActions()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
+  // The source sheet, and the source it shows (by its index; kept while it closes).
+  const [sourcesOpen, setSourcesOpen] = useState(false)
+  const [sourceAt, setSourceAt] = useState(0)
+  const showSource = (index: number) => {
+    setSourceAt(index)
+    setSourcesOpen(true)
+  }
   const reply = currentReply(message)
   const model = modelById(reply.model ?? message.model)
   const running = reply.status === 'running'
@@ -84,9 +96,9 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
       case 'approval':
         return <ApprovalCard part={part} onDecide={(decision) => actions.decide(...address, part.id, decision)} />
       case 'text':
-        return <Markdown text={part.text} streaming={part.streaming} sources={sources} />
+        return <Markdown text={part.text} streaming={part.streaming} sources={sources} onLink={openKitPage} onCite={showSource} />
       case 'sources':
-        return <SourcesRow sources={part.sources} />
+        return <SourcesRow sources={part.sources} onOpen={showSource} />
       case 'artifact':
         return (
           <ArtifactCard
@@ -160,6 +172,16 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
         <ProcessTrail parts={[]} live activity={reply.activity} since={reply.startedAt} />
       )}
       {reply.status === 'stopped' && <StoppedNote />}
+      {sources && (
+        <SourceSheet
+          open={sourcesOpen}
+          onOpenChange={setSourcesOpen}
+          sources={sources}
+          active={sourceAt}
+          onActiveChange={setSourceAt}
+          onOpenDocument={(index) => toast(sources[index].title, { description: 'This demo has no document viewer.' })}
+        />
+      )}
     </AssistantMessage>
   )
 })

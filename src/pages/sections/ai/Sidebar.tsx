@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode, type RefObject } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Add01Icon, DashboardSquare01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
+import { Add01Icon, DashboardSquare01Icon, Database01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { AccountMenu } from '@/blocks/account-menu'
 import {
@@ -77,6 +77,10 @@ export const Sidebar = memo(function Sidebar({
 }) {
   const actions = useActions()
   const history = useMemo(() => toHistoryProjects(projects), [projects])
+  const knowledgeActive = view.kind === 'knowledge'
+  const knowledgeLink = useMemo(() => [{
+    id: 'knowledge', label: 'Knowledge', icon: Database01Icon, onSelect: () => actions.openKnowledge(), active: knowledgeActive,
+  }], [actions, knowledgeActive])
   const rows = useMemo(
     (): HistoryChat[] => chats.map((c) => (c.id === runningChatId ? { ...c, running: true } : c)),
     [chats, runningChatId],
@@ -116,6 +120,7 @@ export const Sidebar = memo(function Sidebar({
       onDeleteProject={actions.deleteProject}
       onViewAll={actions.openLibrary}
       viewAllActive={view.kind === 'library'}
+      links={knowledgeLink}
       groupByDate={groupByDate}
       onGroupByDateChange={actions.setGroupByDate}
       onRenameChat={actions.renameChat}

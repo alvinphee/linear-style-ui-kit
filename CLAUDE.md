@@ -90,6 +90,18 @@ linear-style-ui-kit/
     │   │   │   ├── scheduled-task-dialog.tsx  create or edit a scheduled task: prompt, recurrence, next runs, model, delivery
     │   │   │   └── task-run-history.tsx  a scheduled task's runs, inline or in a sheet
     │   │   ├── artifacts/     artifact panel
+    │   │   ├── citations/     where a reply's facts came from:
+    │   │   │   └── source-panel.tsx  a reply's sources, the active one with its cited passage; SourceSheet on narrow screens
+    │   │   ├── knowledge/     what the assistant reads: project knowledge and knowledge bases (RAG):
+    │   │   │   ├── knowledge-types.ts  the shapes the knowledge blocks share: knowledge base, source, document, chunk, citation
+    │   │   │   ├── project-knowledge.tsx  a project's knowledge: context meter and mode, files (in or out), pasted text, web pages, linked knowledge bases
+    │   │   │   ├── knowledge-base-list.tsx  knowledge bases to open: search, grid or list, size, index health, sources, access
+    │   │   │   ├── knowledge-base-page.tsx  one knowledge base: header, summary numbers, indexing progress, tabs
+    │   │   │   ├── knowledge-documents.tsx  a knowledge base's documents: status (queued, processing, indexed, failed), filters, bulk re-index and remove, upload
+    │   │   │   ├── knowledge-sources.tsx  where documents come from (upload, website, connected app, text), sync schedules, the add source dialog
+    │   │   │   ├── retrieval-tester.tsx  test retrieval: a question, the chunks it would fetch with scores and highlights, what the model would see
+    │   │   │   ├── knowledge-base-settings.tsx  retrieval settings (chunk size, overlap, embedding model, hybrid search, reranking, top-K, cut-off) and access
+    │   │   │   └── create-knowledge-base-dialog.tsx  new knowledge base: name, what is in it, icon, access, what to start with
     │   │   ├── reasoning/     thinking trail
     │   │   ├── connectors/    let the assistant use other apps:
     │   │   │   ├── connector-card.tsx  an app the assistant can use: mark, status (connected, needs reconnecting, admin disabled), Connect or Manage
@@ -153,6 +165,7 @@ linear-style-ui-kit/
     ├── components/
     │   ├── ui/                shadcn components (ours to edit)
     │   ├── ai/                the AI kit's components (registry category "ai")
+    │   │   ├── context-meter.tsx  how much of a project's context its knowledge uses, and the Full context / Search mode badge
     │   │   ├── ai-label.tsx   "AI" tag for AI-made content
     │   │   ├── thinking-indicator.tsx  Thinking…, shimmer, typing dots, caret, timer
     │   │   └── incognito-toggle.tsx  incognito (temporary) chat switch for an AI chat
@@ -202,6 +215,7 @@ linear-style-ui-kit/
     │   ├── text.ts            plural, slug, initials, greeting
     │   ├── keyboard.ts        isTyping (when single-key shortcuts must not fire)
     │   ├── random.ts          seededRandom for sample data
+    │   ├── token-estimate.ts  rough token counts for text and files, formatTokens
     │   ├── use-timers.ts, use-svg-id.ts, use-media-query.ts
     │   └── utils.ts
     ├── templates/             whole apps built from the kit (level 5)
@@ -259,13 +273,18 @@ linear-style-ui-kit/
             ├── AiWorkspaceSection.tsx AI chat workspace: projects, history, agent, artifacts, and in the
             │                         full-page app its addresses (chat, project, library, settings)
             ├── ai/                    its engine, scripted scenarios, parts, All chats, routes.ts,
-            │                         ProjectView (a project's tabs, wired to the workspace)
+            │                         ProjectView (a project's tabs, wired to the workspace),
+            │                         KnowledgeView (knowledge bases), scenarios-knowledge.ts (cited answers)
+            │   ├── knowledge/         sample knowledge bases and retrieval, the made-up indexer
+            │                         (library.ts, shared with the kit page) and its provider
             │   ├── projects/          sample templates, icons, people, tools, schedules, and the
             │                         defaults a saved project is filled in with (defaults.ts)
             │   └── settings/          the full-page Settings: SettingsScreen (its sections), one tab per
             │                         file, prefs.ts (useAiPrefs, useStoredState: kept in the browser)
             │                         and the connectors', skills' and memories' sample data
-            ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx, AiProjectsSection.tsx  kit pages
+            ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx, AiProjectsSection.tsx,
+            │   AiKnowledgeSection.tsx  kit pages
+            ├── ai-knowledge/          the Knowledge page's panels (project knowledge, bases, retrieval, citations)
             ├── ai-settings/           those pages' panels (account, models and voice, connectors, skills)
             ├── ai-projects/           the Projects page's panels (workspace, tools, schedules, sharing)
             ├── AiFeaturesSection.tsx  inline AI, summary, triage, AI search and more
@@ -300,8 +319,8 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **AI:** the AI kit, a domain across the levels rather than a level (see
   "Domains" in `docs/architecture.md`): Overview (install the AI kit, every
   AI item read from the registry, the AI templates); Components: AI
-  components; Blocks: AI workspace, AI in the product, Connectors, Projects,
-  Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
+  components; Blocks: AI workspace, AI in the product, Connectors, Knowledge,
+  Projects, Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
 
@@ -350,7 +369,17 @@ template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
   task's prompt), Sharing (the share dialog: people, roles, general access)
   and Settings (details, duplicate, archive, delete). Projects can be
   starred (first in the sidebar) and archived (hidden); colleagues' projects
-  are under Shared with me (demo only). Settings is a full page at
+  are under Shared with me (demo only).
+  Knowledge (in the sidebar, `/knowledge[/<id>[/<tab>]]`): knowledge bases,
+  libraries searched with retrieval (RAG), each with Documents (indexing:
+  queued, processing, indexed, failed), Sources (upload, website, connected
+  app, text; synced on a schedule), Test retrieval, Settings and Access. A
+  project's Knowledge tab shows how much of its context its own files use:
+  under the threshold every file is read in full (Full context), over it the
+  assistant searches them (Search mode); it also links knowledge bases, which
+  are always searched. Answers from a project's files cite them: [1] shows
+  the passage on hover and opens the source panel (try "What is our refund
+  policy?" in Customer support). Settings is a full page at
   `/settings/<section>` (the account menu, or Upgrade plan for Billing):
   Profile, Appearance, Personalisation, Notifications, Security; Models and
   features, Memory, Connectors, Skills, Voice; Data controls, Billing and
@@ -557,8 +586,9 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 151 items: `tokens` (the whole theme from `styles.css`), 47 ui, 39
-components, 54 blocks, 9 lib files and the `ai-kit` bundle. Which level
+needs. 163 items: `tokens` (the whole theme from `styles.css`), 47 ui, 40
+components, 64 blocks, 10 lib files and the `ai-kit` bundle. No part may be
+called `tokens` (the script stops if one is). Which level
 becomes which item: `docs/architecture.md`.
 - Items from `components/ai/` and `blocks/ai/**` have `categories: ["ai"]`;
   `ai-kit` (a `registry:item` with no files) depends on all of them:

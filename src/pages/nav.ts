@@ -3,7 +3,7 @@ import { navigate } from '@/lib/router'
 import {
   AiBrain01Icon, AiChat02Icon, AiInnovation01Icon, AiMagicIcon, Alert02Icon, AppWindowIcon, ArrowLeftRightIcon, ArrowRightDoubleIcon,
   Audit01Icon, Building06Icon, Calendar01Icon, Calendar03Icon, ChartAreaIcon, ChartGanttIcon,
-  CheckmarkSquare02Icon, ClipboardCheckIcon, CommandIcon, Comment01Icon, Compass01Icon, CursorPointer02Icon, DashboardSquare01Icon,
+  CheckmarkSquare02Icon, ClipboardCheckIcon, CommandIcon, Comment01Icon, Compass01Icon, CursorPointer02Icon, DashboardSquare01Icon, Database01Icon,
   DragDropVerticalIcon, DropdownFieldTypeIcon, FileEmpty02Icon, FileUploadIcon, Folder01Icon, Flag02Icon, FormIcon,
   GitCompareIcon, GridViewIcon, Heading01Icon, HorizontalResizeIcon, InboxIcon, InputTextIcon, KanbanIcon,
   KeyboardIcon, LayoutGridIcon, LayoutPanelTopIcon, LeftToRightListBulletIcon, ListCollapseIcon, Loading03Icon,
@@ -116,6 +116,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'ai-workspace', label: 'AI workspace', icon: AiChat02Icon, category: 'Blocks' },
       { id: 'ai-features', label: 'AI in the product', icon: SparklesIcon, category: 'Blocks' },
       { id: 'ai-connectors', label: 'Connectors', icon: Plug01Icon, category: 'Blocks' },
+      { id: 'ai-knowledge', label: 'Knowledge', icon: Database01Icon, category: 'Blocks' },
       { id: 'ai-projects', label: 'Projects', icon: Folder01Icon, category: 'Blocks' },
       { id: 'ai-settings', label: 'Settings page', icon: Settings01Icon, category: 'Blocks' },
       { id: 'ai-skills', label: 'Skills and memory', icon: PuzzleIcon, category: 'Blocks' },

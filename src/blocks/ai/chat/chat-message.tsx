@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Alert02Icon, ArrowLeft01Icon, ArrowRight01Icon, Copy01Icon, CornerDownRightIcon, FileTextIcon, Globe02Icon, PencilEdit02Icon, RefreshIcon, SparklesIcon, StopCircleIcon, ThumbsDownIcon, ThumbsUpIcon, Tick02Icon,
+  Alert02Icon, ArrowLeft01Icon, ArrowRight01Icon, BookOpen01Icon, Copy01Icon, CornerDownRightIcon, FileTextIcon, Globe02Icon, PencilEdit02Icon, RefreshIcon, SparklesIcon, StopCircleIcon, ThumbsDownIcon, ThumbsUpIcon, Tick02Icon,
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { FileChip } from '@/components/file-chip'
 import { IconAction } from '@/components/icon-action'
 import { Mention } from '@/components/mention'
-import type { Citation } from '@/blocks/markdown'
+import { SourceMark, citationMeta, isDocumentCitation, type Citation } from '@/blocks/markdown'
 import { useCopied } from '@/lib/clipboard'
 import { plural } from '@/lib/text'
 
@@ -341,34 +341,68 @@ export function FeedbackDialog({ open, onOpenChange, reasons, onSubmit, title = 
   )
 }
 
-// The sources a reply used, as a row of cards numbered like its citations.
-export function SourcesRow({ sources, className }: { sources: Citation[]; className?: string }) {
+const SOURCE_CARD = 'flex h-full w-full min-w-0 flex-col gap-1.5 rounded-lg border p-2.5 text-left outline-none'
+const SOURCE_CARD_ACTIVE = 'hover:bg-accent/60 focus-visible:ring-ring/30 focus-visible:ring-2'
+
+// The sources a reply used, as a row of cards numbered like its citations. A
+// web page opens in a new tab. A document (a project file, a knowledge base's
+// page) shows its file icon, name and page, and a click calls `onOpen` with
+// its index, to show the passage in a source panel.
+export function SourcesRow({ sources, onOpen, className }: {
+  sources: Citation[]
+  onOpen?: (index: number) => void
+  className?: string
+}) {
+  const documents = sources.filter(isDocumentCitation).length
   return (
     <div className={cn('grid min-w-0 gap-1.5', className)}>
       <span className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium">
-        <HugeiconsIcon icon={Globe02Icon} strokeWidth={2} className="size-3" />
+        <HugeiconsIcon icon={documents === sources.length ? BookOpen01Icon : Globe02Icon} strokeWidth={2} className="size-3" />
         {plural(sources.length, 'source')}
       </span>
       <ol className="-mx-0.5 flex gap-2 overflow-x-auto px-0.5 pb-1">
-        {sources.map((source, i) => (
-          <li key={source.url} className="w-52 shrink-0">
-            <a
-              href={source.url}
-              target="_blank"
-              rel="noreferrer noopener"
-              className="hover:bg-accent/60 focus-visible:ring-ring/30 flex h-full min-w-0 flex-col gap-1.5 rounded-lg border p-2.5 outline-none focus-visible:ring-2"
-            >
-              <span className="flex min-w-0 items-center gap-1.5 text-[11px]">
-                <span aria-hidden="true" className="bg-muted text-muted-foreground grid size-4 shrink-0 place-items-center rounded-[4px] text-[9px] font-semibold uppercase">
-                  {source.domain[0]}
-                </span>
-                <span className="text-muted-foreground min-w-0 truncate">{source.domain}</span>
-                <span className="text-muted-foreground ml-auto tabular-nums">{i + 1}</span>
-              </span>
-              <span className="line-clamp-2 text-xs font-medium">{source.title}</span>
-            </a>
-          </li>
-        ))}
+        {sources.map((source, i) => {
+          const document = isDocumentCitation(source)
+          const top = (
+            <span className="flex min-w-0 items-center gap-1.5 text-[11px]">
+              <SourceMark source={source} />
+              <span className="text-muted-foreground min-w-0 truncate">{document ? source.from ?? source.domain : source.domain}</span>
+              <span className="text-muted-foreground ml-auto tabular-nums">{i + 1}</span>
+            </span>
+          )
+          const title = (
+            <span className="line-clamp-2 text-xs font-medium">
+              {source.title}
+              {document && source.page !== undefined && <span className="text-muted-foreground font-normal"> · p. {source.page}</span>}
+            </span>
+          )
+          return (
+            <li key={`${i}-${source.url || source.title}`} className="w-52 shrink-0">
+              {!document ? (
+                <a href={source.url} target="_blank" rel="noreferrer noopener" className={cn(SOURCE_CARD, SOURCE_CARD_ACTIVE)}>
+                  {top}
+                  {title}
+                </a>
+              ) : onOpen ? (
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-label={`Source ${i + 1}: ${source.title}, ${citationMeta(source)}. Show the passage`}
+                  onClick={() => onOpen(i)}
+                  className={cn(SOURCE_CARD, SOURCE_CARD_ACTIVE)}
+                >
+                  {top}
+                  {title}
+                </button>
+              ) : (
+                <div className={SOURCE_CARD}>
+                  {top}
+                  {title}
+                </div>
+              )}
+            </li>
+          )
+        })}
       </ol>
     </div>
   )

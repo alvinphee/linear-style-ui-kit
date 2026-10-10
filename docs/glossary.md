@@ -221,8 +221,6 @@ used by most design systems).
 | Shared link | A read-only link to a chat; it can be revoked |
 | Archived chat | A chat taken out of the history without deleting it |
 | Data retention | How long chats are kept before they are deleted |
-The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
-`form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
 | Project workspace | A project's page with tabs (Overview, Chats, Knowledge, Tools, Schedules, Sharing, Settings), as Claude and ChatGPT open a project |
 | Project template | A starting point for a new project: its icon, colour and instructions (Research, Writing, Customer support…) |
 | Starred project | A project pinned to the top of the Projects list |
@@ -233,9 +231,27 @@ The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
 | Run (scheduled task) | One time a scheduled task ran: running, succeeded or failed, with its result. The list of them is the run history |
 | Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
 
+| Knowledge base | A library the assistant searches when a question needs it (policies, product documents, a support wiki), shared across projects and people |
+| Knowledge source | Where a knowledge base gets its documents: uploaded files, a crawled website, a connected app's folder, pasted text. Synced sources stay current on a schedule |
+| Indexing | Turning documents into searchable chunks: queued, processing, then indexed, or failed (with why) |
+| Chunk | One piece of a document, a few hundred tokens long, that search returns. Chunk size and overlap set how documents are split |
+| Embedding (embedding model) | Numbers that capture what a chunk means, so search can find it by meaning rather than exact words. Changing the model means re-indexing |
+| Hybrid search | Keyword search alongside meaning (semantic) search, so exact names and numbers are found too |
+| Reranking | A second, slower pass that reorders the best matches |
+| Top-K | How many chunks go to the model for one question |
+| Similarity score and cut-off | How well a chunk matches a question (0 to 1), and the score below which chunks are left out |
+| Retrieval tester (test retrieval) | Ask a question and see which chunks would be fetched, ranked with scores and highlights, before anyone asks it in a chat |
+| Context window | How much text the model can read at once, in tokens. A project's knowledge counts against it |
+| Token | The unit models read text in, about four characters of English |
+| Full context and Search mode | The product names for long context and RAG on a project's knowledge: every file read in full while it fits, searched once it does not. The context meter shows which, with the threshold where search starts |
+| Linked knowledge base | A knowledge base a project searches; it never counts against the project's context |
+| Document citation | A citation to a passage in a file or knowledge base, with its page; hover shows the passage |
+| Source panel | The list of a reply's sources beside the chat, the active one showing the exact passage cited |
 ## Forms and checklists
 checklist, an expense claim and a survey are all forms to them.
 
+The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
+`form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
 | Term | Meaning |
 |---|---|
 | Form (form template, form definition) | What a form asks: its name, sections and fields, as data. What the catalogue lists. The type is `FormDefinition` |
