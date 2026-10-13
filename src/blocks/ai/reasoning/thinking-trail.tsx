@@ -20,7 +20,8 @@ import { plural } from '@/lib/text'
 // "Searched Customer support files · 3 passages from 2 documents" and opens
 // to the matched documents with their scores.
 //
-// Also here: ApprovalCard, the agent asking before it changes anything.
+// Also here: ApprovalCard, the agent asking before it changes anything
+// (Approve / Deny, or Allow once / Always allow / Deny for a tool call).
 //
 // Wrap the page in an @container: the step counts and tool summaries show
 // from @sm up, the approval card's waiting note from @md.
@@ -331,10 +332,14 @@ function ChangeValue({ value, icon, before }: { value: string; icon?: ReactNode;
   return <span className="inline-flex min-w-0 items-center gap-1">{icon}{text}</span>
 }
 
+// With `onAlwaysAllow` the actions become Allow once / Always allow / Deny,
+// as agents ask before a tool call: Always allow remembers the tool, so the
+// next run goes ahead without asking. Pass `always` once that was the choice.
 export function ApprovalCard({
-  title, description, changes = [], children, state, onApprove, onDeny, disabled, icon = Shield01Icon,
-  waitingNote = 'The agent is waiting for you', approveLabel = 'Approve', denyLabel = 'Deny',
-  approvedNote = 'Approved', deniedNote = 'Denied, nothing changed', className,
+  title, description, changes = [], children, state, onApprove, onDeny, onAlwaysAllow, always = false, disabled,
+  icon = Shield01Icon, waitingNote = 'The agent is waiting for you', approveLabel, alwaysAllowLabel = 'Always allow',
+  denyLabel = 'Deny', approvedNote, alwaysNote = 'Allowed. It won’t ask again for this tool.',
+  deniedNote = 'Denied, nothing changed', className,
 }: {
   title: string
   description?: ReactNode
@@ -344,16 +349,27 @@ export function ApprovalCard({
   state: ApprovalDecision
   onApprove: () => void
   onDeny: () => void
+  // Adds Always allow between Deny and Approve, which becomes Allow once.
+  onAlwaysAllow?: () => void
+  // The approval was an Always allow: shows `alwaysNote` once approved.
+  always?: boolean
   disabled?: boolean
   icon?: IconSvgElement
   waitingNote?: string
+  // Defaults to "Approve", or "Allow once" beside Always allow.
   approveLabel?: string
+  alwaysAllowLabel?: string
   denyLabel?: string
+  // Defaults to "Approved", or "Allowed once" beside Always allow.
   approvedNote?: string
+  alwaysNote?: string
   deniedNote?: string
   className?: string
 }) {
   const pending = state === 'pending'
+  const withAlways = !!onAlwaysAllow
+  const approveText = approveLabel ?? (withAlways ? 'Allow once' : 'Approve')
+  const approvedText = always ? alwaysNote : approvedNote ?? (withAlways ? 'Allowed once' : 'Approved')
   return (
     <div role="group" aria-label="Approval request" className={cn('bg-card min-w-0 overflow-hidden rounded-lg border', pending && 'border-brand/40', className)}>
       <div className={cn('flex items-start gap-2.5 p-3', pending && 'bg-brand/5')}>
@@ -389,19 +405,20 @@ export function ApprovalCard({
         </ul>
       )}
       {children && <div className="border-t px-3 py-2 text-xs">{children}</div>}
-      <div className="flex min-h-11 items-center justify-end gap-2 border-t px-3 py-2">
+      <div className={cn('flex min-h-11 items-center justify-end gap-2 border-t px-3 py-2', withAlways && 'flex-wrap')}>
         {pending ? (
           <>
             <span className="text-muted-foreground mr-auto hidden text-[11px] @md:inline">{waitingNote}</span>
             <Button variant="ghost" disabled={disabled} onClick={onDeny}>{denyLabel}</Button>
+            {withAlways && <Button variant="outline" disabled={disabled} onClick={onAlwaysAllow}>{alwaysAllowLabel}</Button>}
             <Button disabled={disabled} onClick={onApprove}>
               <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} data-icon="inline-start" />
-              {approveLabel}
+              {approveText}
             </Button>
           </>
         ) : state === 'approved' ? (
-          <span className="text-status-done mr-auto flex items-center gap-1.5 text-xs font-medium">
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-3.5" /> {approvedNote}
+          <span className="text-status-done mr-auto flex min-w-0 items-center gap-1.5 text-xs font-medium">
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} strokeWidth={2} className="size-3.5 shrink-0" /> {approvedText}
           </span>
         ) : (
           <span className="text-muted-foreground mr-auto flex items-center gap-1.5 text-xs font-medium">

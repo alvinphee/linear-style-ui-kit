@@ -65,7 +65,8 @@ import { plural } from '@/lib/text'
 export type ChatType = { value: string; label: string; icon?: IconSvgElement; colour?: string }
 
 // A row under New chat: a page (All chats, Library) or an action (Incognito chat).
-export type ChatLink = { id: string; label: string; icon: IconSvgElement; onSelect: () => void; active?: boolean }
+// `count`: a number at the row's end, such as runs that need you.
+export type ChatLink = { id: string; label: string; icon: IconSvgElement; onSelect: () => void; active?: boolean; count?: number }
 
 export type HistoryChat = {
   id: string
@@ -825,7 +826,7 @@ export function ChatHistory({
           <NavItem icon={Search01Icon} label={searchLabel} onClick={() => setSearching(true)} />
         )}
         {shownLinks.map((link) => (
-          <NavItem key={link.id} icon={link.icon} label={link.label} active={link.active} onClick={() => go(link.onSelect)} />
+          <NavItem key={link.id} icon={link.icon} label={link.label} count={link.count || undefined} active={link.active} onClick={() => go(link.onSelect)} />
         ))}
         {folds && (
           <NavItem

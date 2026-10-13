@@ -96,6 +96,19 @@ export function formatRelativeDate(value: DateInput, { now, time = false }: { no
   return time ? `${day}, ${formatTime(value)}` : day
 }
 
+// How long ago, in a few words: "just now", "12 min ago", "3 h ago",
+// "yesterday", "4 days ago", then "on 2 Oct".
+export function formatAgo(time: number, now: number = Date.now()) {
+  const minutes = Math.round((now - time) / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `${hours} h ago`
+  const days = Math.round(hours / 24)
+  if (days < 7) return days === 1 ? 'yesterday' : `${days} days ago`
+  return `on ${formatShortDate(time)}`
+}
+
 // A date range: "1 Sep – 30 Sep", or a single date when both ends are the
 // same day (or there is no end). With `year`, the year follows the end date,
 // and the start date too when the range crosses into a new year.

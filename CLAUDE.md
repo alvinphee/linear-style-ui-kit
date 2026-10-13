@@ -89,6 +89,21 @@ linear-style-ui-kit/
     │   │   │   ├── scheduled-task-list.tsx  scheduled tasks: schedule, next run, last run, pause, Run now
     │   │   │   ├── scheduled-task-dialog.tsx  create or edit a scheduled task: prompt, recurrence, next runs, model, delivery
     │   │   │   └── task-run-history.tsx  a scheduled task's runs, inline or in a sheet
+    │   │   ├── agents/        saved assistants that also work on their own:
+    │   │   │   ├── agent-types.ts  the shapes the agent blocks share: agent, draft, template, trigger, run, step, approval
+    │   │   │   ├── agent-card.tsx  an agent: mark, description, trigger chips, what it uses, status, Chat and Run now; the template card
+    │   │   │   ├── agent-gallery.tsx  agents to open: yours, shared with you, Explore (templates by category), search, Create agent
+    │   │   │   ├── agent-page.tsx  one agent: header (Chat, Run now, Edit, menu), status, tabs
+    │   │   │   ├── agent-overview.tsx  an agent's Overview: conversation starters, triggers, what it uses, recent runs
+    │   │   │   ├── agent-builder.tsx  the builder's frame: Create and Configure beside a live Preview (tabs when narrow), save, unsaved changes
+    │   │   │   ├── builder-chat.tsx  the Create tab: describe the agent, the builder asks follow-ups, chips for what it updated
+    │   │   │   ├── agent-preview.tsx  try an agent: its welcome and starters, then a conversation, what it would use
+    │   │   │   ├── agent-config-form.tsx  the Configure tab: basics, instructions, starters, knowledge, tools and permissions, model, triggers, access
+    │   │   │   ├── trigger-editor.tsx  an agent's triggers: manual, schedule, event in a connected app (with a filter)
+    │   │   │   ├── run-status.tsx  a run's status badge, trigger, timing and agent mark
+    │   │   │   ├── run-card.tsx  one run: agent, title, progress or approval, Allow once and Deny, error
+    │   │   │   ├── runs-inbox.tsx  every run: Needs you, Running, Done, All, by day
+    │   │   │   └── run-detail.tsx  one run: steps, the approval (Allow once, Always allow, Deny), result, retry; RunSheet
     │   │   ├── artifacts/     artifact panel
     │   │   ├── citations/     where a reply's facts came from:
     │   │   │   └── source-panel.tsx  a reply's sources, the active one with its cited passage; SourceSheet on narrow screens
@@ -274,7 +289,10 @@ linear-style-ui-kit/
             │                         full-page app its addresses (chat, project, library, settings)
             ├── ai/                    its engine, scripted scenarios, parts, All chats, routes.ts,
             │                         ProjectView (a project's tabs, wired to the workspace),
-            │                         KnowledgeView (knowledge bases), scenarios-knowledge.ts (cited answers)
+            │                         KnowledgeView (knowledge bases), scenarios-knowledge.ts (cited answers),
+            │                         AgentsView (gallery, an agent's page, the builder), RunsView (runs inbox)
+            │   ├── agents/            sample agents, templates, events and runs, the scripted builder
+            │                         (builder-script.ts), the made-up runner (runner.ts) and its provider
             │   ├── knowledge/         sample knowledge bases and retrieval, the made-up indexer
             │                         (library.ts, shared with the kit page) and its provider
             │   ├── projects/          sample templates, icons, people, tools, schedules, and the
@@ -283,7 +301,8 @@ linear-style-ui-kit/
             │                         file, prefs.ts (useAiPrefs, useStoredState: kept in the browser)
             │                         and the connectors', skills' and memories' sample data
             ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx, AiProjectsSection.tsx,
-            │   AiKnowledgeSection.tsx  kit pages
+            │   AiKnowledgeSection.tsx, AiAgentsSection.tsx  kit pages
+            ├── ai-agents/             the Agents page's panels (gallery, builder, configure, runs)
             ├── ai-knowledge/          the Knowledge page's panels (project knowledge, bases, retrieval, citations)
             ├── ai-settings/           those pages' panels (account, models and voice, connectors, skills)
             ├── ai-projects/           the Projects page's panels (workspace, tools, schedules, sharing)
@@ -319,8 +338,8 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **AI:** the AI kit, a domain across the levels rather than a level (see
   "Domains" in `docs/architecture.md`): Overview (install the AI kit, every
   AI item read from the registry, the AI templates); Components: AI
-  components; Blocks: AI workspace, AI in the product, Connectors, Knowledge,
-  Projects, Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
+  components; Blocks: AI workspace, AI in the product, Agents, Connectors,
+  Knowledge, Projects, Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
 
@@ -379,7 +398,19 @@ template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
   assistant searches them (Search mode); it also links knowledge bases, which
   are always searched. Answers from a project's files cite them: [1] shows
   the passage on hover and opens the source panel (try "What is our refund
-  policy?" in Customer support). Settings is a full page at
+  policy?" in Customer support).
+  Agents (in the sidebar, `/agents`): saved assistants with instructions,
+  knowledge, tools (each tool Always allow, Ask first or Off), a model and
+  triggers (manual, a schedule, or an event in a connected app). The
+  gallery has yours, shared with you and Explore (templates). Create agent
+  opens the builder (`/agents/new`, or `/agents/<id>/edit`): describe it in
+  Create and the builder fills it in and asks follow-ups (`builder-script.ts`),
+  or use Configure; Preview tries it. An agent's page has Overview, Chat (a
+  scripted chat in its voice), Runs and Triggers. Run now (or a trigger)
+  starts a run: steps advance, and it stops at an approval (Allow once,
+  Always allow, Deny) before sending or writing. Runs (`/runs[/<id>]`) is
+  the inbox, with a count in the sidebar of what needs you; a toast says
+  when a run needs you, finishes or fails. Settings is a full page at
   `/settings/<section>` (the account menu, or Upgrade plan for Billing):
   Profile, Appearance, Personalisation, Notifications, Security; Models and
   features, Memory, Connectors, Skills, Voice; Data controls, Billing and
@@ -586,8 +617,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 163 items: `tokens` (the whole theme from `styles.css`), 47 ui, 40
-components, 64 blocks, 10 lib files and the `ai-kit` bundle. No part may be
+needs. 177 items: `tokens` (the whole theme from `styles.css`), 47 ui, 40
+components, 78 blocks, 10 lib files and the `ai-kit` bundle. No part may be
 called `tokens` (the script stops if one is). Which level
 becomes which item: `docs/architecture.md`.
 - Items from `components/ai/` and `blocks/ai/**` have `categories: ["ai"]`;

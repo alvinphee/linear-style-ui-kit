@@ -876,3 +876,11 @@ the duplicate check missed it, and `public/r/tokens.json` would have held
 whichever came last: installing the theme could have installed a token
 counter. The file is now `token-estimate.ts`, and the registry script stops
 if any part is called `tokens`.
+
+## A badge must count what its page counts (added 2026-10-13)
+The sidebar's Runs badge first added "waiting for approval" and "not opened"
+together, and showed 5 while the inbox's Needs you showed 3: a run that is
+waiting and not opened was counted twice, and finished runs not opened
+counted too. The badge now uses the inbox's own rule (`needsYou` in
+runs-inbox.tsx), so the two can't disagree. Export the rule with the list
+and count with it, rather than rebuilding the count from the store.

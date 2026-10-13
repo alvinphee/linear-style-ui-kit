@@ -1,15 +1,17 @@
 import { memo, useMemo, type ReactNode, type RefObject } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Add01Icon, DashboardSquare01Icon, Database01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon } from '@hugeicons/core-free-icons'
+import { Add01Icon, BotIcon, DashboardSquare01Icon, Database01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon, Task01Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { AccountMenu } from '@/blocks/account-menu'
 import {
   ChatHistory, ChatMenuItems as ChatMenu, DeleteChatDialog as DeleteChatConfirm, type HistoryChat, type HistoryProject,
 } from '@/blocks/ai/chat/chat-history'
+import { needsYou } from '@/blocks/ai/agents/runs-inbox'
 import type { MenuKit } from '@/components/menu-kit'
 import { Shortcut } from '@/components/shortcut'
 import { UsageMeter } from '@/components/usage-meter'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { useAgents } from './agents/context'
 import { useActions } from './context'
 import { CHAT_TYPES, USER, now } from './data'
 import { projectIcon } from './projects/templates'
@@ -77,10 +79,14 @@ export const Sidebar = memo(function Sidebar({
 }) {
   const actions = useActions()
   const history = useMemo(() => toHistoryProjects(projects), [projects])
-  const knowledgeActive = view.kind === 'knowledge'
-  const knowledgeLink = useMemo(() => [{
-    id: 'knowledge', label: 'Knowledge', icon: Database01Icon, onSelect: () => actions.openKnowledge(), active: knowledgeActive,
-  }], [actions, knowledgeActive])
+  const { runs } = useAgents()
+  // The same runs as the inbox's Needs you: waiting, or failed and not opened.
+  const waiting = runs.runs.filter(needsYou).length
+  const links = useMemo(() => [
+    { id: 'knowledge', label: 'Knowledge', icon: Database01Icon, onSelect: () => actions.openKnowledge(), active: view.kind === 'knowledge' },
+    { id: 'agents', label: 'Agents', icon: BotIcon, onSelect: () => actions.openAgents(), active: view.kind === 'agents' },
+    { id: 'runs', label: 'Runs', icon: Task01Icon, onSelect: () => actions.openRuns(), active: view.kind === 'runs', count: waiting },
+  ], [actions, view.kind, waiting])
   const rows = useMemo(
     (): HistoryChat[] => chats.map((c) => (c.id === runningChatId ? { ...c, running: true } : c)),
     [chats, runningChatId],
@@ -120,7 +126,7 @@ export const Sidebar = memo(function Sidebar({
       onDeleteProject={actions.deleteProject}
       onViewAll={actions.openLibrary}
       viewAllActive={view.kind === 'library'}
-      links={knowledgeLink}
+      links={links}
       groupByDate={groupByDate}
       onGroupByDateChange={actions.setGroupByDate}
       onRenameChat={actions.renameChat}

@@ -22,6 +22,11 @@ export type WorkspaceActions = {
   openLibrary: () => void
   // Knowledge bases: the library, or one at a tab (Documents when left out).
   openKnowledge: (baseId?: string, tab?: string) => void
+  // Agents: the gallery (at a tab), 'new' for the builder, or one agent at a
+  // tab ('edit' is its builder).
+  openAgents: (agentId?: string, tab?: string) => void
+  // The runs inbox, with one run open.
+  openRuns: (runId?: string) => void
   // Incognito on or off; either way a new chat starts.
   setIncognito: (on: boolean) => void
   // The history's chats by date, or one list.

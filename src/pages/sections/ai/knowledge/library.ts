@@ -67,14 +67,19 @@ const recount = (base: KnowledgeBase): KnowledgeBase => ({
 const clone = (bases: KnowledgeBase[]): KnowledgeBase[] =>
   bases.map((b) => ({ ...b, sources: b.sources.map((s) => ({ ...s, sync: s.sync && { ...s.sync } })), documents: b.documents.map((d) => ({ ...d })) }))
 
-type Saved = { bases: KnowledgeBase[]; schedules: Record<string, Recurrence> }
+// `samples`: the sample bases this browser has had, so one deleted stays
+// deleted while one added to the samples later still arrives.
+type Saved = { bases: KnowledgeBase[]; schedules: Record<string, Recurrence>; samples?: string[] }
 
 function load(key: string | undefined, initial: KnowledgeBase[]): Saved {
-  const fresh = { bases: clone(initial), schedules: { ...SAMPLE_SOURCE_SCHEDULES } }
+  const fresh: Saved = { bases: clone(initial), schedules: { ...SAMPLE_SOURCE_SCHEDULES }, samples: initial.map((b) => b.id) }
   if (!key) return fresh
   try {
     const saved = JSON.parse(localStorage.getItem(key) ?? 'null') as Saved | null
-    return saved && Array.isArray(saved.bases) ? { bases: saved.bases, schedules: saved.schedules ?? {} } : fresh
+    if (!saved || !Array.isArray(saved.bases)) return fresh
+    const had = saved.samples ?? saved.bases.map((b) => b.id)
+    const added = fresh.bases.filter((b) => !had.includes(b.id))
+    return { bases: [...saved.bases, ...added], schedules: { ...fresh.schedules, ...saved.schedules }, samples: fresh.samples }
   } catch {
     return fresh
   }
@@ -212,6 +217,6 @@ export function useKnowledgeLibrary(initial: KnowledgeBase[], storageKey?: strin
       toast('Sync schedule saved', { description: describeRecurrence(recurrence) })
     },
     scheduleOf: (id: string) => schedules[id],
-    reset: () => setState({ bases: clone(initial), schedules: { ...SAMPLE_SOURCE_SCHEDULES } }),
+    reset: () => setState({ bases: clone(initial), schedules: { ...SAMPLE_SOURCE_SCHEDULES }, samples: initial.map((b) => b.id) }),
   }
 }

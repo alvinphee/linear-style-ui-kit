@@ -1,4 +1,4 @@
-import { BookOpen01Icon, CustomerSupportIcon, GlobalIcon, ShippingTruck01Icon, UserGroupIcon } from '@hugeicons/core-free-icons'
+import { BookOpen01Icon, ContractsIcon, CustomerSupportIcon, GlobalIcon, ShippingTruck01Icon, UserGroupIcon } from '@hugeicons/core-free-icons'
 import type {
   IndexStatus, KnowledgeBase, KnowledgeDocument, KnowledgeSource, RetrievalSettings,
 } from '@/blocks/ai/knowledge/knowledge-types'
@@ -182,6 +182,18 @@ const CUSTOMS_SOURCES: KnowledgeSource[] = [
   { id: 'kb-customs-files', kind: 'upload', name: 'Uploaded files', detail: `${CUSTOMS_FILES.length} files uploaded`, documentCount: CUSTOMS_FILES.length },
 ]
 
+/* ---------- Contract library (the Contract reviewer agent's) ---------- */
+
+const CONTRACT_FILES = [
+  'Master services agreement template.docx', 'Supplier terms 2026.pdf', 'Data processing addendum.pdf',
+  'Mutual NDA template.docx', 'Liability and indemnity playbook.pdf', 'Payment terms policy.pdf',
+  'Termination clauses guide.pdf', 'Approved fallback clauses.docx', 'Signed contracts register.xlsx',
+]
+const CONTRACT_DOCS = documents('kb-ct-d', 'kb-contracts-files', CONTRACT_FILES, 57, { maxDaysAgo: 60 })
+const CONTRACT_SOURCES: KnowledgeSource[] = [
+  { id: 'kb-contracts-files', kind: 'upload', name: 'Uploaded files', detail: `${CONTRACT_FILES.length} files uploaded`, documentCount: CONTRACT_FILES.length },
+]
+
 const newest = (docs: KnowledgeDocument[]) => Math.max(...docs.map((d) => d.updatedAt))
 
 export const SAMPLE_KNOWLEDGE_BASES: KnowledgeBase[] = [
@@ -245,5 +257,19 @@ export const SAMPLE_KNOWLEDGE_BASES: KnowledgeBase[] = [
     linkedProjects: [{ id: 'p-ops', name: 'Operations' }],
     owner: 'Alex Morgan',
     updatedAt: newest(CUSTOMS_DOCS),
+  },
+  {
+    id: 'kb-contracts',
+    name: 'Contract library',
+    description: 'Templates, the clause playbook and fallbacks the legal team approves, for reviewing contracts.',
+    icon: ContractsIcon,
+    colour: 'var(--chart-5)',
+    sources: CONTRACT_SOURCES,
+    documents: CONTRACT_DOCS,
+    settings: { ...DEFAULT_RETRIEVAL, chunkSize: 1024, chunkOverlap: 128 },
+    access: 'private',
+    linkedProjects: [],
+    owner: 'Alex Morgan',
+    updatedAt: newest(CONTRACT_DOCS),
   },
 ]

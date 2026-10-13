@@ -206,3 +206,8 @@ export type View =
   | { kind: 'library' }
   // Knowledge bases: the library, or one at a tab.
   | { kind: 'knowledge'; baseId?: string; tab?: string }
+  // Agents: the gallery (at a tab), the builder for a new one ('new'), one
+  // agent at a tab, or its builder (tab 'edit').
+  | { kind: 'agents'; agentId?: string; tab?: string }
+  // The runs inbox, with one run open.
+  | { kind: 'runs'; runId?: string }

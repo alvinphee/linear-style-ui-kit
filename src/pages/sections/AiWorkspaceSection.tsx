@@ -23,9 +23,12 @@ import {
   type Sink,
 } from './ai/engine'
 import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
+import { AgentsProvider } from './ai/agents/context'
+import { AgentsView } from './ai/AgentsView'
 import { KnowledgeProvider } from './ai/knowledge/context'
 import { KnowledgeView } from './ai/KnowledgeView'
 import { ProjectView } from './ai/ProjectView'
+import { RunsView } from './ai/RunsView'
 import { isAppPath, parseRoute, pathFor, settingsPath } from './ai/routes'
 import { SettingsScreen } from './ai/settings/SettingsScreen'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
@@ -237,6 +240,15 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
       if (stateRef.current.incognito) dispatch({ type: 'incognito', on: false })
     }
 
+    // Moving to a page of another kind: the reply stops, the artifact panel
+    // closes and incognito ends, as opening a project does.
+    function leaveFor(kind: View['kind']) {
+      if (stateRef.current.view.kind === kind) return
+      stopRun()
+      closePanel(false)
+      endIncognito()
+    }
+
     function closePanel(restoreFocus = true) {
       if (!stateRef.current.artifact) return
       dispatch({ type: 'artifact/close' })
@@ -383,12 +395,16 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         dispatch({ type: 'view', view: { kind: 'library' } })
       },
       openKnowledge(baseId, tab) {
-        if (stateRef.current.view.kind !== 'knowledge') {
-          stopRun()
-          closePanel(false)
-          endIncognito()
-        }
+        leaveFor('knowledge')
         dispatch({ type: 'view', view: { kind: 'knowledge', baseId, tab } })
+      },
+      openAgents(agentId, tab) {
+        leaveFor('agents')
+        dispatch({ type: 'view', view: { kind: 'agents', agentId, tab } })
+      },
+      openRuns(runId) {
+        leaveFor('runs')
+        dispatch({ type: 'view', view: { kind: 'runs', runId } })
       },
       setIncognito(on) {
         closePanel(false)
@@ -530,6 +546,8 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
     else if (next.kind === 'project') actions.openProject(next.projectId, next.tab)
     else if (next.kind === 'library') actions.openLibrary()
     else if (next.kind === 'knowledge') actions.openKnowledge(next.baseId, next.tab)
+    else if (next.kind === 'agents') actions.openAgents(next.agentId, next.tab)
+    else if (next.kind === 'runs') actions.openRuns(next.runId)
     else actions.newChat(next.projectId)
   }, [page, path, actions])
 
@@ -638,122 +656,128 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
   return (
     <ActionsContext.Provider value={actions}>
       <KnowledgeProvider>
-        {/* The shimmer, typing dots and voice waveform keyframes, hoisted into <head> once. */}
-        <AiMotion />
-        <article
-          ref={cardRef}
-          aria-label="AI workspace"
-          onKeyDown={onKeyDown}
-          className={cn(
-            'bg-card relative flex min-w-0 overflow-hidden',
-            page ? 'h-svh' : 'h-[46rem] rounded-lg border lg:col-span-2',
-          )}
-        >
-          {settings === undefined && sidebarInline && (
-            <aside aria-label="Chats and projects" className="bg-subtle flex w-64 shrink-0 flex-col border-r">
-              {sidebar(false)}
-            </aside>
-          )}
-
-          <div className="flex min-w-0 flex-1 flex-col">
-            {settings !== undefined ? (
-              <SettingsScreen
-                active={settings}
-                onSelect={actions.openSettings}
-                start={<IconAction label="Back to chats" icon={ArrowLeft01Icon} onClick={actions.closeSettings} />}
-                model={state.model}
-                onModelChange={actions.setDefaultModel}
-                chatCount={kept.length}
-                credits={state.credits}
-                onExportAll={exportAll}
-                onResetDemo={actions.resetDemo}
-              />
-            ) : view.kind === 'project' && project ? (
-              <ProjectView
-                project={project}
-                chats={summaries.filter((c) => c.projectId === project.id)}
-                tab={view.tab}
-                start={sidebarToggle}
-                key={project.id}
-              />
-            ) : view.kind === 'knowledge' ? (
-              <KnowledgeView baseId={view.baseId} tab={view.tab} projects={state.projects} start={sidebarToggle} />
-            ) : view.kind === 'library' ? (
-              <AllChats chats={kept} projects={state.projects} runningChatId={runningChatId} sidebarToggle={sidebarToggle} />
-            ) : (
-              <Conversation
-                chat={chat}
-                project={project}
-                projects={state.projects}
-                model={chat?.model ?? state.model}
-                modes={modes}
-                running={running}
-                incognito={state.incognito}
-                openArtifactId={artifact?.id ?? null}
-                hasArtifacts={!!chat && chatHasArtifacts(chat)}
-                sidebarToggle={sidebarToggle}
-                focusKey={focusKey}
-                mentions={mentions}
-                onOpenArtifacts={openLatestArtifact}
-                onDeleted={() => setFocusKey((k) => k + 1)}
-              />
+      <AgentsProvider openRun={actions.openRuns}>
+          {/* The shimmer, typing dots and voice waveform keyframes, hoisted into <head> once. */}
+          <AiMotion />
+          <article
+            ref={cardRef}
+            aria-label="AI workspace"
+            onKeyDown={onKeyDown}
+            className={cn(
+              'bg-card relative flex min-w-0 overflow-hidden',
+              page ? 'h-svh' : 'h-[46rem] rounded-lg border lg:col-span-2',
             )}
-          </div>
+          >
+            {settings === undefined && sidebarInline && (
+              <aside aria-label="Chats and projects" className="bg-subtle flex w-64 shrink-0 flex-col border-r">
+                {sidebar(false)}
+              </aside>
+            )}
 
-          {artifact && state.artifact && panelInline && (
-            <aside
-              aria-label="Artifact"
-              onKeyDown={onPanelKeyDown}
-              className="animate-in fade-in-0 slide-in-from-right-2 flex w-96 shrink-0 flex-col border-l duration-200"
-            >
-              <ArtifactPanel
-                artifact={artifact}
-                version={state.artifact.version}
-                onVersion={(version) => dispatch({ type: 'artifact/open', id: artifact.id, version })}
-                onClose={actions.closeArtifact}
-                headingRef={panelHeading}
-                key={artifact.id}
-              />
-            </aside>
-          )}
-
-          <div aria-live="polite" className="sr-only">{liveText}</div>
-        </article>
-
-        {!sidebarInline && (
-          <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-            <SheetContent
-              side="left"
-              showCloseButton={false}
-              className="bg-subtle gap-0 p-0 data-[side=left]:w-72 data-[side=left]:max-w-[85vw]"
-            >
-              <SheetTitle className="sr-only">Chats and projects</SheetTitle>
-              <SheetDescription className="sr-only">Start a chat, open a project or find an old chat.</SheetDescription>
-              {sidebar(true)}
-            </SheetContent>
-          </Sheet>
-        )}
-
-        {!panelInline && (
-          <Sheet open={panelOpen} onOpenChange={(open) => !open && actions.closeArtifact()}>
-            <SheetContent
-              side="right"
-              showCloseButton={false}
-              className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
-            >
-              <SheetTitle className="sr-only">{panel?.artifact.title ?? 'Artifact'}</SheetTitle>
-              <SheetDescription className="sr-only">Preview, code, versions and download.</SheetDescription>
-              {panel && (
-                <ArtifactPanel
-                  artifact={panel.artifact}
-                  version={panel.version}
-                  onVersion={(version) => dispatch({ type: 'artifact/open', id: panel.artifact.id, version })}
-                  onClose={actions.closeArtifact}
+            <div className="flex min-w-0 flex-1 flex-col">
+              {settings !== undefined ? (
+                <SettingsScreen
+                  active={settings}
+                  onSelect={actions.openSettings}
+                  start={<IconAction label="Back to chats" icon={ArrowLeft01Icon} onClick={actions.closeSettings} />}
+                  model={state.model}
+                  onModelChange={actions.setDefaultModel}
+                  chatCount={kept.length}
+                  credits={state.credits}
+                  onExportAll={exportAll}
+                  onResetDemo={actions.resetDemo}
+                />
+              ) : view.kind === 'project' && project ? (
+                <ProjectView
+                  project={project}
+                  chats={summaries.filter((c) => c.projectId === project.id)}
+                  tab={view.tab}
+                  start={sidebarToggle}
+                  key={project.id}
+                />
+              ) : view.kind === 'agents' ? (
+              <AgentsView agentId={view.agentId} tab={view.tab} start={sidebarToggle} />
+            ) : view.kind === 'runs' ? (
+              <RunsView runId={view.runId} start={sidebarToggle} />
+            ) : view.kind === 'knowledge' ? (
+                <KnowledgeView baseId={view.baseId} tab={view.tab} projects={state.projects} start={sidebarToggle} />
+              ) : view.kind === 'library' ? (
+                <AllChats chats={kept} projects={state.projects} runningChatId={runningChatId} sidebarToggle={sidebarToggle} />
+              ) : (
+                <Conversation
+                  chat={chat}
+                  project={project}
+                  projects={state.projects}
+                  model={chat?.model ?? state.model}
+                  modes={modes}
+                  running={running}
+                  incognito={state.incognito}
+                  openArtifactId={artifact?.id ?? null}
+                  hasArtifacts={!!chat && chatHasArtifacts(chat)}
+                  sidebarToggle={sidebarToggle}
+                  focusKey={focusKey}
+                  mentions={mentions}
+                  onOpenArtifacts={openLatestArtifact}
+                  onDeleted={() => setFocusKey((k) => k + 1)}
                 />
               )}
-            </SheetContent>
-          </Sheet>
-        )}
+            </div>
+
+            {artifact && state.artifact && panelInline && (
+              <aside
+                aria-label="Artifact"
+                onKeyDown={onPanelKeyDown}
+                className="animate-in fade-in-0 slide-in-from-right-2 flex w-96 shrink-0 flex-col border-l duration-200"
+              >
+                <ArtifactPanel
+                  artifact={artifact}
+                  version={state.artifact.version}
+                  onVersion={(version) => dispatch({ type: 'artifact/open', id: artifact.id, version })}
+                  onClose={actions.closeArtifact}
+                  headingRef={panelHeading}
+                  key={artifact.id}
+                />
+              </aside>
+            )}
+
+            <div aria-live="polite" className="sr-only">{liveText}</div>
+          </article>
+
+          {!sidebarInline && (
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <SheetContent
+                side="left"
+                showCloseButton={false}
+                className="bg-subtle gap-0 p-0 data-[side=left]:w-72 data-[side=left]:max-w-[85vw]"
+              >
+                <SheetTitle className="sr-only">Chats and projects</SheetTitle>
+                <SheetDescription className="sr-only">Start a chat, open a project or find an old chat.</SheetDescription>
+                {sidebar(true)}
+              </SheetContent>
+            </Sheet>
+          )}
+
+          {!panelInline && (
+            <Sheet open={panelOpen} onOpenChange={(open) => !open && actions.closeArtifact()}>
+              <SheetContent
+                side="right"
+                showCloseButton={false}
+                className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-md"
+              >
+                <SheetTitle className="sr-only">{panel?.artifact.title ?? 'Artifact'}</SheetTitle>
+                <SheetDescription className="sr-only">Preview, code, versions and download.</SheetDescription>
+                {panel && (
+                  <ArtifactPanel
+                    artifact={panel.artifact}
+                    version={panel.version}
+                    onVersion={(version) => dispatch({ type: 'artifact/open', id: panel.artifact.id, version })}
+                    onClose={actions.closeArtifact}
+                  />
+                )}
+              </SheetContent>
+            </Sheet>
+          )}
+      </AgentsProvider>
       </KnowledgeProvider>
     </ActionsContext.Provider>
   )

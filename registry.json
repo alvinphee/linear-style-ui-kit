@@ -1938,6 +1938,256 @@
       ]
     },
     {
+      "name": "agent-builder",
+      "type": "registry:block",
+      "title": "Agent builder",
+      "description": "the builder's frame: Create and Configure beside a live Preview (tabs when narrow), save, unsaved changes",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/mark",
+        "@kit/spinner",
+        "@kit/tabs",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-builder.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-builder.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-card",
+      "type": "registry:block",
+      "title": "Agent card",
+      "description": "an agent: mark, description, trigger chips, what it uses, status, Chat and Run now; the template card",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/dropdown-menu",
+        "@kit/format",
+        "@kit/mark",
+        "@kit/recurrence-picker",
+        "@kit/spinner",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-config-form",
+      "type": "registry:block",
+      "title": "Agent config form",
+      "description": "the Configure tab: basics, instructions, starters, knowledge, tools and permissions, model, triggers, access",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/collapsible",
+        "@kit/command",
+        "@kit/connector-card",
+        "@kit/connector-dialog",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/icon-colour-picker",
+        "@kit/input",
+        "@kit/knowledge-types",
+        "@kit/popover",
+        "@kit/prompt-box",
+        "@kit/select",
+        "@kit/settings-page",
+        "@kit/skill-card",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/tokens",
+        "@kit/trigger-editor"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-config-form.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-config-form.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-gallery",
+      "type": "registry:block",
+      "title": "Agent gallery",
+      "description": "agents to open: yours, shared with you, Explore (templates by category), search, Create agent",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-card",
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/empty",
+        "@kit/search-field",
+        "@kit/tabs",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-gallery.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-gallery.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-overview",
+      "type": "registry:block",
+      "title": "Agent overview",
+      "description": "an agent's Overview: conversation starters, triggers, what it uses, recent runs",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-card",
+        "@kit/agent-types",
+        "@kit/badge",
+        "@kit/button",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/mark",
+        "@kit/markdown"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-overview.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-overview.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-page",
+      "type": "registry:block",
+      "title": "Agent page",
+      "description": "one agent: header (Chat, Run now, Edit, menu), status, tabs",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-card",
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/dropdown-menu",
+        "@kit/tabs"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-page.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-preview",
+      "type": "registry:block",
+      "title": "Agent preview",
+      "description": "try an agent: its welcome and starters, then a conversation, what it would use",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/chat-message",
+        "@kit/mark",
+        "@kit/markdown",
+        "@kit/prompt-box",
+        "@kit/text",
+        "@kit/thinking-indicator",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-preview.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-preview.tsx"
+        }
+      ]
+    },
+    {
+      "name": "agent-types",
+      "type": "registry:block",
+      "title": "Agent types",
+      "description": "the shapes the agent blocks share: agent, draft, template, trigger, run, step, approval",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/recurrence-picker"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/agent-types.ts",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/agent-types.ts"
+        }
+      ]
+    },
+    {
       "name": "ai-summary-card",
       "type": "registry:block",
       "title": "AI summary card",
@@ -1995,6 +2245,34 @@
           "path": "src/blocks/ai/artifacts/artifact-panel.tsx",
           "type": "registry:component",
           "target": "@components/blocks/ai/artifacts/artifact-panel.tsx"
+        }
+      ]
+    },
+    {
+      "name": "builder-chat",
+      "type": "registry:block",
+      "title": "Builder chat",
+      "description": "the Create tab: describe the agent, the builder asks follow-ups, chips for what it updated",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/chat-message",
+        "@kit/markdown",
+        "@kit/prompt-box",
+        "@kit/thinking-indicator",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/builder-chat.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/builder-chat.tsx"
         }
       ]
     },
@@ -3401,6 +3679,124 @@
       ]
     },
     {
+      "name": "run-card",
+      "type": "registry:block",
+      "title": "Run card",
+      "description": "one run: agent, title, progress or approval, Allow once and Deny, error",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/progress",
+        "@kit/run-status",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/run-card.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/run-card.tsx"
+        }
+      ]
+    },
+    {
+      "name": "run-detail",
+      "type": "registry:block",
+      "title": "Run detail",
+      "description": "one run: steps, the approval (Allow once, Always allow, Deny), result, retry; RunSheet",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/format",
+        "@kit/markdown",
+        "@kit/progress",
+        "@kit/run-status",
+        "@kit/sheet",
+        "@kit/thinking-trail",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/run-detail.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/run-detail.tsx"
+        }
+      ]
+    },
+    {
+      "name": "run-status",
+      "type": "registry:block",
+      "title": "Run status",
+      "description": "a run's status badge, trigger, timing and agent mark",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/format",
+        "@kit/mark",
+        "@kit/status-badge",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/run-status.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/run-status.tsx"
+        }
+      ]
+    },
+    {
+      "name": "runs-inbox",
+      "type": "registry:block",
+      "title": "Runs inbox",
+      "description": "every run: Needs you, Running, Done, All, by day",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/empty",
+        "@kit/format",
+        "@kit/run-card",
+        "@kit/run-status",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/runs-inbox.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/runs-inbox.tsx"
+        }
+      ]
+    },
+    {
       "name": "scheduled-task-dialog",
       "type": "registry:block",
       "title": "Scheduled task dialog",
@@ -3842,6 +4238,40 @@
       ]
     },
     {
+      "name": "trigger-editor",
+      "type": "registry:block",
+      "title": "Trigger editor",
+      "description": "an agent's triggers: manual, schedule, event in a connected app (with a filter)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/agent-types",
+        "@kit/button",
+        "@kit/connector-card",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/field",
+        "@kit/input",
+        "@kit/recurrence-picker",
+        "@kit/switch",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/agents/trigger-editor.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/agents/trigger-editor.tsx"
+        }
+      ]
+    },
+    {
       "name": "voice-picker",
       "type": "registry:block",
       "title": "Voice picker",
@@ -3895,9 +4325,18 @@
       "title": "AI kit",
       "description": "Every AI component and block at once (every item in the \"ai\" category), with what they need",
       "registryDependencies": [
+        "@kit/agent-builder",
+        "@kit/agent-card",
+        "@kit/agent-config-form",
+        "@kit/agent-gallery",
+        "@kit/agent-overview",
+        "@kit/agent-page",
+        "@kit/agent-preview",
+        "@kit/agent-types",
         "@kit/ai-label",
         "@kit/ai-summary-card",
         "@kit/artifact-panel",
+        "@kit/builder-chat",
         "@kit/chat-history",
         "@kit/chat-library",
         "@kit/chat-message",
@@ -3923,6 +4362,10 @@
         "@kit/project-tools",
         "@kit/prompt-box",
         "@kit/retrieval-tester",
+        "@kit/run-card",
+        "@kit/run-detail",
+        "@kit/run-status",
+        "@kit/runs-inbox",
         "@kit/scheduled-task-dialog",
         "@kit/scheduled-task-list",
         "@kit/skill-card",
@@ -3934,6 +4377,7 @@
         "@kit/task-run-history",
         "@kit/thinking-indicator",
         "@kit/thinking-trail",
+        "@kit/trigger-editor",
         "@kit/voice-picker"
       ],
       "categories": [

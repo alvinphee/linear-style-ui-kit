@@ -229,8 +229,6 @@ used by most design systems).
 | Project memory | What the assistant learns in one project, kept apart from your personal memory |
 | Scheduled task | A prompt the assistant runs on its own on a schedule; each run's result arrives as a new chat in the project (ChatGPT Tasks, Claude's scheduled tasks) |
 | Run (scheduled task) | One time a scheduled task ran: running, succeeded or failed, with its result. The list of them is the run history |
-| Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
-
 | Knowledge base | A library the assistant searches when a question needs it (policies, product documents, a support wiki), shared across projects and people |
 | Knowledge source | Where a knowledge base gets its documents: uploaded files, a crawled website, a connected app's folder, pasted text. Synced sources stay current on a schedule |
 | Indexing | Turning documents into searchable chunks: queued, processing, then indexed, or failed (with why) |
@@ -247,13 +245,23 @@ used by most design systems).
 | Linked knowledge base | A knowledge base a project searches; it never counts against the project's context |
 | Document citation | A citation to a passage in a file or knowledge base, with its page; hover shows the passage |
 | Source panel | The list of a reply's sources beside the chat, the active one showing the exact passage cited |
-## Forms and checklists
-checklist, an expense claim and a survey are all forms to them.
+| Agent | A saved, named assistant (ChatGPT's GPTs, Gemini's Gems): instructions, knowledge, tools and a model, used from a chat or run on its own |
+| Agent builder | Where an agent is made: Create (describe it in a chat; the builder fills it in and asks follow-ups), Configure (the same as a form) and a live Preview |
+| Agent template | A ready-made agent to start from, in the gallery's Explore tab |
+| Conversation starter | A prompt shown before a chat with an agent; one click sends it |
+| Trigger | What starts an agent's run: manual (someone runs it), schedule (a recurrence), or event (something happens in a connected app, narrowed by a filter such as from:@supplier.com) |
+| Run | One time an agent worked: queued, running, waiting for approval, then succeeded, failed or cancelled, with its steps and result |
+| Runs inbox | Every agent's runs, what needs you first (waiting for approval, or failed and not opened) |
+| Approval (human in the loop) | A run stops before a tool that sends or changes something and asks: Allow once, Always allow (it won't ask again for that tool), or Deny (the step is skipped) |
+| Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
 
 The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
 `form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
+## Forms and checklists
 | Term | Meaning |
 |---|---|
+checklist, an expense claim and a survey are all forms to them.
+
 | Form (form template, form definition) | What a form asks: its name, sections and fields, as data. What the catalogue lists. The type is `FormDefinition` |
 | Field schema | The kit's one list of field kinds and how each is drawn and checked, shared by the form dialog and the form renderer (`form-fields.tsx`) |
 | Form renderer | Draws a whole form from its definition: sections, progress, validation, review, submit. The block is `form-renderer` |

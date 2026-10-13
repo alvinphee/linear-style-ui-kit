@@ -40,6 +40,7 @@ const DEMO_PAGE: Record<string, string> = {
 }
 // Blocks in a folder of their own are demoed on that folder's page.
 const DEMO_FOLDER: Record<string, string> = {
+  agents: 'ai-agents',
   connectors: 'ai-connectors',
   projects: 'ai-projects',
   knowledge: 'ai-knowledge',

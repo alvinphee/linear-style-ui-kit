@@ -21,6 +21,7 @@ import { GO_KEYS, NAV, NAV_GROUPS, TEMPLATES, byCategory, goTo } from './nav'
 import ShortcutsDialog from './ShortcutsDialog'
 import ShowcaseSidebar from './ShowcaseSidebar'
 import AccordionSection from './sections/AccordionSection'
+import AiAgentsSection from './sections/AiAgentsSection'
 import AiComponentsSection from './sections/AiComponentsSection'
 import AiConnectorsSection from './sections/AiConnectorsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
@@ -171,6 +172,7 @@ export default function KitchenSink() {
     'ai-overview': () => <AiOverviewSection />,
     'ai-workspace': () => <AiWorkspaceSection />,
     'ai-features': () => <AiFeaturesSection />,
+    'ai-agents': () => <AiAgentsSection />,
     'ai-connectors': () => <AiConnectorsSection />,
     'ai-projects': () => <AiProjectsSection />,
     'ai-knowledge': () => <AiKnowledgeSection />,
