@@ -20,8 +20,10 @@ const EVENT_TOAST: Record<RunEvent['type'], (name: string, title: string) => [st
   cancelled: (name, title) => [`${name} was cancelled`, title],
 }
 
+export const AGENTS_KEY = 'linear-kit:ai-agents:v1'
+
 function useAgentsState(openRun: (id: string) => void) {
-  const [agents, setAgents] = useStoredState<Agent[]>('linear-kit:ai-agents:v1', SAMPLE_AGENTS)
+  const [agents, setAgents] = useStoredState<Agent[]>(AGENTS_KEY, SAMPLE_AGENTS)
   const all = useMemo(() => [...agents, ...SHARED_AGENTS], [agents])
   const agentOf = useCallback((id: string) => all.find((a) => a.id === id), [all])
 

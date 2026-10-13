@@ -884,3 +884,12 @@ waiting and not opened was counted twice, and finished runs not opened
 counted too. The badge now uses the inbox's own rule (`needsYou` in
 runs-inbox.tsx), so the two can't disagree. Export the rule with the list
 and count with it, rather than rebuilding the count from the store.
+
+## A mode that should apply once (added 2026-10-13)
+Research first stayed on like Web search, so a follow-up to its report ("now
+three bullets") started a second half-minute research run, and so did an
+edit or a regenerate. The big chat apps treat deep research as a tool for
+one message. The workspace now turns it off as soon as any reply starts
+(`startRun`, the one place every reply goes through), not only in `send`.
+Put a per-reply rule where every reply starts, not in one of the ways a
+reply can start.

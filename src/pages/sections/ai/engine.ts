@@ -2,6 +2,7 @@ import { now, uid } from './data'
 import { code, files, general, plan, research, revise, translate } from './scenarios-assist'
 import { continueReminders, reminders } from './scenarios-invoices'
 import { knowledge, knowledgeTopic } from './scenarios-knowledge'
+import { deepResearch } from './scenarios-research'
 import { compare, continueUpdate, email, summary, update } from './scenarios-jobs'
 import { Builder, type AgentContext, type ArtifactDraft, type BuilderContext, type ScriptEvent } from './script'
 import type { ApprovalRequest, Chat, Model, Part, PartOf, PlanStep, Project } from './types'
@@ -54,7 +55,10 @@ const SCENARIOS: Record<Intent, (b: Builder, ctx: AgentContext) => void> = {
 export function buildScript(ctx: AgentContext) {
   const b = new Builder(ctx)
   const intent = detectIntent(ctx)
-  SCENARIOS[intent](b, ctx)
+  // Deep research turns any question into a research run, except an edit of
+  // the last artifact ("make it shorter" on the report it just wrote).
+  if (ctx.modes.research && intent !== 'revise') deepResearch(b, ctx)
+  else SCENARIOS[intent](b, ctx)
   return b.events
 }
 
@@ -114,112 +118,127 @@ function* interpret(
     ? { id: resumePlan.id, steps: resumePlan.steps.map((s) => ({ ...s })) }
     : null
   let text: { id: string; text: string } | null = null
+  // Left in the reply if it is stopped before the script settles.
+  let stopNote: string | undefined
+  let settled = false
 
-  for (const ev of events) {
-    switch (ev.type) {
-      case 'pause':
-        yield ev.ms
-        break
-      case 'activity':
-        sink.activity(ev.text)
-        break
-      case 'think': {
-        sink.activity('Thinking…')
-        const id = uid('p')
-        sink.addPart({ id, type: 'thinking', text: '', state: 'running', ms: 0, startedAt: clock() })
-        text = null
-        const ticks = Math.max(4, Math.round(ev.ms / 120))
-        for (let i = 1; i <= ticks; i++) {
-          yield ev.ms / ticks
-          sink.patchPart(id, { text: ev.text.slice(0, Math.ceil((ev.text.length * i) / ticks)) })
+  try {
+    for (const ev of events) {
+      switch (ev.type) {
+        case 'pause':
+          yield ev.ms
+          break
+        case 'activity':
+          sink.activity(ev.text)
+          break
+        case 'think': {
+          sink.activity('Thinking…')
+          const id = uid('p')
+          sink.addPart({ id, type: 'thinking', text: '', state: 'running', ms: 0, startedAt: clock() })
+          text = null
+          const ticks = Math.max(4, Math.round(ev.ms / 120))
+          for (let i = 1; i <= ticks; i++) {
+            yield ev.ms / ticks
+            sink.patchPart(id, { text: ev.text.slice(0, Math.ceil((ev.text.length * i) / ticks)) })
+          }
+          sink.patchPart(id, { state: 'done', ms: ev.ms, text: ev.text })
+          break
         }
-        sink.patchPart(id, { state: 'done', ms: ev.ms, text: ev.text })
-        break
-      }
-      case 'plan':
-        plan = { id: uid('p'), steps: ev.steps.map((label): PlanStep => ({ label, state: 'pending' })) }
-        sink.activity('Planning…')
-        sink.addPart({ id: plan.id, type: 'plan', steps: plan.steps.map((s) => ({ ...s })) })
-        text = null
-        yield 350
-        break
-      case 'step': {
-        const step = plan?.steps[ev.index]
-        if (!plan || !step) break
-        const t = clock()
-        if (ev.state === 'running') {
-          step.state = 'running'
-          step.startedAt = t
-        } else {
-          step.state = ev.state
-          step.ms = step.startedAt ? t - step.startedAt : 0
+        case 'plan':
+          plan = { id: uid('p'), steps: ev.steps.map((label): PlanStep => ({ label, state: 'pending' })) }
+          sink.activity('Planning…')
+          sink.addPart({ id: plan.id, type: 'plan', steps: plan.steps.map((s) => ({ ...s })) })
+          text = null
+          yield 350
+          break
+        case 'step': {
+          const step = plan?.steps[ev.index]
+          if (!plan || !step) break
+          const t = clock()
+          if (ev.state === 'running') {
+            step.state = 'running'
+            step.startedAt = t
+          } else {
+            step.state = ev.state
+            step.ms = step.startedAt ? t - step.startedAt : 0
+          }
+          sink.patchPart(plan.id, { steps: plan.steps.map((s) => ({ ...s })) })
+          break
         }
-        sink.patchPart(plan.id, { steps: plan.steps.map((s) => ({ ...s })) })
-        break
-      }
-      case 'tool': {
-        sink.activity(ev.activity)
-        const id = uid('p')
-        sink.addPart({ id, type: 'tool', name: ev.name, input: ev.input, state: 'running', ms: 0, startedAt: clock() })
-        text = null
-        yield ev.ms
-        sink.patchPart(id, ev.error
-          ? { state: 'error', error: ev.error, ms: ev.ms }
-          : { state: 'done', output: ev.output, summary: ev.summary, ms: ev.ms })
-        break
-      }
-      case 'text': {
-        sink.activity('Writing…')
-        let base = ''
-        if (text) base = `${text.text}\n\n`
-        else {
-          text = { id: uid('p'), text: '' }
-          sink.addPart({ id: text.id, type: 'text', text: '', streaming: true })
+        case 'tool': {
+          sink.activity(ev.activity)
+          const id = uid('p')
+          sink.addPart({ id, type: 'tool', name: ev.name, input: ev.input, state: 'running', ms: 0, startedAt: clock() })
+          text = null
+          yield ev.ms
+          sink.patchPart(id, ev.error
+            ? { state: 'error', error: ev.error, ms: ev.ms }
+            : { state: 'done', output: ev.output, summary: ev.summary, ms: ev.ms })
+          break
         }
-        const full = base + ev.text
-        let shown = base.length
-        while (shown < full.length) {
-          let next = Math.min(full.length, shown + model.charsPerTick)
-          const space = full.indexOf(' ', next)
-          if (space !== -1 && space - next < 10) next = space
-          shown = next
-          sink.patchPart(text.id, { text: full.slice(0, shown), streaming: true })
-          yield 50
+        case 'text': {
+          sink.activity('Writing…')
+          let base = ''
+          if (text) base = `${text.text}\n\n`
+          else {
+            text = { id: uid('p'), text: '' }
+            sink.addPart({ id: text.id, type: 'text', text: '', streaming: true })
+          }
+          const full = base + ev.text
+          let shown = base.length
+          while (shown < full.length) {
+            let next = Math.min(full.length, shown + model.charsPerTick)
+            const space = full.indexOf(' ', next)
+            if (space !== -1 && space - next < 10) next = space
+            shown = next
+            sink.patchPart(text.id, { text: full.slice(0, shown), streaming: true })
+            yield 50
+          }
+          text.text = full
+          sink.patchPart(text.id, { text: full, streaming: false })
+          break
         }
-        text.text = full
-        sink.patchPart(text.id, { text: full, streaming: false })
-        break
+        case 'sources':
+          sink.addPart({ id: uid('p'), type: 'sources', sources: ev.sources })
+          text = null
+          yield 150
+          break
+        case 'artifact': {
+          sink.activity('Saving the artifact…')
+          yield 450
+          const ref = sink.artifact(ev.draft)
+          sink.addPart({ id: uid('p'), type: 'artifact', artifactId: ref.artifactId, version: ref.version, title: ev.draft.title, kind: ev.draft.kind })
+          text = null
+          break
+        }
+        case 'approval':
+          settled = true
+          sink.addPart({ id: uid('p'), type: 'approval', request: ev.request, state: 'pending' })
+          sink.activity(undefined)
+          sink.finish('awaiting')
+          return
+        case 'error':
+          settled = true
+          sink.addPart({ id: uid('p'), type: 'error', message: ev.message, detail: ev.detail })
+          sink.activity(undefined)
+          sink.finish('error')
+          return
+        case 'followUps':
+          sink.followUps(ev.items)
+          break
+        case 'stopNote':
+          stopNote = ev.text
+          break
       }
-      case 'sources':
-        sink.addPart({ id: uid('p'), type: 'sources', sources: ev.sources })
-        text = null
-        yield 150
-        break
-      case 'artifact': {
-        sink.activity('Saving the artifact…')
-        yield 450
-        const ref = sink.artifact(ev.draft)
-        sink.addPart({ id: uid('p'), type: 'artifact', artifactId: ref.artifactId, version: ref.version, title: ev.draft.title, kind: ev.draft.kind })
-        text = null
-        break
-      }
-      case 'approval':
-        sink.addPart({ id: uid('p'), type: 'approval', request: ev.request, state: 'pending' })
-        sink.activity(undefined)
-        sink.finish('awaiting')
-        return
-      case 'error':
-        sink.addPart({ id: uid('p'), type: 'error', message: ev.message, detail: ev.detail })
-        sink.activity(undefined)
-        sink.finish('error')
-        return
-      case 'followUps':
-        sink.followUps(ev.items)
-        break
     }
+    settled = true
+    sink.activity(undefined)
+    sink.finish('done')
+  } finally {
+    // Reached early only by stop() (run.return()), before the reply is
+    // marked stopped, so the note lands in it.
+    if (!settled && stopNote) sink.addPart({ id: uid('p'), type: 'text', text: stopNote, streaming: false })
   }
-  sink.activity(undefined)
-  sink.finish('done')
 }
 
 export type Controller = { stop: () => void }

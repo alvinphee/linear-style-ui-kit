@@ -4,6 +4,7 @@ import {
   Download01Icon, Folder01Icon, IncognitoIcon, MoreHorizontalIcon, PanelRightOpenIcon, Share08Icon,
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { ShareChatDialog } from '@/blocks/ai/chat/share-chat-dialog'
 import { RenameInput } from '@/blocks/ai/chat/chat-history'
 import { ChatThread, ChatWelcome, PromptStarters } from '@/blocks/ai/chat/chat-thread'
 import { ModelPicker, type PromptModel } from '@/blocks/ai/chat/prompt-box'
@@ -13,14 +14,19 @@ import { DROPDOWN_MENU_KIT } from '@/components/menu-kit'
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { copyText } from '@/lib/clipboard'
 import { greeting } from '@/lib/text'
 import { useActions } from './context'
-import { DEFAULT_MODEL, MODELS, STARTERS, USER } from './data'
+import { DEFAULT_MODEL, MODELS, STARTERS, USER, now } from './data'
+import { ChatUsageNotice, ComposerNotices } from './ChatChrome'
 import { AssistantMessageView, UserMessageView } from './Message'
+import { ORGANISATION } from './projects/people'
 import { PromptBox } from './PromptBox'
 import { ChatMenuItems, DeleteChatDialog } from './Sidebar'
 import type { Chat, ModelId, Modes, Project } from './types'
+
+// A shared chat's address. Nothing is served there: this demo has no
+// shared-chat page, so the link is only something to copy.
+const shareUrl = (id: string) => `${window.location.origin}/#/templates/ai-chat/shared/${id}`
 
 // Speed or quality as three short bars, in the model picker's details line.
 function Meter({ label, value }: { label: string; value: number }) {
@@ -89,13 +95,8 @@ function Header({ chat, project, projects, model, incognito, sidebarToggle, hasA
   const titleRef = useRef<HTMLButtonElement>(null)
   const kept = chat && !chat.temporary ? chat : null
 
-  function share() {
-    if (!chat) return
-    copyText(`https://share.example.com/c/${chat.id}`, {
-      success: 'Share link copied',
-      description: `share.example.com/c/${chat.id} · demo only`,
-    })
-  }
+  const [sharing, setSharing] = useState(false)
+  const share = () => setSharing(true)
 
   return (
     <header className="flex h-11 shrink-0 items-center gap-1 border-b px-2">
@@ -144,7 +145,15 @@ function Header({ chat, project, projects, model, incognito, sidebarToggle, hasA
         defaultId={DEFAULT_MODEL}
       />
       {hasArtifacts && <IconAction label="Artifacts" icon={PanelRightOpenIcon} onClick={onOpenArtifacts} />}
-      {kept && <IconAction label="Share" icon={Share08Icon} onClick={share} className="hidden @sm:inline-flex" />}
+      {kept && (
+        <IconAction
+          label={kept.share ? 'Shared' : 'Share'}
+          icon={Share08Icon}
+          onClick={share}
+          aria-haspopup="dialog"
+          className={cn('hidden @sm:inline-flex', kept.share && 'text-brand')}
+        />
+      )}
       {kept && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -188,16 +197,40 @@ function Header({ chat, project, projects, model, incognito, sidebarToggle, hasA
       <IncognitoToggle pressed={incognito} onPressedChange={actions.setIncognito} className="ml-1 hidden @lg:inline-flex" />
       <IncognitoToggle pressed={incognito} onPressedChange={actions.setIncognito} label="" className="@lg:hidden" />
       <DeleteChatDialog chatId={confirm && kept ? kept.id : null} title={kept?.title ?? ''} onClose={() => setConfirm(false)} onDeleted={onDeleted} />
+      {kept && (
+        <ShareChatDialog
+          open={sharing}
+          onOpenChange={setSharing}
+          chat={{ title: kept.title, messageCount: kept.messages.length, hasArtifacts }}
+          link={kept.share ? {
+            url: shareUrl(kept.share.id),
+            createdAt: kept.share.createdAt,
+            mode: kept.share.mode,
+            access: kept.share.access,
+            includeArtifacts: kept.share.includeArtifacts,
+            messageCount: kept.share.messageCount,
+            views: kept.share.views,
+          } : null}
+          sharedBy={USER.name}
+          organisation={ORGANISATION}
+          now={now()}
+          onCreate={(options) => actions.shareChat(kept.id, options)}
+          onUpdate={(options) => actions.updateShare(kept.id, options)}
+          onRevoke={() => actions.revokeShare(kept.id)}
+        />
+      )}
     </header>
   )
 }
 
 function MessageList({ chat, openArtifactId, mentions }: { chat: Chat; openArtifactId: string | null; mentions: RegExp | null }) {
   const last = chat.messages.length - 1
+  // An incognito chat is not kept, so it cannot be branched into a kept one.
+  const canFork = !chat.temporary
   return (
     <ChatThread resetKey={chat.id} count={chat.messages.length} follow={chat.messages}>
       {chat.messages.map((message, i) => (message.role === 'user'
-        ? <UserMessageView key={message.id} chatId={chat.id} message={message} mentions={mentions} />
+        ? <UserMessageView key={message.id} chatId={chat.id} message={message} mentions={mentions} canFork={canFork} />
         : (
           <AssistantMessageView
             key={message.id}
@@ -205,18 +238,21 @@ function MessageList({ chat, openArtifactId, mentions }: { chat: Chat; openArtif
             message={message}
             isLast={i === last}
             openArtifactId={openArtifactId}
+            canFork={canFork}
           />
         )))}
     </ChatThread>
   )
 }
 
-function Greeting({ project, projects, modes, incognito, focusKey }: {
+function Greeting({ project, projects, modes, incognito, focusKey, credits, model }: {
   project: Project | null
   projects: Project[]
   modes: Modes
   incognito: boolean
   focusKey: number
+  credits: number
+  model: ModelId
 }) {
   const actions = useActions()
   return (
@@ -238,14 +274,16 @@ function Greeting({ project, projects, modes, incognito, focusKey }: {
         />
       )}
     >
-      <PromptBox running={false} modes={modes} projects={projects} focusKey={focusKey} />
+      <ChatUsageNotice credits={credits} model={model} className="mb-2" />
+      <ComposerNotices credits={credits} model={model} className="mb-2" />
+      <PromptBox running={false} modes={modes} projects={projects} project={project} focusKey={focusKey} />
     </ChatWelcome>
   )
 }
 
 export const Conversation = memo(function Conversation({
-  chat, project, projects, model, modes, running, incognito, openArtifactId, hasArtifacts, sidebarToggle, focusKey,
-  mentions, onOpenArtifacts, onDeleted,
+  chat, project, projects, model, modes, running, awaiting = false, credits, incognito, openArtifactId, hasArtifacts,
+  sidebarToggle, focusKey, mentions, onOpenArtifacts, onDeleted,
 }: {
   chat: Chat | null
   project: Project | null
@@ -253,6 +291,10 @@ export const Conversation = memo(function Conversation({
   model: ModelId
   modes: Modes
   running: boolean
+  // The last reply waits for an approval.
+  awaiting?: boolean
+  // Percent of the month's credits used, for the usage limit notices.
+  credits: number
   incognito: boolean
   openArtifactId: string | null
   hasArtifacts: boolean
@@ -285,18 +327,29 @@ export const Conversation = memo(function Conversation({
                 Incognito: this chat isn't saved, and is deleted when you leave it.
               </p>
             )}
+            <ComposerNotices credits={credits} model={model} className="mb-2" />
             <PromptBox
               key={chat.id}
               running={running}
+              awaiting={awaiting}
               modes={modes}
               projects={projects}
+              project={project}
               focusKey={focusKey}
-              placeholder={running ? 'The agent is working. Press Stop to interrupt.' : 'Reply, @ to mention, / for commands'}
+              placeholder="Reply, @ to mention, / for commands"
             />
           </div>
         </>
       ) : (
-        <Greeting project={project} projects={projects} modes={modes} incognito={incognito} focusKey={focusKey} />
+        <Greeting
+          project={project}
+          projects={projects}
+          modes={modes}
+          incognito={incognito}
+          focusKey={focusKey}
+          credits={credits}
+          model={model}
+        />
       )}
     </div>
   )

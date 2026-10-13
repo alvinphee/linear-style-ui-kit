@@ -1,7 +1,7 @@
 import { Fragment, memo, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, StoppedNote, UserMessage,
+  AssistantMessage, FeedbackDialog, FollowUps, MessageActions, SourcesRow, StoppedNote, UserMessage, useReadAloud,
 } from '@/blocks/ai/chat/chat-message'
 import { SourceSheet } from '@/blocks/ai/citations/source-panel'
 import { Markdown } from '@/blocks/markdown'
@@ -11,6 +11,8 @@ import { goTo } from '../../nav'
 import { useActions } from './context'
 import { modelById } from './data'
 import { currentReply, replyText } from './helpers'
+import { useAiPrefs } from './settings/prefs'
+import { VOICES } from './settings/VoiceTab'
 import { ApprovalCard, ArtifactCard, ErrorCard, ProcessTrail, type ProcessPart } from './parts'
 import type { AssistantMessage as AssistantMessageData, Part, PartOf, UserMessage as UserMessageData } from './types'
 
@@ -24,12 +26,15 @@ const copy = (text: string) => copyText(text, { success: false, error: false })
 // Links to "#board" in a reply open that kit page, as in ./markdown.tsx.
 const openKitPage = (href: string) => goTo(href.slice(1))
 
-export const UserMessageView = memo(function UserMessageView({ chatId, message, mentions }: {
+// `canFork`: Branch in new chat is offered (not in an incognito chat).
+export const UserMessageView = memo(function UserMessageView({ chatId, message, mentions, canFork }: {
   chatId: string
   message: UserMessageData
   mentions: RegExp | null
+  canFork: boolean
 }) {
   const actions = useActions()
+  const total = message.branches?.length ?? 1
   return (
     <UserMessage
       text={message.text}
@@ -37,9 +42,25 @@ export const UserMessageView = memo(function UserMessageView({ chatId, message, 
       mentions={mentions}
       onCopy={copy}
       onEdit={(text) => actions.editMessage(chatId, message.id, text)}
+      editNote="Sending starts a new branch. The old one is kept."
+      branches={total > 1
+        ? {
+          current: Math.min(message.branch ?? 0, total - 1),
+          total,
+          onChange: (index) => actions.selectBranch(chatId, message.id, index),
+        }
+        : undefined}
+      onBranch={canFork ? () => actions.forkChat(chatId, message.id) : undefined}
     />
   )
 })
+
+// The reply's text spoken in the voice and speed from Settings › Voice.
+function useReplyReader() {
+  const { prefs } = useAiPrefs()
+  const voice = VOICES.find((v) => v.id === prefs.voice)
+  return useReadAloud({ voice: voice?.name, rate: prefs.voiceSpeed, pitch: voice?.pitch })
+}
 
 const REASONS = ['Not accurate', 'Wrong jobs or data', 'Ignored instructions', 'Too long', 'Too slow', 'Other']
 
@@ -61,13 +82,15 @@ function groupParts(parts: Part[]): Group[] {
   return groups
 }
 
-export const AssistantMessageView = memo(function AssistantMessageView({ chatId, message, isLast, openArtifactId }: {
+export const AssistantMessageView = memo(function AssistantMessageView({ chatId, message, isLast, openArtifactId, canFork }: {
   chatId: string
   message: AssistantMessageData
   isLast: boolean
   openArtifactId: string | null
+  canFork: boolean
 }) {
   const actions = useActions()
+  const reader = useReplyReader()
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   // The source sheet, and the source it shows (by its index; kept while it closes).
   const [sourcesOpen, setSourcesOpen] = useState(false)
@@ -133,6 +156,8 @@ export const AssistantMessageView = memo(function AssistantMessageView({ chatId,
                 actions.feedback(...address, next)
                 if (next) toast('Thanks for the feedback')
               }}
+              readAloud={reader.supported ? { reading: reader.reading, onToggle: () => reader.toggle(replyText(reply)) } : undefined}
+              onBranch={canFork ? () => actions.forkChat(chatId, message.id) : undefined}
               versions={{
                 current: message.current,
                 total: message.versions.length,

@@ -104,7 +104,7 @@ type Topic = {
   followUps: string[]
 }
 
-const TOPICS: (Topic & { match: RegExp })[] = [
+export const TOPICS: (Topic & { match: RegExp })[] = [
   {
     match: /cold|pharma|temperature|chill|fridge|vaccine/,
     name: 'cold chain rules for pharma deliveries',

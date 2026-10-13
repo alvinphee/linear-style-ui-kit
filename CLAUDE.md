@@ -77,9 +77,15 @@ linear-style-ui-kit/
     │   ├── ai/                the AI kit's blocks (the AI domain, registry category "ai"; the
     │   │                      AI workspace, AI in the product and both ERP templates share them)
     │   │   ├── ai-summary-card.tsx  AI summary card
-    │   │   ├── chat/          prompt box, chat message, chat thread (welcome screen, prompt
+    │   │   ├── chat/          prompt box (with queued messages), chat message (branches, read
+    │   │   │                  aloud, branch in new chat), chat thread (welcome screen, prompt
     │   │   │                  starters), chat history (projects, pinned, chats by date or as one
-    │   │   │                  list), chat library (All chats: search, filter by type)
+    │   │   │                  list), chat library (All chats: search, filter by type), and:
+    │   │   │   ├── prompt-library.tsx  saved prompts: search, favourites, yours and team, {{variables}} filled in before use, save as prompt
+    │   │   │   ├── share-chat-dialog.tsx  share a chat: snapshot or live link, who can open it, artifacts, copy, revoke
+    │   │   │   └── usage-limit.tsx  usage limit banner and notice (near, reached), and the rate limit error with its countdown
+    │   │   ├── onboarding/
+    │   │   │   └── onboarding-dialog.tsx  the first-run welcome: name and role, reply style, apps to connect, a prompt to try
     │   │   ├── projects/      a project as a workspace:
     │   │   │   ├── project-page.tsx  project page: header (icon, star, share, menu), tabs, and its parts (overview header, start chat, stats, instructions, knowledge, chats)
     │   │   │   ├── new-project-dialog.tsx  new project from a template, or edit its details: name, icon and colour, description, instructions
@@ -132,7 +138,8 @@ linear-style-ui-kit/
     │   │   ├── memory/        what the assistant remembers about you
     │   │   │   └── memory-manager.tsx  what the assistant remembers: search, edit in place, delete, clear all, off state
     │   │   └── voice/         voice mode
-    │   │       └── voice-picker.tsx  voices as radio cards with a sample to play and an equaliser
+    │   │       ├── voice-picker.tsx  voices as radio cards with a sample to play and an equaliser
+    │   │       └── voice-mode.tsx  voice mode: a full-screen spoken conversation with the orb, captions, mute, end; VoiceOrb
     │   ├── account-menu.tsx   who is signed in, with their menu: a row at a sidebar's foot, or the avatar in a header
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
@@ -169,6 +176,8 @@ linear-style-ui-kit/
     │   │                      beside it, shrinking while you scroll down, as iOS 26's works)
     │   ├── notifications-menu.tsx  the bell's popover
     │   ├── period-picker.tsx  period switch, compare, date range picker
+    │   ├── keyboard-shortcuts-dialog.tsx  every shortcut in groups, searchable
+    │   ├── offline-banner.tsx  "You're offline", what will send when you're back, then "Back online"
     │   ├── share-dialog.tsx   share anything: invite people with a role, people with access, general access, copy link; ShareSummary, ShareButton
     │   ├── session-list.tsx   signed-in devices: device, browser, place, last active, sign out one or all others
     │   ├── settings-page.tsx  settings page: sections down the left (a list that drills in when narrow), SettingsHeader, SettingsGroup, SettingsRow
@@ -231,6 +240,7 @@ linear-style-ui-kit/
     │   ├── keyboard.ts        isTyping (when single-key shortcuts must not fire)
     │   ├── random.ts          seededRandom for sample data
     │   ├── token-estimate.ts  rough token counts for text and files, formatTokens
+    │   ├── use-online.ts      whether the browser is online, following its events
     │   ├── use-timers.ts, use-svg-id.ts, use-media-query.ts
     │   └── utils.ts
     ├── templates/             whole apps built from the kit (level 5)
@@ -290,7 +300,10 @@ linear-style-ui-kit/
             ├── ai/                    its engine, scripted scenarios, parts, All chats, routes.ts,
             │                         ProjectView (a project's tabs, wired to the workspace),
             │                         KnowledgeView (knowledge bases), scenarios-knowledge.ts (cited answers),
-            │                         AgentsView (gallery, an agent's page, the builder), RunsView (runs inbox)
+            │                         AgentsView (gallery, an agent's page, the builder), RunsView (runs inbox),
+            │                         ChatChrome (onboarding, shortcuts, command menu, offline and usage notices),
+            │                         AppCommandMenu (Ctrl+K), VoiceSession (scripted voice mode),
+            │                         prompts-data.ts (the prompt library), scenarios-research.ts (deep research)
             │   ├── agents/            sample agents, templates, events and runs, the scripted builder
             │                         (builder-script.ts), the made-up runner (runner.ts) and its provider
             │   ├── knowledge/         sample knowledge bases and retrieval, the made-up indexer
@@ -301,7 +314,8 @@ linear-style-ui-kit/
             │                         file, prefs.ts (useAiPrefs, useStoredState: kept in the browser)
             │                         and the connectors', skills' and memories' sample data
             ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx, AiProjectsSection.tsx,
-            │   AiKnowledgeSection.tsx, AiAgentsSection.tsx  kit pages
+            │   AiKnowledgeSection.tsx, AiAgentsSection.tsx, AiChatFeaturesSection.tsx  kit pages
+            ├── ai-chat-features/      the Chat features page's panels (composer, chat core, modes, states)
             ├── ai-agents/             the Agents page's panels (gallery, builder, configure, runs)
             ├── ai-knowledge/          the Knowledge page's panels (project knowledge, bases, retrieval, citations)
             ├── ai-settings/           those pages' panels (account, models and voice, connectors, skills)
@@ -338,8 +352,8 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **AI:** the AI kit, a domain across the levels rather than a level (see
   "Domains" in `docs/architecture.md`): Overview (install the AI kit, every
   AI item read from the registry, the AI templates); Components: AI
-  components; Blocks: AI workspace, AI in the product, Agents, Connectors,
-  Knowledge, Projects, Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
+  components; Blocks: AI workspace, AI in the product, Agents, Chat features,
+  Connectors, Knowledge, Projects, Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
 
@@ -410,7 +424,19 @@ template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
   starts a run: steps advance, and it stops at an approval (Allow once,
   Always allow, Deny) before sending or writing. Runs (`/runs[/<id>]`) is
   the inbox, with a count in the sidebar of what needs you; a toast says
-  when a run needs you, finishes or fails. Settings is a full page at
+  when a run needs you, finishes or fails.
+  In a chat: `@` mentions agents, the project's files, projects, knowledge
+  bases, connectors, people and jobs; the prompt library (book button or
+  `/prompts`) fills `{{variables}}` before use; Enter while a reply runs
+  queues the next message (it waits through an approval). Editing a message
+  keeps the old one as a branch (‹ 1 / 2 ›); any message can start a new
+  chat (Branch in new chat); replies can be read aloud; Share makes a
+  snapshot or live link. Research (a mode, for one reply) plans, searches
+  for half a minute and ends with a cited report artifact. Voice mode (the
+  voice button) is a full-screen spoken conversation; ending it saves it as
+  chat messages. Ctrl+K is the command menu, `?` the shortcuts; the first
+  visit opens the welcome (onboarding). Near the monthly credit limit a
+  banner offers a cheaper model or an upgrade. Settings is a full page at
   `/settings/<section>` (the account menu, or Upgrade plan for Billing):
   Profile, Appearance, Personalisation, Notifications, Security; Models and
   features, Memory, Connectors, Skills, Voice; Data controls, Billing and
@@ -617,8 +643,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 177 items: `tokens` (the whole theme from `styles.css`), 47 ui, 40
-components, 78 blocks, 10 lib files and the `ai-kit` bundle. No part may be
+needs. 185 items: `tokens` (the whole theme from `styles.css`), 47 ui, 40
+components, 85 blocks, 11 lib files and the `ai-kit` bundle. No part may be
 called `tokens` (the script stops if one is). Which level
 becomes which item: `docs/architecture.md`.
 - Items from `components/ai/` and `blocks/ai/**` have `categories: ["ai"]`;

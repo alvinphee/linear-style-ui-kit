@@ -5,6 +5,7 @@ import type { ProjectKnowledgeLink, ProjectKnowledgeText } from '@/blocks/ai/kno
 import type { ProjectChatVisibility, ProjectMemberPermission } from '@/blocks/ai/projects/project-sharing'
 import type { ScheduledTask } from '@/blocks/ai/schedules/scheduled-task-dialog'
 import type { ShareAccess, ShareMember } from '@/blocks/share-dialog'
+import type { ShareChatAccess, ShareChatMode } from '@/blocks/ai/chat/share-chat-dialog'
 
 export type ModelId = 'swift' | 'balanced' | 'depth' | 'depth-max'
 
@@ -23,7 +24,8 @@ export type Model = {
   badge?: string
 }
 
-export type Modes = { web: boolean; deep: boolean }
+// Deep research: a plan, many searches, then a report with sources.
+export type Modes = { web: boolean; deep: boolean; research?: boolean }
 
 // What a file holds: the kit's file kinds (components/file-chip).
 export type { FileKind }
@@ -160,7 +162,30 @@ export type Reply = {
   feedback?: 'up' | 'down'
 }
 
-export type UserMessage = { id: string; role: 'user'; text: string; attachments: FileRef[]; at: number }
+// One version of a user message. Editing a message adds a branch, and the
+// messages after it belong to that branch, so the old conversation is kept.
+export type MessageBranch = {
+  text: string
+  attachments: FileRef[]
+  at: number
+  // The messages after this one in this branch. Empty for the branch on
+  // screen: its messages are the chat's own, after this message.
+  after: Message[]
+}
+
+export type UserMessage = {
+  id: string
+  role: 'user'
+  // The text, attachments and time of the branch on screen.
+  text: string
+  attachments: FileRef[]
+  at: number
+  // Left out (never edited, or saved before branching existed): one branch,
+  // the message itself.
+  branches?: MessageBranch[]
+  // The branch on screen, an index into `branches`.
+  branch?: number
+}
 
 export type AssistantMessage = {
   id: string
@@ -183,6 +208,20 @@ export type Chat = {
   messages: Message[]
   // Incognito: kept out of the history and the saved state, deleted when you leave it.
   temporary?: boolean
+  // Its shared link, if it has one. The address is built from its id.
+  share?: ChatShare
+}
+
+// A chat's shared link. A snapshot shows the first `messageCount` messages;
+// a live link shows the chat as it is whenever it is opened.
+export type ChatShare = {
+  id: string
+  createdAt: number
+  mode: ShareChatMode
+  access: ShareChatAccess
+  includeArtifacts: boolean
+  messageCount: number
+  views: number
 }
 
 type ArtifactVersion = { content: string; at: number }

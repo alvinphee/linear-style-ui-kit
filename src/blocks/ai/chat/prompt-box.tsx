@@ -4,7 +4,7 @@ import {
 } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  ArrowDown01Icon, ArrowUp02Icon, Attachment01Icon, Cancel01Icon, Mic01Icon, StopIcon,
+  ArrowDown01Icon, ArrowUp02Icon, Attachment01Icon, Cancel01Icon, Clock01Icon, Mic01Icon, StopIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
@@ -37,6 +37,11 @@ import { plural } from '@/lib/text'
 // at the start) and `getMentions` ("@" anywhere) open a suggestion menu above
 // the box. Move focus in with `autoFocus`, by changing `focusKey`, or with
 // the ref's focus().
+//
+// `onCommand` takes a picked slash command over (such as "/prompts" opening a
+// dialog) instead of inserting it. With `onQueue`, Enter while `running`
+// queues the text as a queued message (sent when the reply ends) instead of
+// doing nothing; show it above the box with `queued`.
 
 export type PromptAttachment = {
   id: string
@@ -98,8 +103,13 @@ export type PromptBoxHandle = { focus: (options?: FocusOptions) => void }
 
 type Menu = { kind: 'slash' | 'mention'; query: string; start: number; end: number }
 
+// A queued message, shown above the box while a reply is running.
+export type PromptQueued = { text: string; attachments?: number }
+
 type Item = {
   value: string
+  // The command's name, for a slash command.
+  name?: string
   group: string
   label: string
   hint?: string
@@ -152,6 +162,34 @@ export function AttachmentChip({ attachment, onRemove, className }: {
   className?: string
 }) {
   return <FileChip name={attachment.name} size={attachment.size} icon={attachment.icon} onRemove={onRemove} className={className} />
+}
+
+// A message written while a reply was running, waiting to be sent when it
+// ends: its text (or how many files), with Edit and Cancel.
+export function QueuedMessage({ text, attachments = 0, onEdit, onCancel, className }: {
+  text: string
+  attachments?: number
+  // Puts it back in the box to change.
+  onEdit?: () => void
+  onCancel?: () => void
+  className?: string
+}) {
+  const files = attachments > 0 ? plural(attachments, 'file') : ''
+  return (
+    <div className={cn('@container min-w-0', className)}>
+      <div role="status" className="bg-muted/50 flex min-w-0 items-center gap-2 rounded-lg border border-dashed py-1 pr-1 pl-2.5 text-xs">
+        <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />
+        <p className="min-w-0 flex-1 truncate">
+          <span className="text-muted-foreground">Queued: </span>
+          <span className="font-medium">{text || files}</span>
+          {text && files && <span className="text-muted-foreground"> + {files}</span>}
+          <span className="text-muted-foreground hidden @md:inline"> · sends when this reply ends</span>
+        </p>
+        {onEdit && <Button variant="ghost" size="xs" onClick={onEdit}>Edit</Button>}
+        {onCancel && <Button variant="ghost" size="xs" className="text-muted-foreground" onClick={onCancel}>Cancel</Button>}
+      </div>
+    </div>
+  )
 }
 
 function ModeToggle({ mode, onToggle }: { mode: PromptMode; onToggle: () => void }) {
@@ -263,7 +301,8 @@ export function PromptBox({
   value, defaultValue = '', onValueChange, attachments: attachmentsProp, onAttachmentsChange, onSubmit,
   placeholder, label = 'Message', running = false, onStop, disabled = false, maxAttachments = 5, accept,
   modes, onModeToggle, tools, models, model, onModelChange, defaultModel, modelLabel, commands, getMentions,
-  dictation, hints = true, footer, autoFocus, focusKey, ref, className,
+  dictation, hints = true, footer, autoFocus, focusKey, onCommand, onQueue, queued, onEditQueued, onCancelQueued,
+  ref, className,
 }: {
   value?: string
   defaultValue?: string
@@ -297,6 +336,16 @@ export function PromptBox({
   commands?: PromptCommand[]
   // The "@" menu's rows for what was typed after the "@" (may be empty).
   getMentions?: (query: string) => PromptSuggestion[]
+  // A slash command was picked. Return true to handle it yourself: "/name"
+  // is then taken out of the text instead of completed.
+  onCommand?: (name: string) => boolean | void
+  // Lets Enter (and a Queue button) work while `running`: the trimmed text
+  // and files are handed here to send later. Return false to keep them.
+  onQueue?: (text: string, attachments: PromptAttachment[]) => void | boolean
+  // The queued message, shown above the box.
+  queued?: PromptQueued | null
+  onEditQueued?: () => void
+  onCancelQueued?: () => void
   // Shows Dictate.
   dictation?: PromptDictation
   // The key hints under the box.
@@ -363,7 +412,7 @@ export function PromptBox({
     const q = menu.query.toLowerCase()
     if (menu.kind === 'slash') {
       return (commands ?? []).filter((c) => c.name.startsWith(q)).map((c) => ({
-        value: `cmd:${c.name}`, group: 'Commands', label: `/${c.name}`, hint: c.description, insert: `/${c.name} `, icon: c.icon, command: true,
+        value: `cmd:${c.name}`, name: c.name, group: 'Commands', label: `/${c.name}`, hint: c.description, insert: `/${c.name} `, icon: c.icon, command: true,
       }))
     }
     return (getMentions?.(menu.query) ?? []).map((s) => ({
@@ -373,7 +422,10 @@ export function PromptBox({
 
   const open = !!menu && items.length > 0
   const activeValue = items.some((i) => i.value === active) ? active : items[0]?.value ?? ''
-  const canSend = !disabled && !running && (!!text.trim() || files.length > 0) && recording === null && !transcribing
+  const hasContent = !!text.trim() || files.length > 0
+  const canSend = !disabled && !running && hasContent && recording === null && !transcribing
+  const queueing = running && !!onQueue
+  const canQueue = queueing && !disabled && hasContent && recording === null && !transcribing
 
   const detect = (value: string, caret: number) => detectMenu(value, caret, slash, mention)
 
@@ -384,6 +436,13 @@ export function PromptBox({
 
   function pick(item: Item) {
     if (!menu) return
+    if (item.command && item.name && onCommand?.(item.name) === true) {
+      const rest = text.slice(0, menu.start) + text.slice(menu.end)
+      setText(rest.trimStart())
+      setMenu(null)
+      requestAnimationFrame(() => areaRef.current?.focus())
+      return
+    }
     const next = text.slice(0, menu.start) + item.insert + text.slice(menu.end)
     const caret = menu.start + item.insert.length
     setText(next)
@@ -410,6 +469,13 @@ export function PromptBox({
   }
 
   function submit() {
+    if (canQueue) {
+      if (onQueue?.(text.trim(), files) === false) return
+      setText('')
+      setFiles([])
+      setMenu(null)
+      return
+    }
     if (!canSend) return
     if (onSubmit(text.trim(), files) === false) return
     setText('')
@@ -526,6 +592,16 @@ export function PromptBox({
         </div>
       )}
 
+      {queued && (
+        <QueuedMessage
+          text={queued.text}
+          attachments={queued.attachments}
+          onEdit={onEditQueued}
+          onCancel={onCancelQueued}
+          className="mb-2"
+        />
+      )}
+
       <div
         onDragOver={(e) => {
           if (!canAttach || !e.dataTransfer.types.includes('Files')) return
@@ -596,6 +672,16 @@ export function PromptBox({
               ))}
             </>
           )}
+          {canQueue && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-full" aria-label="Queue this message" onClick={submit}>
+                  <HugeiconsIcon icon={Clock01Icon} strokeWidth={2} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Send when this reply ends</TooltipContent>
+            </Tooltip>
+          )}
           {running ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -630,10 +716,10 @@ export function PromptBox({
       )}
 
       {(hints || footer || files.length > 0) && (
-        <p id={hintId} className="text-muted-foreground mt-1.5 flex items-center gap-3 px-1 text-[11px]">
+        <p id={hintId} className="text-muted-foreground mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 px-1 text-[11px]">
           {hints && (
             <>
-              <span className="hidden items-center gap-1 @md:flex"><Kbd>Enter</Kbd> to send</span>
+              <span className="hidden items-center gap-1 @md:flex"><Kbd>Enter</Kbd> {queueing ? 'to queue' : 'to send'}</span>
               <span className="hidden items-center gap-1 @md:flex"><Kbd>Shift</Kbd><Kbd>Enter</Kbd> new line</span>
               {keyHints && (
                 <span className="flex items-center gap-1 @md:ml-auto">

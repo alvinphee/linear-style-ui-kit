@@ -297,6 +297,18 @@
       ]
     },
     {
+      "name": "use-online",
+      "type": "registry:lib",
+      "title": "Use online",
+      "description": "whether the browser is online, following its events",
+      "files": [
+        {
+          "path": "src/lib/use-online.ts",
+          "type": "registry:lib"
+        }
+      ]
+    },
+    {
       "name": "use-svg-id",
       "type": "registry:lib",
       "title": "Use SVG id",
@@ -2355,6 +2367,7 @@
         "@kit/button",
         "@kit/clipboard",
         "@kit/dialog",
+        "@kit/dropdown-menu",
         "@kit/file-chip",
         "@kit/icon-action",
         "@kit/markdown",
@@ -3043,6 +3056,24 @@
       ]
     },
     {
+      "name": "keyboard-shortcuts-dialog",
+      "type": "registry:block",
+      "title": "Keyboard shortcuts dialog",
+      "description": "every shortcut in groups, searchable",
+      "registryDependencies": [
+        "@kit/dialog",
+        "@kit/search-field",
+        "@kit/shortcut"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/keyboard-shortcuts-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/keyboard-shortcuts-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "knowledge-base-list",
       "type": "registry:block",
       "title": "Knowledge base list",
@@ -3414,6 +3445,61 @@
       ]
     },
     {
+      "name": "offline-banner",
+      "type": "registry:block",
+      "title": "Offline banner",
+      "description": "\"You're offline\", what will send when you're back, then \"Back online\"",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/offline-banner.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/offline-banner.tsx"
+        }
+      ]
+    },
+    {
+      "name": "onboarding-dialog",
+      "type": "registry:block",
+      "title": "Onboarding dialog",
+      "description": "Onboarding dialog",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/connector-card",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/input",
+        "@kit/label",
+        "@kit/radio-group",
+        "@kit/switch",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/onboarding/onboarding-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/onboarding/onboarding-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "period-picker",
       "type": "registry:block",
       "title": "Period picker",
@@ -3614,6 +3700,44 @@
           "path": "src/blocks/ai/chat/prompt-box.tsx",
           "type": "registry:component",
           "target": "@components/blocks/ai/chat/prompt-box.tsx"
+        }
+      ]
+    },
+    {
+      "name": "prompt-library",
+      "type": "registry:block",
+      "title": "Prompt library",
+      "description": "saved prompts: search, favourites, yours and team, {{variables}} filled in before use, save as prompt",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/empty",
+        "@kit/field",
+        "@kit/icon-action",
+        "@kit/input",
+        "@kit/search-field",
+        "@kit/switch",
+        "@kit/tabs",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat/prompt-library.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat/prompt-library.tsx"
         }
       ]
     },
@@ -3907,6 +4031,39 @@
           "path": "src/blocks/settings-page.tsx",
           "type": "registry:component",
           "target": "@components/blocks/settings-page.tsx"
+        }
+      ]
+    },
+    {
+      "name": "share-chat-dialog",
+      "type": "registry:block",
+      "title": "Share chat dialog",
+      "description": "share a chat: snapshot or live link, who can open it, artifacts, copy, revoke",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/delete-confirm",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/format",
+        "@kit/input",
+        "@kit/radio-group",
+        "@kit/switch",
+        "@kit/text"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat/share-chat-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat/share-chat-dialog.tsx"
         }
       ]
     },
@@ -4272,6 +4429,60 @@
       ]
     },
     {
+      "name": "usage-limit",
+      "type": "registry:block",
+      "title": "Usage limit",
+      "description": "usage limit banner and notice (near, reached), and the rate limit error with its countdown",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/empty",
+        "@kit/format",
+        "@kit/text",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/chat/usage-limit.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/chat/usage-limit.tsx"
+        }
+      ]
+    },
+    {
+      "name": "voice-mode",
+      "type": "registry:block",
+      "title": "Voice mode",
+      "description": "voice mode: a full-screen spoken conversation with the orb, captions, mute, end; VoiceOrb",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "radix-ui@^1.6.7"
+      ],
+      "registryDependencies": [
+        "@kit/thinking-indicator",
+        "@kit/tokens"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/voice/voice-mode.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/voice/voice-mode.tsx"
+        }
+      ]
+    },
+    {
       "name": "voice-picker",
       "type": "registry:block",
       "title": "Voice picker",
@@ -4356,11 +4567,13 @@
         "@kit/knowledge-types",
         "@kit/memory-manager",
         "@kit/new-project-dialog",
+        "@kit/onboarding-dialog",
         "@kit/project-knowledge",
         "@kit/project-page",
         "@kit/project-sharing",
         "@kit/project-tools",
         "@kit/prompt-box",
+        "@kit/prompt-library",
         "@kit/retrieval-tester",
         "@kit/run-card",
         "@kit/run-detail",
@@ -4368,6 +4581,7 @@
         "@kit/runs-inbox",
         "@kit/scheduled-task-dialog",
         "@kit/scheduled-task-list",
+        "@kit/share-chat-dialog",
         "@kit/skill-card",
         "@kit/skill-detail",
         "@kit/skill-editor",
@@ -4378,6 +4592,8 @@
         "@kit/thinking-indicator",
         "@kit/thinking-trail",
         "@kit/trigger-editor",
+        "@kit/usage-limit",
+        "@kit/voice-mode",
         "@kit/voice-picker"
       ],
       "categories": [

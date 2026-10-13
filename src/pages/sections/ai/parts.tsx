@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { IconSvgElement } from '@hugeicons/react'
 import {
-  Attachment01Icon, BookOpen01Icon, DatabaseIcon, FileTextIcon, FileViewIcon, Globe02Icon, InvoiceIcon,
+  Attachment01Icon, BookOpen01Icon, BrowserIcon, DatabaseIcon, FileTextIcon, FileViewIcon, Globe02Icon, InvoiceIcon,
   MailSend01Icon, PencilEdit02Icon, Search01Icon, SourceCodeIcon, Table01Icon,
 } from '@hugeicons/core-free-icons'
 import { ArtifactCard as ArtifactCardView, ErrorCard as ErrorCardView } from '@/blocks/ai/chat/chat-message'
@@ -103,14 +103,23 @@ function trailSteps(thinking: PartOf<'thinking'> | undefined, plan: PartOf<'plan
   })
   for (const tool of tools) {
     let [running, done] = TOOL_VERBS[tool.name]
+    let icon = TOOL_ICONS[tool.name]
+    let detail = inputHint(tool.input)
     let results: TrailResult[] | undefined
+    // Deep research reads web pages with read_file: { url, title }.
+    const page = tool.name === 'read_file' ? tool.input as { url?: unknown; title?: unknown } | null : null
+    if (typeof page?.url === 'string') {
+      [running, done] = ['Reading a page', 'Read a page']
+      icon = BrowserIcon
+      detail = typeof page.title === 'string' ? page.title : page.url
+    }
     if (tool.name === 'search_knowledge') {
       const search = knowledgeSearch(tool)
       if (search.where) [running, done] = [`Searching ${search.where}`, `Searched ${search.where}`]
       results = search.results
     }
     steps.push({
-      id: tool.id, kind: 'tool', label: done, activeLabel: running, detail: inputHint(tool.input), icon: TOOL_ICONS[tool.name],
+      id: tool.id, kind: 'tool', label: done, activeLabel: running, detail, icon,
       status: tool.state, ms: tool.ms, startedAt: tool.startedAt, name: tool.name, input: tool.input, output: tool.output,
       error: tool.error, summary: tool.summary, results,
     })

@@ -22,6 +22,7 @@ import ShortcutsDialog from './ShortcutsDialog'
 import ShowcaseSidebar from './ShowcaseSidebar'
 import AccordionSection from './sections/AccordionSection'
 import AiAgentsSection from './sections/AiAgentsSection'
+import AiChatFeaturesSection from './sections/AiChatFeaturesSection'
 import AiComponentsSection from './sections/AiComponentsSection'
 import AiConnectorsSection from './sections/AiConnectorsSection'
 import AiFeaturesSection from './sections/AiFeaturesSection'
@@ -173,6 +174,7 @@ export default function KitchenSink() {
     'ai-workspace': () => <AiWorkspaceSection />,
     'ai-features': () => <AiFeaturesSection />,
     'ai-agents': () => <AiAgentsSection />,
+    'ai-chat-features': () => <AiChatFeaturesSection />,
     'ai-connectors': () => <AiConnectorsSection />,
     'ai-projects': () => <AiProjectsSection />,
     'ai-knowledge': () => <AiKnowledgeSection />,

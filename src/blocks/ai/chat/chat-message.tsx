@@ -1,13 +1,16 @@
-import { useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Alert02Icon, ArrowLeft01Icon, ArrowRight01Icon, BookOpen01Icon, Copy01Icon, CornerDownRightIcon, FileTextIcon, Globe02Icon, PencilEdit02Icon, RefreshIcon, SparklesIcon, StopCircleIcon, ThumbsDownIcon, ThumbsUpIcon, Tick02Icon,
+  Alert02Icon, ArrowLeft01Icon, ArrowRight01Icon, BookOpen01Icon, Copy01Icon, CornerDownRightIcon, FileTextIcon, GitBranchIcon,
+  Globe02Icon, MoreHorizontalIcon, PencilEdit02Icon, RefreshIcon, SparklesIcon, StopCircleIcon, StopIcon, ThumbsDownIcon,
+  ThumbsUpIcon, Tick02Icon, VolumeHighIcon,
 } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { FileChip } from '@/components/file-chip'
 import { IconAction } from '@/components/icon-action'
@@ -21,6 +24,8 @@ import { plural } from '@/lib/text'
 // header, whatever body you give it, and an actions bar), and what a reply can
 // hold besides text: sources, an artifact, an error, a "Stopped" note,
 // follow-up suggestions, and the "What went wrong?" dialog behind thumbs down.
+// An edited message can keep its branches ("‹ 1 / 2 ›"), any message can be
+// branched into a new chat, and a reply can be read aloud (useReadAloud).
 //
 // Nothing here knows about a model or a store: data comes in as props and
 // every action goes out as a callback. Some notes show from @md up, so put the
@@ -58,10 +63,59 @@ function highlight(text: string, mentions?: RegExp | null): ReactNode[] {
   return out
 }
 
+// A version pager: "‹ 2 / 3 ›". For regenerated replies and edited messages.
+export type VersionPagerProps = { current: number; total: number; onChange: (index: number) => void }
+
+function VersionPager({ current, total, onChange, label, noun, className }: VersionPagerProps & {
+  label: string
+  // "version" or "branch", for the arrows' names.
+  noun: string
+  className?: string
+}) {
+  return (
+    <div role="group" aria-label={label} className={cn('text-muted-foreground flex items-center text-[11px]', className)}>
+      <Button variant="ghost" size="icon-xs" aria-label={`Previous ${noun}`} disabled={current === 0} onClick={() => onChange(current - 1)}>
+        <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
+      </Button>
+      <span className="px-0.5 tabular-nums" aria-live="polite">
+        <span className="sr-only">{noun} </span>{current + 1} / {total}
+      </span>
+      <Button variant="ghost" size="icon-xs" aria-label={`Next ${noun}`} disabled={current === total - 1} onClick={() => onChange(current + 1)}>
+        <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
+      </Button>
+    </div>
+  )
+}
+
+// "More actions" on a message: a menu of whatever else it offers.
+function MoreActions({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconAction label={label} icon={MoreHorizontalIcon} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-48">{children}</DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function BranchItem({ label, onSelect }: { label: string; onSelect: () => void }) {
+  return (
+    <DropdownMenuItem onSelect={onSelect}>
+      <HugeiconsIcon icon={GitBranchIcon} strokeWidth={2} /> {label}
+    </DropdownMenuItem>
+  )
+}
+
 // The person's message, on the right. Copy and Edit show on hover (always
 // on touch screens); Edit turns the bubble into a box, and Enter sends the
-// new text to `onEdit`.
-export function UserMessage({ text, attachments = [], mentions, onCopy, onEdit, editNote = 'Sending replaces the replies below', className }: {
+// new text to `onEdit`. When an edit keeps the old conversation as a branch,
+// `branches` shows "‹ 1 / 2 ›" to switch between them (always visible), and
+// `onBranch` adds Branch in new chat to a More actions menu.
+export function UserMessage({
+  text, attachments = [], mentions, onCopy, onEdit, editNote = 'Sending replaces the replies below', branches, onBranch,
+  branchLabel = 'Branch in new chat', className,
+}: {
   text: string
   attachments?: ChatFile[]
   // Highlights matches as mentions; give it the `g` flag.
@@ -69,11 +123,15 @@ export function UserMessage({ text, attachments = [], mentions, onCopy, onEdit, 
   onCopy?: (text: string) => void
   onEdit?: (text: string) => void
   editNote?: string
+  branches?: VersionPagerProps
+  onBranch?: () => void
+  branchLabel?: string
   className?: string
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(text)
   const [copied, flagCopied] = useCopied()
+  const hasBranches = !!branches && branches.total > 1
 
   function save() {
     if (!draft.trim()) return
@@ -119,28 +177,38 @@ export function UserMessage({ text, attachments = [], mentions, onCopy, onEdit, 
           {highlight(text, mentions)}
         </div>
       )}
-      {!editing && (onCopy || onEdit) && (
-        <div className="flex gap-0.5 opacity-0 transition-opacity group-focus-within/user:opacity-100 group-hover/user:opacity-100 [@media(hover:none)]:opacity-100">
-          {onCopy && (
-            <IconAction
-              label={copied ? 'Copied' : 'Copy'}
-              icon={copied ? Tick02Icon : Copy01Icon}
-              onClick={() => {
-                onCopy(text)
-                flagCopied()
-              }}
-            />
+      {!editing && (onCopy || onEdit || onBranch || hasBranches) && (
+        <div className="flex items-center gap-0.5">
+          {(onCopy || onEdit || onBranch) && (
+            <div className="flex gap-0.5 opacity-0 transition-opacity group-focus-within/user:opacity-100 group-hover/user:opacity-100 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:opacity-100">
+              {onCopy && (
+                <IconAction
+                  label={copied ? 'Copied' : 'Copy'}
+                  icon={copied ? Tick02Icon : Copy01Icon}
+                  onClick={() => {
+                    onCopy(text)
+                    flagCopied()
+                  }}
+                />
+              )}
+              {onEdit && (
+                <IconAction
+                  label="Edit"
+                  icon={PencilEdit02Icon}
+                  onClick={() => {
+                    setDraft(text)
+                    setEditing(true)
+                  }}
+                />
+              )}
+              {onBranch && (
+                <MoreActions label="More actions">
+                  <BranchItem label={branchLabel} onSelect={onBranch} />
+                </MoreActions>
+              )}
+            </div>
           )}
-          {onEdit && (
-            <IconAction
-              label="Edit"
-              icon={PencilEdit02Icon}
-              onClick={() => {
-                setDraft(text)
-                setEditing(true)
-              }}
-            />
-          )}
+          {branches && hasBranches && <VersionPager {...branches} label="Message branches" noun="branch" />}
         </div>
       )}
     </div>
@@ -176,20 +244,49 @@ export function AssistantMessage({ name, icon = SparklesIcon, meta, label, child
 
 export type Feedback = 'up' | 'down'
 
-type ActionLabels = { copy: string; copied: string; regenerate: string; up: string; down: string }
-const ACTION_LABELS: ActionLabels = { copy: 'Copy', copied: 'Copied', regenerate: 'Regenerate', up: 'Good reply', down: 'Bad reply' }
+type ActionLabels = {
+  copy: string
+  copied: string
+  regenerate: string
+  up: string
+  down: string
+  readAloud: string
+  stopReading: string
+  more: string
+  branch: string
+}
+const ACTION_LABELS: ActionLabels = {
+  copy: 'Copy',
+  copied: 'Copied',
+  regenerate: 'Regenerate',
+  up: 'Good reply',
+  down: 'Bad reply',
+  readAloud: 'Read aloud',
+  stopReading: 'Stop reading',
+  more: 'More actions',
+  branch: 'Branch in new chat',
+}
 
 // The bar under a reply. Each action shows only when its callback is given.
 // Thumbs are toggles: `onFeedback` gets the new value, or undefined when the
-// pressed one is clicked again. `versions` adds a "2 / 3" pager for
-// regenerated replies.
-export function MessageActions({ onCopy, onRegenerate, regenerateDisabled, feedback, onFeedback, versions, labels, children, className }: {
+// pressed one is clicked again. `readAloud` is a toggle too, pressed while
+// the reply is being read (useReadAloud does the speaking; leave it out when
+// the browser cannot speak). `onBranch` and `menu` fill a More actions menu.
+// `versions` adds a "2 / 3" pager for regenerated replies.
+export function MessageActions({
+  onCopy, onRegenerate, regenerateDisabled, feedback, onFeedback, readAloud, onBranch, menu, versions, labels, children,
+  className,
+}: {
   onCopy?: () => void
   onRegenerate?: () => void
   regenerateDisabled?: boolean
   feedback?: Feedback | null
   onFeedback?: (value: Feedback | undefined) => void
-  versions?: { current: number; total: number; onChange: (index: number) => void }
+  readAloud?: { reading: boolean; onToggle: () => void }
+  onBranch?: () => void
+  // More menu items (DropdownMenuItem), after Branch in new chat.
+  menu?: ReactNode
+  versions?: VersionPagerProps
   labels?: Partial<ActionLabels>
   // More actions, after the built-in ones.
   children?: ReactNode
@@ -226,32 +323,130 @@ export function MessageActions({ onCopy, onRegenerate, regenerateDisabled, feedb
           />
         </>
       )}
-      {children}
-      {versions && versions.total > 1 && (
-        <div role="group" aria-label="Reply versions" className="text-muted-foreground ml-1 flex items-center text-[11px]">
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Previous version"
-            disabled={versions.current === 0}
-            onClick={() => versions.onChange(versions.current - 1)}
-          >
-            <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} />
-          </Button>
-          <span className="px-0.5 tabular-nums">{versions.current + 1} / {versions.total}</span>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            aria-label="Next version"
-            disabled={versions.current === versions.total - 1}
-            onClick={() => versions.onChange(versions.current + 1)}
-          >
-            <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} />
-          </Button>
-        </div>
+      {readAloud && (
+        <IconAction
+          label={readAloud.reading ? text.stopReading : text.readAloud}
+          icon={readAloud.reading ? StopIcon : VolumeHighIcon}
+          pressed={readAloud.reading}
+          onClick={readAloud.onToggle}
+        />
       )}
+      {children}
+      {(onBranch || menu) && (
+        <MoreActions label={text.more}>
+          {onBranch && <BranchItem label={text.branch} onSelect={onBranch} />}
+          {menu}
+        </MoreActions>
+      )}
+      {versions && versions.total > 1 && <VersionPager {...versions} label="Reply versions" noun="version" className="ml-1" />}
     </div>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Read aloud: a reply spoken by the browser (speechSynthesis). One reply is
+// read at a time: starting another stops the first.
+
+export const canReadAloud = () => typeof window !== 'undefined' && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'
+
+// Markdown as something worth hearing: no symbols, link text without the
+// address, no citation numbers, code blocks named rather than read out, and
+// a full stop after a line (a heading, a list item) that has none.
+export function speakableText(markdown: string) {
+  return markdown
+    .replace(/```[\s\S]*?```/g, '\nCode block.\n')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[ \t]*\[\d+\]/g, '')
+    .replace(/^[ \t]*\|?[ \t:|-]+\|[ \t:|-]*$/gm, '')
+    .replace(/[ \t]*\|[ \t]*/g, ', ')
+    .replace(/^\s*(#{1,6}|[-*+]|\d+\.|>)\s+/gm, '')
+    .replace(/[*_~`#]+/g, '')
+    .split('\n')
+    .map((line) => line.replace(/^,\s*|,\s*$/g, '').trim())
+    .filter(Boolean)
+    .map((line) => (/[.!?:;]$/.test(line) ? line : `${line}.`))
+    .join(' ')
+}
+
+// Some browsers stop a long utterance part way, so the text is read in
+// sentence-sized pieces.
+function chunks(text: string, max = 220) {
+  const out: string[] = []
+  let current = ''
+  for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+    if (current && current.length + sentence.length + 1 > max) {
+      out.push(current)
+      current = sentence
+    } else current = current ? `${current} ${sentence}` : sentence
+  }
+  if (current) out.push(current)
+  return out
+}
+
+// The reader speaking now, so another can stop it.
+let speaking: { id: object; stop: () => void } | null = null
+
+// Reads text aloud. `voice` picks the first system voice whose name holds it
+// ("Aria"); when none matches, `pitch` is used instead so voices still
+// differ. `rate` is the speed (1 is normal). Stops on unmount.
+export function useReadAloud({ voice, rate = 1, pitch = 1 }: { voice?: string; rate?: number; pitch?: number } = {}) {
+  const [reading, setReading] = useState(false)
+  const run = useRef<object | null>(null)
+  const supported = canReadAloud()
+
+  const stop = useCallback(() => {
+    const own = run.current
+    if (!own) return
+    run.current = null
+    setReading(false)
+    if (speaking?.id === own) {
+      speaking = null
+      window.speechSynthesis.cancel()
+    }
+  }, [])
+
+  useEffect(() => stop, [stop])
+
+  const start = useCallback((text: string) => {
+    if (!canReadAloud()) return
+    speaking?.stop()
+    window.speechSynthesis.cancel()
+    const pieces = chunks(speakableText(text))
+    if (!pieces.length) return
+    const id = {}
+    const done = () => {
+      if (run.current === id) {
+        run.current = null
+        setReading(false)
+      }
+      if (speaking?.id === id) speaking = null
+    }
+    const match = voice
+      ? window.speechSynthesis.getVoices().find((v) => v.name.toLowerCase().includes(voice.toLowerCase()))
+      : undefined
+    pieces.forEach((piece, i) => {
+      const utterance = new SpeechSynthesisUtterance(piece)
+      utterance.rate = rate
+      if (match) {
+        utterance.voice = match
+        utterance.lang = match.lang
+      } else utterance.pitch = pitch
+      utterance.onerror = done
+      if (i === pieces.length - 1) utterance.onend = done
+      window.speechSynthesis.speak(utterance)
+    })
+    run.current = id
+    speaking = { id, stop }
+    setReading(true)
+  }, [voice, rate, pitch, stop])
+
+  const toggle = useCallback((text: string) => {
+    if (run.current) stop()
+    else start(text)
+  }, [start, stop])
+
+  return { supported, reading, start, stop, toggle }
 }
 
 // Suggested next questions, as pills under the last reply.

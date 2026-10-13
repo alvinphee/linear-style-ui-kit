@@ -39,6 +39,9 @@ export type ScriptEvent =
   | { type: 'approval'; request: ApprovalRequest }
   | { type: 'error'; message: string; detail?: string }
   | { type: 'followUps'; items: string[] }
+  // What to leave in the reply if it is stopped from here on (a long run's
+  // partial result). Undefined clears it.
+  | { type: 'stopNote'; text?: string }
 
 export type AgentContext = {
   prompt: string
@@ -73,7 +76,7 @@ const TOOL_MS: Record<ToolName, number> = {
   send_reminders: 1100,
 }
 
-function hash(text: string) {
+export function hash(text: string) {
   let h = 0
   for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0
   return Math.abs(h)
@@ -128,9 +131,18 @@ export class Builder {
     this.events.push({ type: 'step', index, state })
   }
 
-  tool(name: ToolName, input: unknown, result: { output?: unknown; summary?: string; error?: string }, activity: string) {
+  // `ms` sets how long the call takes; left out, it is the tool's usual time.
+  tool(name: ToolName, input: unknown, result: { output?: unknown; summary?: string; error?: string }, activity: string, ms?: number) {
     const jitter = (hash(JSON.stringify(input) ?? '') % 5) * 100
-    this.events.push({ type: 'tool', name, input, ...result, ms: Math.min(2000, TOOL_MS[name] + jitter), activity })
+    this.events.push({ type: 'tool', name, input, ...result, ms: ms ?? Math.min(2000, TOOL_MS[name] + jitter), activity })
+  }
+
+  activity(text: string) {
+    this.events.push({ type: 'activity', text })
+  }
+
+  onStop(text?: string) {
+    this.events.push({ type: 'stopNote', text })
   }
 
   say(text: string, mentionFiles = true) {

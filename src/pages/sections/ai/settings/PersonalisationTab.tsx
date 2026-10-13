@@ -17,7 +17,7 @@ import { useAiPrefs, type ResponseStyle } from './prefs'
 
 const MAX = 1500
 
-const STYLES: { id: ResponseStyle; label: string; icon: IconSvgElement; line: string; example: string }[] = [
+export const STYLES: { id: ResponseStyle; label: string; icon: IconSvgElement; line: string; example: string }[] = [
   { id: 'default', label: 'Default', icon: SparklesIcon, line: 'Balanced length, plain words.', example: 'Three things help most: plan routes the night before…' },
   { id: 'concise', label: 'Concise', icon: FlashIcon, line: 'Short and direct. Just the answer.', example: 'Plan routes the night before.' },
   { id: 'explanatory', label: 'Explanatory', icon: BookOpen01Icon, line: 'Walks through the why, step by step.', example: 'Late deliveries usually start the day before. Here’s why…' },

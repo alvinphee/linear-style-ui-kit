@@ -1,4 +1,5 @@
 import { createContext, useContext } from 'react'
+import type { ShareChatOptions } from '@/blocks/ai/chat/share-chat-dialog'
 import type { FileRef, ModelId, Modes, Project } from './types'
 
 // Every action the workspace offers. The object is stable for the life of
@@ -7,11 +8,25 @@ export type WorkspaceActions = {
   // inProject: a new chat in that project, whatever is open.
   send: (text: string, attachments: FileRef[], inProject?: string | null) => void
   stop: () => void
+  // A voice conversation's lines, kept as messages in the open chat (or a new one).
+  addTranscript: (lines: { role: 'user' | 'assistant'; text: string }[]) => void
   regenerate: (chatId: string, messageId: string) => void
   selectVersion: (chatId: string, messageId: string, index: number) => void
   feedback: (chatId: string, messageId: string, replyId: string, value: 'up' | 'down' | undefined) => void
   decide: (chatId: string, messageId: string, replyId: string, partId: string, decision: 'approved' | 'denied') => void
+  // Edit a user message: a new branch with the new text and a new reply. The
+  // old branch, and everything after it, is kept.
   editMessage: (chatId: string, messageId: string, text: string) => void
+  // Show another branch of a user message (by index), with what follows it.
+  selectBranch: (chatId: string, messageId: string, index: number) => void
+  // A new chat with the messages up to and including this one, in the same
+  // project, opened. From a user message, it starts a new reply to it.
+  forkChat: (chatId: string, messageId: string) => void
+  // The chat's shared link: create it, change it (a snapshot is retaken), or
+  // revoke it.
+  shareChat: (chatId: string, options: ShareChatOptions) => void
+  updateShare: (chatId: string, options: ShareChatOptions) => void
+  revokeShare: (chatId: string) => void
   openArtifact: (id: string, version: number) => void
   closeArtifact: () => void
   openChat: (id: string) => void

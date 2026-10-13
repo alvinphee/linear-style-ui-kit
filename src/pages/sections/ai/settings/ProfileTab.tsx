@@ -19,7 +19,7 @@ const LANGUAGES = [
   'English', 'Bahasa Melayu', 'Bahasa Indonesia', '中文 (简体)', 'தமிழ்', 'हिन्दी', 'Español', 'Français', 'Deutsch', 'Português', '日本語', '한국어',
 ]
 
-const ROLES = ['Product manager', 'Software engineer', 'Designer', 'Operations lead', 'Founder', 'Student']
+export const ROLES = ['Product manager', 'Software engineer', 'Designer', 'Operations lead', 'Founder', 'Student']
 
 // The photo is shrunk to a small square before it is kept, so it fits in the
 // browser's storage: 160 px, centre-cropped, as a JPEG data URL.

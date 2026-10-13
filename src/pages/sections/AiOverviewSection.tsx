@@ -37,10 +37,15 @@ const DEMO_PAGE: Record<string, string> = {
   'artifact-panel': 'ai-workspace',
   'thinking-trail': 'ai-workspace',
   'ai-summary-card': 'ai-features',
+  'prompt-library': 'ai-chat-features',
+  'share-chat-dialog': 'ai-chat-features',
+  'usage-limit': 'ai-chat-features',
+  'voice-mode': 'ai-chat-features',
 }
 // Blocks in a folder of their own are demoed on that folder's page.
 const DEMO_FOLDER: Record<string, string> = {
   agents: 'ai-agents',
+  onboarding: 'ai-chat-features',
   connectors: 'ai-connectors',
   projects: 'ai-projects',
   knowledge: 'ai-knowledge',

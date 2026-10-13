@@ -3,7 +3,8 @@ import type { ArtifactDraft } from './engine'
 import { finishReply, withArtifact } from './helpers'
 import { seedState } from './seed'
 import type {
-  Artifact, AssistantMessage, Chat, Message, ModelId, Part, Project, Reply, ReplyStatus, View,
+  Artifact, AssistantMessage, Chat, ChatShare, Message, MessageBranch, ModelId, Part, Project, Reply, ReplyStatus,
+  UserMessage, View,
 } from './types'
 import { withProjectDefaults } from './projects/defaults'
 
@@ -31,12 +32,17 @@ export type Action =
   | { type: 'view'; view: View }
   | { type: 'model'; model: ModelId; chatId?: string }
   | { type: 'chat/add'; chat: Chat }
-  | { type: 'chat/patch'; id: string; patch: Partial<Pick<Chat, 'title' | 'pinned' | 'projectId'>> }
+  | { type: 'chat/patch'; id: string; patch: Partial<Pick<Chat, 'title' | 'pinned' | 'projectId' | 'share'>> }
   | { type: 'chat/duplicate'; id: string; newId: string; at: number }
+  // A new chat with the messages up to and including `messageId`.
+  | { type: 'chat/fork'; id: string; newId: string; messageId: string; at: number }
   | { type: 'chat/delete'; id: string }
   | { type: 'message/add'; chatId: string; messages: Message[]; at: number }
-  // Edit a user message: keep everything before it, then continue from it.
+  // Edit a user message: a new branch with the new text, continued by
+  // `assistant`. The old branch keeps the messages that followed.
   | { type: 'message/edit'; chatId: string; messageId: string; text: string; assistant: AssistantMessage; at: number }
+  // Show another branch of a user message, with the messages that follow it.
+  | { type: 'branch/select'; chatId: string; messageId: string; index: number }
   | { type: 'reply/add'; chatId: string; messageId: string; reply: Reply; at: number }
   | { type: 'reply/select'; chatId: string; messageId: string; index: number }
   | ({ type: 'reply/patch'; patch: Partial<Reply> } & ReplyAddress)
@@ -70,6 +76,58 @@ function patchReply(state: State, a: ReplyAddress, change: (reply: Reply) => Rep
   }))
 }
 
+// ---------------------------------------------------------------------------
+// Branches. The chat's `messages` are always the path on screen; a user
+// message's other branches keep their own text and the messages after it.
+
+// A user message's branches, with the one on screen brought up to date and
+// holding the messages that follow it now.
+function branchesOf(user: UserMessage, after: Message[]): { branches: MessageBranch[]; current: number } {
+  const branches = user.branches?.length ? user.branches : [{ text: user.text, attachments: user.attachments, at: user.at, after: [] }]
+  const current = Math.max(0, Math.min(branches.length - 1, user.branch ?? 0))
+  return {
+    branches: branches.map((b, i) => (i === current ? { text: user.text, attachments: user.attachments, at: user.at, after } : b)),
+    current,
+  }
+}
+
+// Messages with a new branch at `index`: the new text, then `assistant`.
+export function withEditedBranch(messages: Message[], index: number, text: string, assistant: AssistantMessage, at: number): Message[] {
+  const user = messages[index]
+  if (user?.role !== 'user') return messages
+  const { branches } = branchesOf(user, messages.slice(index + 1))
+  const next: MessageBranch = { text, attachments: user.attachments, at, after: [] }
+  return [
+    ...messages.slice(0, index),
+    { ...user, text, at, branches: [...branches, next], branch: branches.length },
+    assistant,
+  ]
+}
+
+// Messages showing branch `to` of the user message at `index`.
+export function withBranch(messages: Message[], index: number, to: number): Message[] {
+  const user = messages[index]
+  if (user?.role !== 'user' || !user.branches?.length) return messages
+  const { branches, current } = branchesOf(user, messages.slice(index + 1))
+  const target = Math.max(0, Math.min(branches.length - 1, to))
+  if (target === current) return messages
+  const shown = branches[target]
+  return [
+    ...messages.slice(0, index),
+    {
+      ...user, text: shown.text, attachments: shown.attachments, at: shown.at, branch: target,
+      branches: branches.map((b, i) => (i === target ? { ...b, after: [] } : b)),
+    },
+    ...shown.after,
+  ]
+}
+
+// The path on screen only: a copy (a fork) does not carry the other branches.
+function withoutBranches(message: Message): Message {
+  if (message.role !== 'user' || !message.branches) return message
+  return { id: message.id, role: 'user', text: message.text, attachments: message.attachments, at: message.at }
+}
+
 function viewAfterDelete(state: State, id: string): View {
   const { view } = state
   if (view.kind !== 'chat' || view.chatId !== id) return view
@@ -92,9 +150,28 @@ export function reducer(state: State, action: Action): State {
     case 'chat/duplicate': {
       const source = state.chats.find((c) => c.id === action.id)
       if (!source) return state
-      const copy: Chat = { ...source, id: action.newId, title: `${source.title} (copy)`, pinned: false, updatedAt: action.at }
+      // A copy is not shared: its link would show the original.
+      const copy: Chat = {
+        ...source, id: action.newId, title: `${source.title} (copy)`, pinned: false, updatedAt: action.at, share: undefined,
+      }
       const index = state.chats.indexOf(source)
       return { ...state, chats: [...state.chats.slice(0, index + 1), copy, ...state.chats.slice(index + 1)] }
+    }
+    case 'chat/fork': {
+      const source = state.chats.find((c) => c.id === action.id)
+      const end = source?.messages.findIndex((m) => m.id === action.messageId) ?? -1
+      if (!source || end === -1) return state
+      const fork: Chat = {
+        id: action.newId,
+        title: `${source.title} (branch)`,
+        projectId: source.projectId,
+        pinned: false,
+        updatedAt: action.at,
+        model: source.model,
+        messages: source.messages.slice(0, end + 1).map(withoutBranches),
+      }
+      const index = state.chats.indexOf(source)
+      return { ...state, chats: [...state.chats.slice(0, index + 1), fork, ...state.chats.slice(index + 1)] }
     }
     case 'chat/delete':
       return { ...state, view: viewAfterDelete(state, action.id), chats: state.chats.filter((c) => c.id !== action.id) }
@@ -103,14 +180,13 @@ export function reducer(state: State, action: Action): State {
     case 'message/edit':
       return patchChat(state, action.chatId, (c) => {
         const index = c.messages.findIndex((m) => m.id === action.messageId)
-        if (index === -1) return c
-        const user = c.messages[index]
-        if (user.role !== 'user') return c
-        return {
-          ...c,
-          updatedAt: action.at,
-          messages: [...c.messages.slice(0, index), { ...user, text: action.text, at: action.at }, action.assistant],
-        }
+        if (c.messages[index]?.role !== 'user') return c
+        return { ...c, updatedAt: action.at, messages: withEditedBranch(c.messages, index, action.text, action.assistant, action.at) }
+      })
+    case 'branch/select':
+      return patchChat(state, action.chatId, (c) => {
+        const messages = withBranch(c.messages, c.messages.findIndex((m) => m.id === action.messageId), action.index)
+        return messages === c.messages ? c : { ...c, messages }
       })
     case 'reply/add':
       return patchChat(state, action.chatId, (c) => ({
@@ -199,21 +275,62 @@ export function initialState(): State {
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null
 
-function validChat(v: unknown): v is Chat {
-  if (!isObject(v) || typeof v.id !== 'string' || typeof v.title !== 'string' || !Array.isArray(v.messages)) return false
-  return v.messages.every((m) => isObject(m) && (m.role === 'user'
+function validMessage(m: unknown): m is Message {
+  return isObject(m) && (m.role === 'user'
     ? typeof m.text === 'string' && Array.isArray(m.attachments)
     : m.role === 'assistant' && Array.isArray(m.versions) && m.versions.length > 0
-      && m.versions.every((r) => isObject(r) && Array.isArray(r.parts) && Array.isArray(r.followUps))))
+      && m.versions.every((r) => isObject(r) && Array.isArray(r.parts) && Array.isArray(r.followUps)))
 }
 
-// A reload cannot resume timers, so anything that was running is stopped.
+function validChat(v: unknown): v is Chat {
+  if (!isObject(v) || typeof v.id !== 'string' || typeof v.title !== 'string' || !Array.isArray(v.messages)) return false
+  return v.messages.every(validMessage)
+}
+
+const validBranch = (b: unknown): b is MessageBranch => isObject(b) && typeof b.text === 'string'
+  && Array.isArray(b.attachments) && typeof b.at === 'number' && Array.isArray(b.after) && b.after.every(validMessage)
+
+const validShare = (s: unknown): s is ChatShare => isObject(s) && typeof s.id === 'string' && typeof s.createdAt === 'number'
+  && (s.mode === 'snapshot' || s.mode === 'live')
+
+// A reload cannot resume timers, so anything that was running is stopped,
+// in the other branches too. Branches that do not read right are dropped:
+// the message is left with the one on screen, as chats saved before
+// branching existed (no `branches`) already are.
+function settleMessage(m: Message, at: number): Message {
+  if (m.role === 'assistant') {
+    return {
+      ...m,
+      current: Math.max(0, Math.min(m.current ?? 0, m.versions.length - 1)),
+      versions: m.versions.map((r) => (r.status === 'running' ? finishReply(r, 'stopped', at) : r)),
+    }
+  }
+  if (m.branches === undefined && m.branch === undefined) return m
+  const { branches } = m
+  if (!Array.isArray(branches) || branches.length < 2 || !branches.every(validBranch)) {
+    return { id: m.id, role: 'user', text: m.text, attachments: m.attachments, at: m.at }
+  }
+  const branch = Math.max(0, Math.min(branches.length - 1, typeof m.branch === 'number' ? m.branch : branches.length - 1))
+  return {
+    ...m,
+    branch,
+    branches: branches.map((b, i) => ({ ...b, after: i === branch ? [] : b.after.map((x) => settleMessage(x, at)) })),
+  }
+}
+
 function settle(chat: Chat, at: number): Chat {
   return {
     ...chat,
-    messages: chat.messages.map((m) => (m.role === 'assistant'
-      ? { ...m, current: Math.min(m.current ?? 0, m.versions.length - 1), versions: m.versions.map((r) => (r.status === 'running' ? finishReply(r, 'stopped', at) : r)) }
-      : m)),
+    messages: chat.messages.map((m) => settleMessage(m, at)),
+    share: validShare(chat.share)
+      ? {
+        ...chat.share,
+        access: chat.share.access === 'organisation' ? 'organisation' : 'link',
+        includeArtifacts: chat.share.includeArtifacts !== false,
+        messageCount: typeof chat.share.messageCount === 'number' ? chat.share.messageCount : chat.messages.length,
+        views: typeof chat.share.views === 'number' ? chat.share.views : 0,
+      }
+      : undefined,
   }
 }
 

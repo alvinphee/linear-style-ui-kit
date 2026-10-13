@@ -3,6 +3,7 @@ import { HugeiconsIcon } from '@hugeicons/react'
 import { ArrowLeft01Icon, ArrowUpRight01Icon, SidebarLeftIcon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
+import type { Agent } from '@/blocks/ai/agents/agent-types'
 import { IconAction } from '@/components/icon-action'
 import { AiMotion } from '@/components/ai/thinking-indicator'
 import { Button } from '@/components/ui/button'
@@ -13,8 +14,12 @@ import { plural, slug } from '@/lib/text'
 import { PEOPLE } from '../data'
 import { useJobs } from '../jobs-store'
 import { goTo } from '../nav'
+import { SAMPLE_AGENTS, SHARED_AGENTS } from './ai/agents/agents-data'
+import { AGENTS_KEY, AgentsProvider } from './ai/agents/context'
+import { AgentsView } from './ai/AgentsView'
 import { AllChats } from './ai/AllChats'
 import { ArtifactPanel } from './ai/ArtifactPanel'
+import { ChatChrome } from './ai/ChatChrome'
 import { ActionsContext, type WorkspaceActions } from './ai/context'
 import { Conversation } from './ai/Conversation'
 import { chatType, modelById, now, toFileRef, uid } from './ai/data'
@@ -23,17 +28,20 @@ import {
   type Sink,
 } from './ai/engine'
 import { artifactRef, chatHasArtifacts, currentReply, lastArtifactIn, replyText } from './ai/helpers'
-import { AgentsProvider } from './ai/agents/context'
-import { AgentsView } from './ai/AgentsView'
+import { SAMPLE_KNOWLEDGE_BASES } from './ai/knowledge/bases-data'
 import { KnowledgeProvider } from './ai/knowledge/context'
 import { KnowledgeView } from './ai/KnowledgeView'
 import { ProjectView } from './ai/ProjectView'
-import { RunsView } from './ai/RunsView'
 import { isAppPath, parseRoute, pathFor, settingsPath } from './ai/routes'
+import { RunsView } from './ai/RunsView'
+import { useConnectors } from './ai/settings/ConnectorsTab'
+import { useStoredState } from './ai/settings/prefs'
 import { SettingsScreen } from './ai/settings/SettingsScreen'
 import { Sidebar, type ChatSummary } from './ai/Sidebar'
 import { clearSaved, initialState, loadState, reducer, saveState } from './ai/store'
-import type { Artifact, AssistantMessage, Chat, FileRef, Model, Modes, PartOf, Project, Reply, View } from './ai/types'
+import type {
+  Artifact, AssistantMessage, Chat, ChatShare, FileRef, Message, Model, Modes, PartOf, Project, Reply, View,
+} from './ai/types'
 import { Panel, Section } from './shared'
 
 // Widths of the card (not the window) at which the side areas fit inline.
@@ -182,6 +190,10 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
 
     function startRun(chatId: string, messageId: string, replyId: string, events: ScriptEvent[], model: Model, plan?: PartOf<'plan'>) {
       stopRun(false)
+      // Research is for one reply, as in the big chat apps: its script is
+      // built by now, and the follow-ups to its report are ordinary replies
+      // unless it is turned on again.
+      if (modesRef.current.research) setModes((m) => ({ ...m, research: false }))
       const token = { done: false }
       const controller = play(events, sinkFor(chatId, messageId, replyId, token), model, plan)
       if (!token.done) runRef.current = { chatId, messageId, replyId, controller }
@@ -288,6 +300,39 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         startRun(chat.id, assistant.id, reply.id, buildScript(contextFor(chat, chat.messages.length, text, attachments, 0)), model)
       },
       stop: () => stopRun(),
+      // A voice conversation, kept as messages: in the open chat, or a new one.
+      addTranscript(lines) {
+        if (!lines.length) return
+        const s = stateRef.current
+        const at = now()
+        let chat = s.view.kind === 'chat' ? chatById(s.view.chatId) : undefined
+        if (!chat) {
+          const first = lines.find((l) => l.role === 'user')?.text ?? 'Voice chat'
+          const projectId = s.view.kind === 'new' || s.view.kind === 'project' ? s.view.projectId : null
+          chat = {
+            id: uid('c'), title: titleFor(first), projectId, pinned: false, updatedAt: at, model: s.model, messages: [],
+            temporary: s.incognito || undefined,
+          }
+          dispatch({ type: 'chat/add', chat })
+          dispatch({ type: 'view', view: { kind: 'chat', chatId: chat.id } })
+        }
+        const model = chat.model
+        dispatch({
+          type: 'message/add',
+          chatId: chat.id,
+          at,
+          messages: lines.map((line): Message => line.role === 'user'
+            ? { id: uid('m'), role: 'user', text: line.text, attachments: [], at }
+            : {
+                id: uid('m'), role: 'assistant', model, current: 0,
+                versions: [{
+                  id: uid('r'), status: 'done', startedAt: at, finishedAt: at, followUps: [],
+                  parts: [{ id: uid('p'), type: 'text', text: line.text, streaming: false }],
+                }],
+              }),
+        })
+        toast('Voice chat saved', { description: `${plural(lines.length, 'line')} added to the chat.` })
+      },
       regenerate(chatId, messageId) {
         const chat = chatById(chatId)
         if (!chat) return
@@ -350,6 +395,60 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         dispatch({ type: 'message/edit', chatId, messageId, text, assistant, at: now() })
         dispatch({ type: 'credits', amount: model.cost })
         startRun(chatId, assistant.id, reply.id, buildScript(contextFor(chat, index, text, user.attachments, 0)), model)
+        setNotice(`New branch: ${model.name} is replying. The old branch is kept.`)
+      },
+      selectBranch(chatId, messageId, index) {
+        const chat = chatById(chatId)
+        const user = chat?.messages.find((m) => m.id === messageId)
+        if (user?.role !== 'user' || !user.branches || index === (user.branch ?? 0)) return
+        // The reply being written belongs to the branch on screen; it stops
+        // there rather than writing into one that is put away.
+        if (runRef.current?.chatId === chatId) stopRun(false)
+        dispatch({ type: 'branch/select', chatId, messageId, index })
+        setNotice(`Branch ${index + 1} of ${user.branches.length}.`)
+      },
+      forkChat(chatId, messageId) {
+        const source = chatById(chatId)
+        const index = source?.messages.findIndex((m) => m.id === messageId) ?? -1
+        if (!source || source.temporary || index === -1) return
+        const message = source.messages[index]
+        const newId = uid('c')
+        const at = now()
+        dispatch({ type: 'chat/fork', id: chatId, newId, messageId, at })
+        api.openChat(newId)
+        // From a question, the new chat answers it afresh.
+        if (message.role === 'user') {
+          const model = modelById(source.model)
+          const reply = newReply(model, model.id)
+          const assistant: AssistantMessage = { id: uid('m'), role: 'assistant', model: model.id, versions: [reply], current: 0 }
+          dispatch({ type: 'message/add', chatId: newId, messages: [assistant], at })
+          dispatch({ type: 'credits', amount: model.cost })
+          startRun(newId, assistant.id, reply.id, buildScript(contextFor(source, index, message.text, message.attachments, 0)), model)
+        }
+        setFocusKey((k) => k + 1)
+        toast('Branched into a new chat', {
+          description: `“${source.title} (branch)”`,
+          action: { label: 'Back to the original', onClick: () => api.openChat(chatId) },
+        })
+      },
+      shareChat(chatId, options) {
+        const chat = chatById(chatId)
+        if (!chat || chat.temporary) return
+        const share: ChatShare = { id: uid('sh'), createdAt: now(), ...options, messageCount: chat.messages.length, views: 0 }
+        dispatch({ type: 'chat/patch', id: chatId, patch: { share } })
+        toast('Link created', { description: 'Demo only: nothing is published.' })
+      },
+      updateShare(chatId, options) {
+        const chat = chatById(chatId)
+        if (!chat?.share) return
+        // Updating retakes a snapshot, so it holds the messages there are now.
+        const share: ChatShare = { ...chat.share, ...options, messageCount: chat.messages.length }
+        dispatch({ type: 'chat/patch', id: chatId, patch: { share } })
+        toast('Link updated')
+      },
+      revokeShare(chatId) {
+        dispatch({ type: 'chat/patch', id: chatId, patch: { share: undefined } })
+        toast('Link revoked', { description: 'It no longer opens the chat.' })
       },
       openArtifact(id, version) {
         const open = stateRef.current.artifact
@@ -578,13 +677,22 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
     }
   }), [signature])
 
+  // Everything the "@" menu offers, so a sent mention shows as a pill. Agent
+  // and connector names come from their stores, which don't tick while runs
+  // and indexing do, so the chat doesn't re-render on every tick.
+  const [savedAgents] = useStoredState<Agent[]>(AGENTS_KEY, SAMPLE_AGENTS)
+  const { connectors } = useConnectors()
   const mentions = useMemo(() => {
-    const names = [...PEOPLE, ...jobsStore.jobs.map((j) => j.id), ...state.projects.map((p) => p.name)]
+    const names = [
+      ...PEOPLE, ...jobsStore.jobs.map((j) => j.id), ...state.projects.map((p) => p.name),
+      ...(project?.files.map((f) => f.name) ?? []), ...[...savedAgents, ...SHARED_AGENTS].map((a) => a.name),
+      ...SAMPLE_KNOWLEDGE_BASES.map((b) => b.name), ...connectors.filter((c) => c.status === 'connected').map((c) => c.name),
+    ]
       .filter(Boolean)
       .sort((a, b) => b.length - a.length)
       .map(escape)
     return names.length ? new RegExp(`@(?:${names.join('|')})`, 'g') : null
-  }, [jobsStore.jobs, state.projects])
+  }, [jobsStore.jobs, state.projects, project, savedAgents, connectors])
 
   const sidebarToggle = (
     <IconAction
@@ -711,6 +819,8 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
                   model={chat?.model ?? state.model}
                   modes={modes}
                   running={running}
+                  awaiting={lastReply?.status === 'awaiting'}
+                  credits={state.credits}
                   incognito={state.incognito}
                   openArtifactId={artifact?.id ?? null}
                   hasArtifacts={!!chat && chatHasArtifacts(chat)}
@@ -741,6 +851,12 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
             )}
 
             <div aria-live="polite" className="sr-only">{liveText}</div>
+            <ChatChrome
+              chats={summaries}
+              projects={state.projects}
+              scopeRef={page ? undefined : cardRef}
+              onboarding={page ? 'auto' : 'manual'}
+            />
           </article>
 
           {!sidebarInline && (

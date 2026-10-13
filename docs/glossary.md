@@ -255,15 +255,26 @@ used by most design systems).
 | Approval (human in the loop) | A run stops before a tool that sends or changes something and asks: Allow once, Always allow (it won't ask again for that tool), or Deny (the step is skipped) |
 | Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
 
+| Prompt library (saved prompts) | Prompts kept to reuse, yours and your team's; a prompt template holds variables such as {{customer}} that are filled in before it is sent |
+| Queued message | A message written while a reply is still running; it sends when the reply ends (not while it waits for an approval) |
+| Branch (message) | One version of an edited message with the replies after it; editing keeps the old branch, switched with ‹ 1 / 2 › |
+| Branch in new chat (fork) | A new chat made from a conversation up to one message |
+| Read aloud | The browser speaks a reply (text to speech) |
+| Shared link (snapshot or live) | A read-only link to a chat: a snapshot shows it as it was, a live link follows new messages; it can be revoked |
+| Deep research | A mode for one message: a research plan, many searches and page reads over a few minutes, then a report with citations |
+| Voice mode | A spoken conversation, full screen: the orb shows listening, thinking and speaking, with captions, mute and end; tapping the orb interrupts (barge-in) |
+| Usage limit and rate limit | How much a plan may use in a period (the banner offers a cheaper model or an upgrade), and a short "too many requests" pause with a countdown before retrying |
+| Onboarding (first run) | The welcome on a first visit: name and role, reply style, apps to connect, a prompt to try |
+| Command menu | Ctrl+K: search and run anything in the app (chats, projects, agents, knowledge, settings, actions) |
 The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
 `form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
 ## Forms and checklists
-| Term | Meaning |
-|---|---|
 checklist, an expense claim and a survey are all forms to them.
 
 | Form (form template, form definition) | What a form asks: its name, sections and fields, as data. What the catalogue lists. The type is `FormDefinition` |
 | Field schema | The kit's one list of field kinds and how each is drawn and checked, shared by the form dialog and the form renderer (`form-fields.tsx`) |
+| Term | Meaning |
+|---|---|
 | Form renderer | Draws a whole form from its definition: sections, progress, validation, review, submit. The block is `form-renderer` |
 | Submission | One filled-in form, kept as a record: who, when, the answers and the result |
 | Result | How a submission came out: passed or failed (a form with checks), or completed (one without) |
