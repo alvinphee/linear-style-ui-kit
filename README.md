@@ -11,9 +11,9 @@ with every part installable into another project through `npx shadcn add`.
 
 <br>
 
-![Status: work in progress](https://img.shields.io/badge/status-work_in_progress-E8A33D?style=flat-square&labelColor=1C1C21) ![Registry: 196 items](https://img.shields.io/badge/registry-196_items-6E74E8?style=flat-square&labelColor=1C1C21) ![Built with Claude Code](https://img.shields.io/badge/built_with-Claude_Code-D97757?style=flat-square&logo=claude&logoColor=D97757&labelColor=1C1C21)
+![Status: work in progress](https://img.shields.io/badge/status-work_in_progress-E8A33D?style=flat-square&labelColor=1C1C21) ![Registry: 196 items](https://img.shields.io/badge/registry-196_items-6E74E8?style=flat-square&labelColor=1C1C21)
 
-![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=61DAFB&labelColor=1C1C21) ![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?style=flat-square&logo=typescript&logoColor=3178C6&labelColor=1C1C21) ![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=646CFF&labelColor=1C1C21) ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=38BDF8&labelColor=1C1C21) ![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-Mira-F4F4F5?style=flat-square&logo=shadcnui&logoColor=F4F4F5&labelColor=1C1C21) ![Hugeicons](https://img.shields.io/badge/Hugeicons-free_set-6E74E8?style=flat-square&labelColor=1C1C21)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=61DAFB&labelColor=1C1C21) ![TypeScript](https://img.shields.io/badge/TypeScript-7-3178C6?style=flat-square&logo=typescript&logoColor=3178C6&labelColor=1C1C21) ![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?style=flat-square&logo=vite&logoColor=646CFF&labelColor=1C1C21) ![Tailwind CSS v4](https://img.shields.io/badge/Tailwind_CSS-v4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=38BDF8&labelColor=1C1C21) ![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-Mira-F4F4F5?style=flat-square&logo=shadcnui&logoColor=F4F4F5&labelColor=1C1C21) ![Hugeicons](https://img.shields.io/badge/Hugeicons-free_set-6E74E8?style=flat-square&labelColor=1C1C21) ![Claude Code](https://img.shields.io/badge/Claude_Code-assistant-D97757?style=flat-square&logo=claude&logoColor=D97757&labelColor=1C1C21)
 
 [Features](#features) · [Screenshots](#screenshots) · [Quick start](#quick-start) · [Use the parts](#use-the-parts-in-your-own-project) · [Architecture](#architecture) · [How this was built](#how-this-was-built)
 
@@ -276,15 +276,13 @@ docs/
 
 ## How this was built
 
-This kit was built with **[Claude Code](https://claude.com/claude-code)**, Anthropic's AI coding agent, which wrote most of the code. Every commit is co-authored with Claude, and you can see it in the history.
-
-My role was designer, architect and reviewer:
+I built this kit with **[Claude Code](https://claude.com/claude-code)** as my AI pair programmer. I set the direction, the architecture and the standards, and reviewed the work:
 
 - **Direction.** I chose the look to aim for, the stack, and the shape of the kit: atomic design levels, a Storybook-style showcase, and full apps that prove the parts work together.
-- **Rules for the agent.** I wrote the standards the agent works to ([`CLAUDE.md`](CLAUDE.md), [`docs/architecture.md`](docs/architecture.md), [`docs/agent-brief.md`](docs/agent-brief.md)): one home per part, colours only through tokens, industry terms from [`docs/glossary.md`](docs/glossary.md), and every screen checked in light mode, dark mode and at 375px wide.
+- **Standards.** I wrote the project's standards ([`CLAUDE.md`](CLAUDE.md), [`docs/architecture.md`](docs/architecture.md), [`docs/agent-brief.md`](docs/agent-brief.md)): one home per part, colours only through tokens, industry terms from [`docs/glossary.md`](docs/glossary.md), and every screen checked in light mode, dark mode and at 375px wide.
 - **Guardrails.** Rules that matter are enforced by code, not just written down: [`scripts/check-rules.mjs`](scripts/check-rules.mjs) fails the build when a part breaks them.
-- **Review.** I reviewed the screens and steered the changes, and recorded what we learned in [`docs/findings.md`](docs/findings.md).
-- **Experiments.** I tested what actually drives UI quality with an AI agent: the brief, the project setup or the model. The answer shaped how this kit is organised: polish comes from parts designed once and reused, not from instructions alone.
+- **Review.** I reviewed the screens and steered the changes, and recorded what I learned in [`docs/findings.md`](docs/findings.md).
+- **Experiments.** I tested what actually drives UI quality: the brief, the project setup or the tooling. The answer shaped how this kit is organised: polish comes from parts designed once and reused, not from instructions alone.
 
 ## Status
 
