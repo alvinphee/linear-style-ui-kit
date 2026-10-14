@@ -893,3 +893,13 @@ one message. The workspace now turns it off as soon as any reply starts
 (`startRun`, the one place every reply goes through), not only in `send`.
 Put a per-reply rule where every reply starts, not in one of the ways a
 reply can start.
+
+## A missing variant gets pasted, then drifts (added 2026-10-13)
+The kit's Checkbox only drew checked and unchecked, so every block that
+needed "some selected" pasted a class string for the dash: the data table,
+the members table (by importing the data table's, which made installing it
+pull in TanStack Table), and the knowledge documents, whose copy drew the
+dash on `::after`, the pseudo-element the Checkbox already uses for its
+larger click area. The dash now lives in the Checkbox (`checked="indeterminate"`)
+and the copies are gone. When a block needs a component state that doesn't
+exist, add it to the component.

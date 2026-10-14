@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
 import {
-  Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, BatteryFullIcon, Copy01Icon, FilterHorizontalIcon, FullSignalIcon,
+  Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Copy01Icon, FilterHorizontalIcon,
   Home01Icon, InboxIcon, Layers01Icon, LockIcon, Logout01Icon, MoreHorizontalIcon, Search01Icon, Settings01Icon,
   Share08Icon, SquareArrowUp02Icon, Task01Icon, Tick02Icon, UserCircleIcon, Wifi01Icon, WifiOff01Icon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import {
-  MobileCard, MobileChip, MobileChips, MobileFab, MobileGroup, MobileMenu, MobileMenuButton, MobileMenuLink, MobileMenuSection,
+  MobileAccountButton, MobileCard, MobileChip, MobileChips, MobileFab, MobileGroup, MobileMenu, MobileMenuButton, MobileMenuLink, MobileMenuSection,
+  MobileMenuTiles, MobileMenuLauncher, MobileMenuModuleList, MobileModuleSheet, MobileModuleStrip,
+  type MobileMenuButtonVariant, type MobileMenuEffect, type MobileSwitcherItem, type MobileSwitcherStyle,
   MobileFloatingTabBar, MobileOption, MobileRow, MobileSheet, MobileShell,
   MobileTabBar, MobileTopAction, MobileTopBar, type MobileTab,
 } from '@/blocks/mobile-shell'
 import { LabelDot } from '@/components/label-dot'
+import { LetterMark } from '@/components/mark'
 import { NoAssignee, UserAvatar } from '@/components/person'
 import { PriorityIcon } from '@/components/priority-icon'
 import { SearchField } from '@/components/search-field'
@@ -28,6 +31,7 @@ import { greeting, plural } from '@/lib/text'
 import { LABEL_BY_ID, PRIORITY_RANK, dueRank, type Job, type Status } from '../../data'
 import { ASSIGNEE_OPTIONS, PRIORITY_OPTIONS, STATUS_OPTIONS, assigneeValue, driverOf, type JobOption } from '../../job-options'
 import { useJobs, type Activity } from '../../jobs-store'
+import { PhoneFrame, PhoneHomeIndicator, PhoneStatusBar } from '../shared'
 import type { Notifications } from './NotificationsMenu'
 
 // The App shells page's phone layout, on the kit's jobs: the mobile shell
@@ -75,6 +79,24 @@ const SORTS: { id: Sort; label: string }[] = [
   { id: 'title', label: 'Title' },
 ]
 
+// The demo's teams, for the menu button as a switcher (the ERP switches modules).
+const TEAMS = [
+  { id: 'ops', label: 'Operations', short: 'OP', colour: 'oklch(0.6 0.17 265)', detail: 'Jobs and dispatch' },
+  { id: 'warehouse', label: 'Warehouse', short: 'WH', colour: 'oklch(0.7 0.14 65)', detail: 'Picking and stock' },
+  { id: 'fleet', label: 'Fleet', short: 'FL', colour: 'oklch(0.65 0.15 155)', detail: 'Vehicles and drivers' },
+  { id: 'care', label: 'Customer care', short: 'CC', colour: 'oklch(0.62 0.16 330)', detail: 'Cases and returns' },
+  { id: 'sales', label: 'Sales', short: 'SA', colour: 'oklch(0.6 0.16 20)', detail: 'Quotes and orders' },
+  { id: 'finance', label: 'Finance', short: 'FI', colour: 'oklch(0.58 0.12 200)', detail: 'Invoices and payments' },
+  { id: 'hr', label: 'People', short: 'HR', colour: 'oklch(0.62 0.15 300)', detail: 'Leave and payroll' },
+  { id: 'safety', label: 'Safety', short: 'SF', colour: 'oklch(0.66 0.16 130)', detail: 'Checks and incidents' },
+  { id: 'projects', label: 'Projects', short: 'PR', colour: 'oklch(0.6 0.14 240)', detail: 'Plans and milestones' },
+  { id: 'purchasing', label: 'Purchasing', short: 'PU', colour: 'oklch(0.68 0.13 85)', detail: 'Orders and suppliers' },
+  { id: 'assets', label: 'Assets', short: 'AS', colour: 'oklch(0.55 0.1 260)', detail: 'Equipment and servicing' },
+  { id: 'reports', label: 'Reports', short: 'RE', colour: 'oklch(0.6 0.12 170)', detail: 'Dashboards and exports' },
+  { id: 'admin', label: 'Admin', short: 'AD', colour: 'oklch(0.5 0.03 260)', detail: 'Users and settings' },
+  { id: 'support', label: 'Support', short: 'SU', colour: 'oklch(0.64 0.16 350)', detail: 'Tickets and chats' },
+]
+
 const MORE_PAGES = [
   { id: 'projects', label: 'Projects', icon: Layers01Icon },
   { id: 'settings', label: 'Settings', icon: Settings01Icon },
@@ -103,12 +125,22 @@ function sortJobs(jobs: Job[], sort: Sort) {
   return [...jobs].sort(by)
 }
 
-export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action, offline, notes, onInstall }: {
+export function PhoneShell({
+  display, nav = 'tabs', tabStyle = 'classic', menuButton = 'label', menuEffect = 'fade', switcherStyle = 'tiles', teamCount = 4, action, offline, notes, onInstall,
+}: {
   // In a browser tab (the browser's address bar and toolbar show) or installed
   // (standalone: full screen, opened from the home screen).
   display: PhoneDisplay
   nav?: PhoneNav
   tabStyle?: PhoneTabStyle
+  // The menu screen's button: ≡ Menu, the bars alone, or the team switcher.
+  menuButton?: MobileMenuButtonVariant
+  // How the menu screen opens.
+  menuEffect?: MobileMenuEffect
+  // With the team switcher button: how a team is chosen.
+  switcherStyle?: MobileSwitcherStyle
+  // How many teams (modules) the app has: 4, 9 or 14.
+  teamCount?: number
   // Where the main action (New issue) sits: a floating button, the middle of
   // the tab bar (a floating button with the menu, which has no tab bar), or
   // the top bar.
@@ -194,9 +226,24 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
   const floating = withTabs && tabStyle === 'floating'
   // The floating bar's search button goes to Issues with its search box ready.
   const [searching, setSearching] = useState(false)
+  const [team, setTeam] = useState(TEAMS[0])
   // More only without the menu, which holds the same.
   const tabs = TABS.filter((t) => !menuMode || t.id !== 'more').map((t) => (t.id === 'inbox' ? { ...t, badge: notes.unread } : t))
   const [menuOpen, setMenuOpen] = useState(false)
+  const [teamsOpen, setTeamsOpen] = useState(false)
+  const teamItems: MobileSwitcherItem[] = TEAMS.slice(0, teamCount).map((t) => ({
+    id: t.id,
+    label: t.label,
+    mark: <LetterMark text={t.short} colour={t.colour} />,
+    detail: t.detail,
+    current: t.id === team.id,
+    onClick: () => {
+      setMenuOpen(false)
+      if (t.id === team.id) return
+      setTeam(t)
+      toast(`Switched to ${t.label}`, { description: 'Demo only: every team shows the same issues.' })
+    },
+  }))
   // The tab bar's middle button needs a classic tab bar; otherwise it floats.
   const fab = (action === 'fab' || (action === 'tab' && (!withTabs || floating))) && !top && (tab === 'home' || tab === 'issues')
   const backLabel = stack.length > 1 ? screenTitle(stack.at(-2)!) : TABS.find((t) => t.id === tab)!.label
@@ -291,14 +338,17 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
       actions: (
         <>
           {newButton}
-          <button
-            type="button"
-            aria-label="Account"
-            onClick={() => chooseTab('more')}
-            className="focus-visible:ring-ring/50 mx-1 rounded-full outline-none focus-visible:ring-2"
-          >
-            <UserAvatar name={ME} className="size-7" />
-          </button>
+          {/* With the menu, the top bar carries the avatar on every screen. */}
+          {!menuMode && (
+            <button
+              type="button"
+              aria-label="Account"
+              onClick={() => chooseTab('more')}
+              className="focus-visible:ring-ring/50 mx-1 rounded-full outline-none focus-visible:ring-2"
+            >
+              <UserAvatar name={ME} className="size-7" />
+            </button>
+          )}
         </>
       ),
       body: (
@@ -442,12 +492,8 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
   return (
     // The phone: a bezel round the screen, sized like a 390 × 844 phone and
     // never wider than the space it is given.
-    <div className="bg-muted ring-border mx-auto w-full max-w-[24.5rem] rounded-[3rem] p-2.5 shadow-xl ring-1">
-      <div
-        ref={setScreenEl}
-        className="bg-background relative isolate flex h-[46rem] max-h-[85vh] min-h-[34rem] flex-col overflow-hidden rounded-[2.4rem] border"
-      >
-        <StatusBar offline={offline} />
+    <PhoneFrame screenRef={setScreenEl}>
+        <PhoneStatusBar offline={offline} />
         {display === 'browser' && (
           <div className="px-3 pb-1" aria-hidden>
             <div className="bg-muted text-muted-foreground flex h-8 items-center justify-center gap-1.5 rounded-full text-xs">
@@ -461,8 +507,51 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
           header={
             menuMode && !top ? (
               <MobileTopBar
-                title={<MobileMenuButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} controls="phone-menu" />}
-                actions={!menuOpen && screen.actions}
+                title={
+                  menuButton === 'switcher' && switcherStyle === 'sheet' ? (
+                    <div className="flex min-w-0 items-center gap-0.5">
+                      <MobileMenuButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} controls="phone-menu" variant="icon" />
+                      <MobileMenuButton
+                        open={teamsOpen}
+                        onClick={() => setTeamsOpen(true)}
+                        controls="phone-teams"
+                        variant="switcher"
+                        mark={<LetterMark text={team.short} colour={team.colour} size="xs" />}
+                        label={team.label}
+                      />
+                    </div>
+                  ) : menuButton === 'switcher' ? (
+                    <MobileMenuButton
+                      open={menuOpen}
+                      onClick={() => setMenuOpen(!menuOpen)}
+                      controls="phone-menu"
+                      variant="switcher"
+                      mark={<LetterMark text={team.short} colour={team.colour} size="xs" />}
+                      label={team.label}
+                    />
+                  ) : menuButton === 'icon' ? (
+                    <div className="flex min-w-0 items-center gap-1">
+                      <MobileMenuButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} controls="phone-menu" variant="icon" />
+                      <span className="min-w-0 truncate text-[15px] font-semibold">{screen.title}</span>
+                    </div>
+                  ) : (
+                    <MobileMenuButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} controls="phone-menu" />
+                  )
+                }
+                actions={!menuOpen && (
+                  <>
+                    {screen.actions}
+                    {/* The account lives here, not in the menu. */}
+                    <MobileAccountButton
+                      name={ME}
+                      pressed={tab === 'more' && !top}
+                      onClick={() => {
+                        setStacks((s) => ({ ...s, more: [] }))
+                        setTab(tab === 'more' && !top ? 'home' : 'more')
+                      }}
+                    />
+                  </>
+                )}
               />
             ) : (
               <MobileTopBar
@@ -474,7 +563,18 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
             )
           }
           menu={menuMode && menuOpen && (
-            <MobileMenu id="phone-menu" onClose={() => setMenuOpen(false)}>
+            <MobileMenu id="phone-menu" effect={menuEffect} onClose={() => setMenuOpen(false)}>
+              {menuButton === 'switcher' && switcherStyle !== 'sheet' && switcherStyle !== 'strip' && (
+                <MobileMenuSection title="Teams">
+                  {switcherStyle === 'launcher' ? (
+                    <MobileMenuLauncher items={teamItems} />
+                  ) : switcherStyle === 'list' ? (
+                    <MobileMenuModuleList items={teamItems} />
+                  ) : (
+                    <MobileMenuTiles items={teamItems} />
+                  )}
+                </MobileMenuSection>
+              )}
               <MobileMenuSection title="Menu">
                 {TABS.slice(0, 3).map((t) => (
                   <MobileMenuLink
@@ -519,24 +619,22 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
                   </MobileMenuLink>
                 ))}
               </MobileMenuSection>
-              <MobileMenuSection title="Account">
-                <MoreScreen
-                  display={display}
-                  offline={offline}
-                  queued={queued}
-                  onInstall={onInstall}
-                  className="p-0 pt-1"
-                />
-              </MobileMenuSection>
             </MobileMenu>
           )}
-          banner={offline && (
-            <div role="status" className="bg-muted text-muted-foreground flex shrink-0 items-center gap-2 px-4 py-1.5 text-[11px]">
-              <HugeiconsIcon icon={WifiOff01Icon} strokeWidth={2} className="size-3.5 shrink-0" />
-              <span className="min-w-0 truncate">
-                Offline. {queued > 0 ? `${plural(queued, 'change')} waiting to sync.` : 'Changes sync when you reconnect.'}
-              </span>
-            </div>
+          banner={(
+            <>
+              {menuMode && !top && !menuOpen && menuButton === 'switcher' && switcherStyle === 'strip' && (
+                <MobileModuleStrip label="Teams" items={teamItems} />
+              )}
+              {offline && (
+                <div role="status" className="bg-muted text-muted-foreground flex shrink-0 items-center gap-2 px-4 py-1.5 text-[11px]">
+                  <HugeiconsIcon icon={WifiOff01Icon} strokeWidth={2} className="size-3.5 shrink-0" />
+                  <span className="min-w-0 truncate">
+                    Offline. {queued > 0 ? `${plural(queued, 'change')} waiting to sync.` : 'Changes sync when you reconnect.'}
+                  </span>
+                </div>
+              )}
+            </>
           )}
           screenKey={`${tab}:${stack.length}`}
           pushed={!!top}
@@ -585,12 +683,12 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
             <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} className="size-5" />
           </div>
         )}
-        {/* The home indicator: the strip the bottom safe area keeps clear. */}
-        <div aria-hidden className="flex h-5 shrink-0 justify-center">
-          <span className="bg-foreground/70 mt-1.5 h-1 w-28 rounded-full" />
-        </div>
+        <PhoneHomeIndicator />
 
         {/* Bottom sheets, inside the phone: a property's picker, sort and filter, quick create. */}
+        {menuMode && menuButton === 'switcher' && switcherStyle === 'sheet' && (
+          <MobileModuleSheet open={teamsOpen} onOpenChange={setTeamsOpen} title="Switch team" items={teamItems} container={screenEl} />
+        )}
         <MobileSheet
           open={!!field && !!pickJob}
           onOpenChange={(o) => !o && setSheet(null)}
@@ -659,8 +757,7 @@ export function PhoneShell({ display, nav = 'tabs', tabStyle = 'classic', action
             <Button type="submit" className="h-10" disabled={!title.trim()}>Create issue</Button>
           </form>
         </MobileSheet>
-      </div>
-    </div>
+    </PhoneFrame>
   )
 }
 
@@ -668,20 +765,6 @@ function screenTitle(screen: Screen) {
   return screen.kind === 'issue' ? screen.id : screen.label
 }
 
-// The phone's own status bar: time, signal, Wi-Fi and battery. An installed
-// app draws under it, so the top safe area keeps the page clear of it.
-function StatusBar({ offline }: { offline: boolean }) {
-  return (
-    <div aria-hidden className="text-foreground flex h-11 shrink-0 items-center justify-between px-7 text-xs font-semibold">
-      <span className="tabular-nums">9:41</span>
-      <span className="flex items-center gap-1.5">
-        <HugeiconsIcon icon={FullSignalIcon} strokeWidth={2} className="size-3.5" />
-        <HugeiconsIcon icon={offline ? WifiOff01Icon : Wifi01Icon} strokeWidth={2} className="size-3.5" />
-        <HugeiconsIcon icon={BatteryFullIcon} strokeWidth={2} className="size-4" />
-      </span>
-    </div>
-  )
-}
 
 // A pushed screen: one issue, full width. Each property is a row that opens
 // its picker in a bottom sheet.

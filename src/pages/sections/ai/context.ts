@@ -67,6 +67,9 @@ export type WorkspaceActions = {
   // section on a wide screen).
   openSettings: (section?: string | null) => void
   closeSettings: () => void
+  // The admin console, at one section (owners and admins).
+  openAdmin: (section?: string | null) => void
+  closeAdmin: () => void
   // The model new chats start with, whatever chat is open.
   setDefaultModel: (model: ModelId) => void
 }

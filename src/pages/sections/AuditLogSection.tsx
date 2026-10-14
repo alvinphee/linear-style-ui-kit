@@ -1,46 +1,24 @@
-import { useId, useState } from 'react'
-import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  Add01Icon, ArrowRight01Icon, Cancel01Icon, Delete02Icon, Login03Icon, PencilEdit02Icon, UserAdd01Icon,
+  Add01Icon, Delete02Icon, Login03Icon, PencilEdit02Icon, UserAdd01Icon,
 } from '@hugeicons/core-free-icons'
-import { endOfDay, format, startOfDay, subDays } from 'date-fns'
-import { cn } from 'cn'
-import { FacetFilter } from '@/blocks/data-table'
-import { DateRangePicker, type DateRange, type DateRangePreset } from '@/blocks/period-picker'
-import { UserAvatar } from '@/components/person'
-import { SearchField } from '@/components/search-field'
-import { Button } from '@/components/ui/button'
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { formatDateRange, formatShortDate, formatTime, relativeDay } from '@/lib/format'
+import { AuditLog, type AuditActionDef, type AuditEvent as LogEvent } from '@/blocks/audit-log'
 import { seededRandom } from '@/lib/random'
-import { plural } from '@/lib/text'
 import { PEOPLE } from '../data'
 import { Section } from './shared'
 
+// The audit log block fed with made-up workspace activity: project edits,
+// invites, API keys, sign-ins. The AI chat app's admin console feeds it its own.
+
 type Action = 'created' | 'updated' | 'deleted' | 'invited' | 'signed_in'
 
-const ACTIONS: Record<Action, { label: string; verb: string; icon: IconSvgElement; className: string }> = {
+const ACTIONS: Record<Action, AuditActionDef> = {
   created: { label: 'Created', verb: 'created', icon: Add01Icon, className: 'text-status-done' },
   updated: { label: 'Updated', verb: 'updated', icon: PencilEdit02Icon, className: 'text-status-progress' },
   deleted: { label: 'Deleted', verb: 'deleted', icon: Delete02Icon, className: 'text-status-blocked' },
   invited: { label: 'Invited', verb: 'invited', icon: UserAdd01Icon, className: 'text-chart-2' },
-  signed_in: { label: 'Signed in', verb: 'signed in to', icon: Login03Icon, className: 'text-muted-foreground' },
+  signed_in: { label: 'Signed in', verb: 'signed in to', icon: Login03Icon, className: 'text-muted-foreground', detailsTitle: 'Session' },
 }
-const ACTION_KEYS = Object.keys(ACTIONS) as Action[]
-
-type Change = { field: string; before?: string; after?: string }
-
-type AuditEvent = {
-  id: string
-  actor: string
-  action: Action
-  // What kind of thing the target is ("project", "API key"); empty when the verb says it.
-  kind: string
-  target: string
-  ip: string
-  at: Date
-  changes: Change[]
-}
+type AuditEvent = LogEvent<Action>
 
 type Picker = <T>(list: readonly T[]) => T
 type Template = (pick: Picker, actor: string) => Pick<AuditEvent, 'action' | 'kind' | 'target' | 'changes'>
@@ -216,284 +194,10 @@ function makeEvents(count: number): AuditEvent[] {
 
 const EVENTS = makeEvents(40)
 
-function countBy<T, K>(list: T[], key: (item: T) => K) {
-  const counts = new Map<K, number>()
-  for (const item of list) counts.set(key(item), (counts.get(key(item)) ?? 0) + 1)
-  return counts
-}
-
-function matchesSearch(event: AuditEvent, query: string) {
-  if (!query) return true
-  return [event.actor, ACTIONS[event.action].verb, event.kind, event.target, event.ip, event.id].some((s) =>
-    s.toLowerCase().includes(query),
-  )
-}
-
-function inRange(event: AuditEvent, range: DateRange | undefined) {
-  if (!range?.from) return true
-  return event.at >= startOfDay(range.from) && event.at <= endOfDay(range.to ?? range.from)
-}
-
-// "Today", "Yesterday", then the weekday, with the date beside it.
-const dayLabel = (date: Date) => ({ label: relativeDay(date, NOW) ?? format(date, 'EEEE'), sub: formatShortDate(date) })
-
-const DATE_PRESETS: DateRangePreset[] = [
-  { label: 'Today', range: { from: NOW, to: NOW } },
-  { label: 'Last 3 days', range: { from: subDays(NOW, 2), to: NOW } },
-  { label: 'Last 7 days', range: { from: subDays(NOW, 6), to: NOW } },
-]
-// A preset without a range clears it.
-const DATE_PRESETS_WITH_CLEAR: DateRangePreset[] = [...DATE_PRESETS, { label: 'Clear' }]
-
 export default function AuditLogSection() {
-  const [search, setSearch] = useState('')
-  const [actors, setActors] = useState<string[]>([])
-  const [actions, setActions] = useState<Action[]>([])
-  const [range, setRange] = useState<DateRange | undefined>()
-  const [openId, setOpenId] = useState<string | null>(null)
-  const id = useId()
-
-  const query = search.trim().toLowerCase()
-  const base = EVENTS.filter((e) => matchesSearch(e, query) && inRange(e, range))
-  // Each filter's counts leave out that filter itself, so they show what picking an option would give.
-  const forActorCounts = base.filter((e) => !actions.length || actions.includes(e.action))
-  const forActionCounts = base.filter((e) => !actors.length || actors.includes(e.actor))
-  const visible = forActionCounts.filter((e) => !actions.length || actions.includes(e.action))
-  const actorCounts = countBy(forActorCounts, (e) => e.actor)
-  const actionCounts = countBy(forActionCounts, (e) => e.action)
-  const active = query !== '' || actors.length > 0 || actions.length > 0 || !!range?.from
-
-  const groups: { key: string; date: Date; events: AuditEvent[] }[] = []
-  for (const event of visible) {
-    const key = format(event.at, 'yyyy-MM-dd')
-    const last = groups.at(-1)
-    if (last?.key === key) last.events.push(event)
-    else groups.push({ key, date: event.at, events: [event] })
-  }
-
-  function reset() {
-    setSearch('')
-    setActors([])
-    setActions([])
-    setRange(undefined)
-  }
-
   return (
     <Section id="audit-log" title="Audit log" description="Who did what, filterable by person, action and date">
-      <article className="bg-card min-w-0 overflow-hidden rounded-lg border lg:col-span-2">
-        <header className="flex flex-wrap items-center gap-1.5 border-b px-3 py-2">
-          <SearchField
-            value={search}
-            onChange={setSearch}
-            placeholder="Search people, targets or IPs"
-            label="Search the audit log"
-            className="w-full sm:w-60"
-          />
-          <FacetFilter
-            title="Actor"
-            options={PEOPLE.map((name) => ({
-              value: name, label: name, count: actorCounts.get(name) ?? 0, visual: <UserAvatar name={name} className="size-4" />,
-            }))}
-            selected={actors}
-            onChange={setActors}
-          />
-          <DateRangePicker
-            value={range}
-            onChange={setRange}
-            presets={range?.from ? DATE_PRESETS_WITH_CLEAR : DATE_PRESETS}
-            defaultMonth={NOW}
-            // No events after now, so later days can't be picked.
-            disabled={{ after: NOW }}
-            size="sm"
-            placeholder="Date"
-            label={range?.from ? formatDateRange(range.from, range.to) : undefined}
-            // Weighted and dashed like the Actor filter beside it.
-            className={cn('font-medium', !range?.from && 'text-foreground border-dashed')}
-          />
-          {active && (
-            <Button variant="ghost" size="sm" onClick={reset}>
-              Reset
-              <HugeiconsIcon icon={Cancel01Icon} strokeWidth={2} data-icon="inline-end" />
-            </Button>
-          )}
-          <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap tabular-nums" aria-live="polite">
-            {visible.length === EVENTS.length ? plural(EVENTS.length, 'event') : `${visible.length} of ${plural(EVENTS.length, 'event')}`}
-          </span>
-        </header>
-
-        <div className="border-b px-3 py-2">
-          <ToggleGroup
-            type="multiple"
-            spacing={1}
-            value={actions}
-            onValueChange={(v) => setActions(v as Action[])}
-            aria-label="Filter by action"
-            className="flex-wrap"
-          >
-            {ACTION_KEYS.map((a) => (
-              <ToggleGroupItem
-                key={a}
-                value={a}
-                size="sm"
-                className="text-muted-foreground hover:text-foreground aria-pressed:bg-accent data-[state=on]:border-border data-[state=on]:bg-accent data-[state=on]:text-foreground h-6 rounded-full border border-transparent px-2.5 text-xs"
-              >
-                <HugeiconsIcon icon={ACTIONS[a].icon} strokeWidth={2} className={cn('size-3.5', ACTIONS[a].className)} />
-                {ACTIONS[a].label}
-                <span className="text-muted-foreground tabular-nums">{actionCounts.get(a) ?? 0}</span>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </div>
-
-        <div className="max-h-[30rem] overflow-y-auto">
-          {groups.length > 0 ? (
-            groups.map((group) => {
-              const day = dayLabel(group.date)
-              const headingId = `${id}-${group.key}`
-              return (
-                <section key={group.key} aria-labelledby={headingId}>
-                  <h4
-                    id={headingId}
-                    className="bg-subtle sticky top-0 z-10 flex items-center gap-2 border-b px-3 py-1.5 text-xs"
-                  >
-                    <span className="font-medium">{day.label}</span>
-                    <span className="text-muted-foreground">{day.sub}</span>
-                    <span className="text-muted-foreground ml-auto tabular-nums">{plural(group.events.length, 'event')}</span>
-                  </h4>
-                  <ul>
-                    {group.events.map((event) => (
-                      <EventRow
-                        key={event.id}
-                        event={event}
-                        open={openId === event.id}
-                        onToggle={() => setOpenId(openId === event.id ? null : event.id)}
-                      />
-                    ))}
-                  </ul>
-                </section>
-              )
-            })
-          ) : (
-            <div className="flex h-40 flex-col items-center justify-center gap-2 text-center">
-              <p className="text-muted-foreground text-xs">No events match these filters.</p>
-              <Button variant="outline" size="sm" onClick={reset}>Clear filters</Button>
-            </div>
-          )}
-        </div>
-      </article>
+      <AuditLog events={EVENTS} actions={ACTIONS} actors={PEOPLE} now={NOW} className="lg:col-span-2" />
     </Section>
-  )
-}
-
-function EventRow({ event, open, onToggle }: { event: AuditEvent; open: boolean; onToggle: () => void }) {
-  const action = ACTIONS[event.action]
-  const panelId = `${event.id}-details`
-
-  return (
-    <li className="border-b last:border-b-0">
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        onClick={onToggle}
-        className="hover:bg-accent/60 focus-visible:bg-accent aria-expanded:bg-accent/40 flex h-9 w-full cursor-default items-center gap-2.5 px-3 text-left text-xs outline-none"
-      >
-        <HugeiconsIcon
-          icon={ArrowRight01Icon}
-          strokeWidth={2}
-          className={cn('text-muted-foreground size-3 shrink-0 transition-transform', open && 'rotate-90')}
-        />
-        <UserAvatar name={event.actor} className="size-5" />
-        <span className="min-w-0 flex-1 truncate">
-          <span className="font-medium">{event.actor}</span>{' '}
-          <span className="text-muted-foreground">
-            {action.verb}
-            {event.kind && ` ${event.kind}`}
-          </span>{' '}
-          <span className="font-medium">{event.target}</span>
-        </span>
-        <span className="text-muted-foreground hidden shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] md:inline-flex">
-          <HugeiconsIcon icon={action.icon} strokeWidth={2} className={cn('size-3', action.className)} />
-          {action.label}
-        </span>
-        <span className="text-muted-foreground hidden w-24 shrink-0 font-mono text-[11px] sm:inline">{event.ip}</span>
-        <time dateTime={event.at.toISOString()} className="text-muted-foreground w-10 shrink-0 text-right tabular-nums">
-          {formatTime(event.at)}
-        </time>
-      </button>
-
-      {open && (
-        <div id={panelId} className="bg-subtle grid gap-3 border-t px-3 py-3 text-xs sm:pl-16">
-          <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 sm:grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)]">
-            <dt className="text-muted-foreground">Event</dt>
-            <dd className="truncate font-mono">{event.id}</dd>
-            <dt className="text-muted-foreground">IP address</dt>
-            <dd className="font-mono">{event.ip}</dd>
-            <dt className="text-muted-foreground">Time</dt>
-            <dd>{format(event.at, 'EEE d MMM yyyy, HH:mm:ss')}</dd>
-            <dt className="text-muted-foreground">Actor</dt>
-            <dd>{event.actor}</dd>
-          </dl>
-          {event.action === 'signed_in' ? <SessionDetails changes={event.changes} /> : <ChangeDiff changes={event.changes} />}
-        </div>
-      )}
-    </li>
-  )
-}
-
-function SessionDetails({ changes }: { changes: Change[] }) {
-  return (
-    <div className="bg-card rounded-md border">
-      <p className="text-muted-foreground border-b px-2.5 py-1.5 font-medium">Session</p>
-      <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 px-2.5 py-2">
-        {changes.map((c) => (
-          <div key={c.field} className="contents">
-            <dt className="text-muted-foreground">{c.field}</dt>
-            <dd>{c.after}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  )
-}
-
-function ChangeDiff({ changes }: { changes: Change[] }) {
-  return (
-    <div className="bg-card overflow-hidden rounded-md border">
-      <table className="w-full table-fixed text-xs">
-        <caption className="sr-only">Changes: each field before and after</caption>
-        <thead className="text-muted-foreground bg-muted/50">
-          <tr>
-            <th scope="col" className="w-[28%] px-2.5 py-1.5 text-left font-medium">Field</th>
-            <th scope="col" className="px-2.5 py-1.5 text-left font-medium">Before</th>
-            <th scope="col" className="px-2.5 py-1.5 text-left font-medium">After</th>
-          </tr>
-        </thead>
-        <tbody>
-          {changes.map((c) => (
-            <tr key={c.field} className="border-t">
-              <th scope="row" className="text-muted-foreground px-2.5 py-1.5 text-left align-top font-normal">{c.field}</th>
-              <td className="px-2.5 py-1.5 align-top"><DiffValue value={c.before} removed /></td>
-              <td className="px-2.5 py-1.5 align-top"><DiffValue value={c.after} /></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-function DiffValue({ value, removed }: { value?: string; removed?: boolean }) {
-  if (value === undefined) return <span className="text-muted-foreground">—</span>
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-full gap-1 rounded px-1 [overflow-wrap:anywhere]',
-        removed ? 'bg-destructive/10 text-destructive' : 'bg-status-done/10 text-status-done',
-      )}
-    >
-      <span aria-hidden className="select-none">{removed ? '−' : '+'}</span>
-      <span className="min-w-0">{value}</span>
-    </span>
   )
 }

@@ -17,8 +17,10 @@ import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/
 export type SettingsNavItem = { id: string; label: string; icon: IconSvgElement; badge?: ReactNode }
 export type SettingsNavGroup = { label?: string; items: SettingsNavItem[] }
 
-export function SettingsPage({ title = 'Settings', nav, active, onSelect, renderSection, start, className }: {
+export function SettingsPage({ title = 'Settings', nav, active, onSelect, renderSection, start, backLabel, className }: {
   title?: string
+  // The narrow screen's way back to the list. "All settings" when left out.
+  backLabel?: string
   nav: SettingsNavGroup[]
   // The open section. null: the list of sections on a narrow screen, the
   // first section on a wide one.
@@ -76,7 +78,7 @@ export function SettingsPage({ title = 'Settings', nav, active, onSelect, render
         <div className={cn('min-h-0 min-w-0 flex-1 flex-col overflow-y-auto @3xl:flex', active ? 'flex' : 'hidden')}>
           <div className="mx-auto grid w-full max-w-2xl gap-6 px-4 py-5 @3xl:px-8 @3xl:py-8">
             <Button variant="ghost" size="sm" className="-ml-2 w-fit @3xl:hidden" onClick={() => onSelect(null)}>
-              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} data-icon="inline-start" /> All {title.toLowerCase()}
+              <HugeiconsIcon icon={ArrowLeft01Icon} strokeWidth={2} data-icon="inline-start" /> {backLabel ?? `All ${title.toLowerCase()}`}
             </Button>
             {shown && renderSection(shown.id)}
           </div>

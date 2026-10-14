@@ -11,6 +11,7 @@ import type { View } from './types'
 //   #/templates/ai-chat/agents[/new | /<id>[/<tab> | /edit]]  agents, the builder
 //   #/templates/ai-chat/runs[/<id>]           the runs inbox, one run open
 //   #/templates/ai-chat/settings[/<section>]  Settings
+//   #/templates/ai-chat/admin[/<section>]     the admin console
 // Only the full-page app uses them; in the kit the workspace sits in a card.
 
 export const APP_BASE = '/templates/ai-chat'
@@ -21,12 +22,15 @@ const OLD_BASE = '/mockups/ai-chat'
 export const isAppPath = (path: string) =>
   [APP_BASE, OLD_BASE].some((base) => path === base || path.startsWith(`${base}/`) || path.startsWith(`${base}?`))
 
-export type AppRoute ={ view: View | null; settings: string | null | undefined }
+// settings and admin: undefined when that page isn't open, null for its list of
+// sections (the first section on a wide screen).
+export type AppRoute = { view: View | null; settings: string | null | undefined; admin: string | null | undefined }
 
 export function parseRoute(path: string): AppRoute {
   const base = path.startsWith(OLD_BASE) ? OLD_BASE : APP_BASE
   const [kind, id, extra] = path.split('?')[0].slice(base.length).split('/').filter(Boolean).map(decodeURIComponent)
-  if (kind === 'settings') return { view: null, settings: id ?? null }
+  if (kind === 'settings') return { view: null, settings: id ?? null, admin: undefined }
+  if (kind === 'admin') return { view: null, settings: undefined, admin: id ?? null }
   const view: View | null =
     !kind ? { kind: 'new', projectId: null }
       : kind === 'chat' && id ? { kind: 'chat', chatId: id }
@@ -37,7 +41,7 @@ export function parseRoute(path: string): AppRoute {
               : kind === 'agents' ? { kind: 'agents', agentId: id, tab: extra }
                 : kind === 'runs' ? { kind: 'runs', runId: id }
                   : null
-  return { view, settings: undefined }
+  return { view, settings: undefined, admin: undefined }
 }
 
 export function pathFor(view: View) {
@@ -65,3 +69,7 @@ export function pathFor(view: View) {
 }
 
 export const settingsPath = (section: string | null) => `${APP_BASE}/settings${section ? `/${encodeURIComponent(section)}` : ''}`
+export const adminPath = (section: string | null) => `${APP_BASE}/admin${section ? `/${encodeURIComponent(section)}` : ''}`
+
+// Settings and the admin console fill the window, with no view behind them.
+export const isFullPage = (route: AppRoute) => route.settings !== undefined || route.admin !== undefined

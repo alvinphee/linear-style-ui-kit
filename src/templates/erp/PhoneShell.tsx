@@ -7,8 +7,9 @@ import {
 import { toast } from 'sonner'
 import { cn } from 'cn'
 import {
-  MobileFab, MobileGroup, MobileMenu, MobileMenuButton, MobileMenuLink, MobileMenuSection, MobileOption, MobileRow,
-  MobileFloatingTabBar, MobileSheet, MobileShell, MobileTabBar, MobileTopAction, MobileTopBar, type MobileTab,
+  MobileAccountButton, MobileFab, MobileGroup, MobileMenu, MobileMenuButton, MobileMenuLauncher, MobileMenuLink, MobileMenuModuleList, MobileMenuSection,
+  MobileMenuTiles, MobileModuleSheet, MobileModuleStrip, MobileOption, MobileRow,
+  MobileFloatingTabBar, MobileSheet, MobileShell, MobileTabBar, MobileTopAction, MobileTopBar, type MobileSwitcherItem, type MobileTab,
 } from '@/blocks/mobile-shell'
 import { IconMark, LetterMark } from '@/components/mark'
 import { UserAvatar } from '@/components/person'
@@ -24,7 +25,7 @@ import { pagesOf } from './modules'
 import { openModule } from './phone'
 import { go, goScreen } from './route'
 import { CompanySwitcher, allowedModules, moduleDescription, moduleLabel, useAlerts } from './Shell'
-import { useErp, type PhoneNav, type StartPage, type TabStyle } from './store'
+import { useErp, type MenuButton, type MenuEffect, type PhoneNav, type StartPage, type SwitcherStyle, type TabStyle } from './store'
 import type { ErpModule, ErpPage } from './types'
 
 // The ERP on a phone: the kit's mobile shell block in place of the sidebar
@@ -45,6 +46,10 @@ import type { ErpModule, ErpPage } from './types'
 // filled in) keeps a back arrow. "Both" keeps a tab bar under the menu, for
 // the screens used all day (Home, Inbox, Scan, Ask AI).
 //
+// Menu button: "≡ Menu"; the bars alone, with the page's title beside them;
+// or the current module, its mark and name, which makes the button the
+// module switcher: its menu leads with every module as a tile.
+//
 // Tab bar style: classic, along the bottom; or floating, as iOS 26 draws it,
 // a capsule over the page with Scan among the tabs and search as a
 // round button beside it, shrinking to the current tab while you scroll down.
@@ -55,6 +60,22 @@ const THEMES: { value: Theme; label: string }[] = [
   { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' },
+]
+
+const MENU_EFFECTS: { value: MenuEffect; label: string }[] = [
+  { value: 'fade', label: 'Fade' },
+  { value: 'curtain', label: 'Curtain' },
+  { value: 'rise', label: 'Rise' },
+  { value: 'cascade', label: 'Cascade' },
+  { value: 'drawer', label: 'Drawer' },
+]
+
+const SWITCHER_STYLES: { value: SwitcherStyle; label: string }[] = [
+  { value: 'tiles', label: 'Tiles' },
+  { value: 'launcher', label: 'Launcher' },
+  { value: 'list', label: 'List' },
+  { value: 'sheet', label: 'Sheet' },
+  { value: 'strip', label: 'Strip' },
 ]
 
 // How deep a screen sits in the Home stack: a deeper one slides in.
@@ -73,7 +94,9 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
   aside?: ReactNode
   children: ReactNode
 }) {
-  const { data, pageTitle, setPaletteOpen, copilotOpen, setCopilotOpen, startCreate, openPeek, phoneNav, tabStyle, session, setRole } = useErp()
+  const {
+    data, pageTitle, setPaletteOpen, copilotOpen, setCopilotOpen, startCreate, openPeek, phoneNav, tabStyle, menuButton, menuEffect, switcherStyle, session, setRole,
+  } = useErp()
   const path = usePath()
   const alerts = useAlerts()
   const [tab, setTab] = useState<Tab>('home')
@@ -83,6 +106,7 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
   const [chatsOpen, setChatsOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [modulesOpen, setModulesOpen] = useState(false)
   const menuMode = phoneNav !== 'tabs'
   const withTabs = phoneNav !== 'menu' && !rest
   const floating = withTabs && tabStyle === 'floating'
@@ -92,6 +116,7 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
     setTab('home')
     setScrolled(false)
     setMenuOpen(false)
+    setModulesOpen(false)
     setChatsOpen(false)
   }, [path])
 
@@ -146,15 +171,45 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
     </button>
   )
 
+  const toggle = { open: menuOpen, onClick: () => setMenuOpen(!menuOpen), controls: 'erp-menu' }
+  const screenTitle = tab === 'inbox' ? 'Inbox' : module.id === 'home' && page.id === 'launchpad' ? 'Home' : index ? moduleLabel(module) : pageTitle ?? page.label
+  const menuToggle =
+    menuButton === 'switcher' && switcherStyle === 'sheet' ? (
+      // The name switches module in a sheet; the bars open the menu.
+      <div className="flex min-w-0 items-center gap-0.5">
+        <MobileMenuButton {...toggle} variant="icon" />
+        <MobileMenuButton
+          open={modulesOpen}
+          onClick={() => setModulesOpen(true)}
+          controls="erp-modules"
+          variant="switcher"
+          mark={<IconMark icon={module.icon} colour={module.colour} size="sm" />}
+          label={moduleLabel(module)}
+        />
+      </div>
+    ) : menuButton === 'switcher' ? (
+      <MobileMenuButton {...toggle} variant="switcher" mark={<IconMark icon={module.icon} colour={module.colour} size="sm" />} label={moduleLabel(module)} />
+    ) : menuButton === 'icon' ? (
+      // The bars alone leave room for the screen's own name beside them.
+      <div className="flex min-w-0 items-center gap-1">
+        <MobileMenuButton {...toggle} variant="icon" />
+        <span className="min-w-0 truncate text-[15px] font-semibold">{screenTitle}</span>
+      </div>
+    ) : (
+      <MobileMenuButton {...toggle} />
+    )
+
   let header: ReactNode
   if (menuMode && !back) {
     header = (
       <MobileTopBar
-        title={<MobileMenuButton open={menuOpen} onClick={() => setMenuOpen(!menuOpen)} controls="erp-menu" />}
+        title={menuToggle}
         actions={!menuOpen && (
           <>
             {tab === 'home' && Extra && <MobileTopAction label="Chats" icon={BubbleChatIcon} onClick={() => setChatsOpen(true)} />}
             {search}
+            {/* The account (profile, company, role, theme, sign out) lives here, not in the menu. */}
+            {session && <MobileAccountButton name={session.name} pressed={tab === 'more'} onClick={() => setTab(tab === 'more' ? 'home' : 'more')} />}
           </>
         )}
       />
@@ -210,21 +265,36 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
   }
   const allowed = allowedModules(session?.role).filter((m) => m.id !== 'home')
 
+  const switcher = menuButton === 'switcher'
+  const home = allowedModules(session?.role).find((m) => m.id === 'home')
+  const moduleItems: MobileSwitcherItem[] = [...(home ? [home] : []), ...allowed].map((m) => ({
+    id: m.id,
+    label: moduleLabel(m),
+    mark: <IconMark icon={m.icon} colour={m.colour} />,
+    detail: m.metric?.(data) ?? moduleDescription(m),
+    current: m.id === module.id,
+    onClick: fromMenu(() => go(m.id, m.pages[0].id)),
+  }))
+  // The sheet and the strip switch module outside the menu; the rest lead it.
+  const inMenu = switcherStyle !== 'sheet' && switcherStyle !== 'strip'
+  const strip = menuMode && switcher && switcherStyle === 'strip' && !back && tab === 'home' && !menuOpen && (
+    <MobileModuleStrip items={moduleItems} />
+  )
   const menu = menuMode && menuOpen && (
-    <MobileMenu id="erp-menu" onClose={() => setMenuOpen(false)}>
-      <MobileMenuSection title="Menu">
-        <MobileMenuLink current={tab === 'home' && module.id === 'home' && page.id === 'launchpad'} onClick={fromMenu(() => go('home', 'launchpad'))}>
-          Home
-        </MobileMenuLink>
-        {ai ? (
-          <MobileMenuLink current={tab === 'home' && onAssistant} onClick={fromMenu(() => go('home', 'assistant'))}>Assistant</MobileMenuLink>
-        ) : (
-          <MobileMenuLink onClick={fromMenu(() => setCopilotOpen(true))}>Ask AI</MobileMenuLink>
-        )}
-        <MobileMenuLink current={tab === 'inbox'} count={unread} onClick={fromMenu(() => setTab('inbox'))}>Inbox</MobileMenuLink>
-        <MobileMenuLink onClick={fromMenu(() => setScanning(true))}>Scan a code</MobileMenuLink>
-      </MobileMenuSection>
-      {module.id !== 'home' && (
+    <MobileMenu id="erp-menu" effect={menuEffect} onClose={() => setMenuOpen(false)}>
+      {/* The button is the module switcher: the modules come first, in the chosen layout. */}
+      {switcher && inMenu && (
+        <MobileMenuSection title="Modules">
+          {switcherStyle === 'launcher' ? (
+            <MobileMenuLauncher items={moduleItems} />
+          ) : switcherStyle === 'list' ? (
+            <MobileMenuModuleList items={moduleItems} />
+          ) : (
+            <MobileMenuTiles items={moduleItems} />
+          )}
+        </MobileMenuSection>
+      )}
+      {switcher && module.id !== 'home' && (
         <MobileMenuSection title={moduleLabel(module)}>
           {visiblePages.map((p) => (
             <MobileMenuLink
@@ -238,18 +308,44 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
           ))}
         </MobileMenuSection>
       )}
-      <MobileMenuSection title="Modules">
-        {allowed.map((m) => (
-          // Its pages are in this menu, so a module opens on its first page.
-          <MobileMenuLink key={m.id} current={m.id === module.id} onClick={fromMenu(() => go(m.id, m.pages[0].id))}>
-            {moduleLabel(m)}
+      <MobileMenuSection title="Menu">
+        {!switcher && (
+          <MobileMenuLink current={tab === 'home' && module.id === 'home' && page.id === 'launchpad'} onClick={fromMenu(() => go('home', 'launchpad'))}>
+            Home
           </MobileMenuLink>
-        ))}
+        )}
+        {ai ? (
+          <MobileMenuLink current={tab === 'home' && onAssistant} onClick={fromMenu(() => go('home', 'assistant'))}>Assistant</MobileMenuLink>
+        ) : (
+          <MobileMenuLink onClick={fromMenu(() => setCopilotOpen(true))}>Ask AI</MobileMenuLink>
+        )}
+        <MobileMenuLink current={tab === 'inbox'} count={unread} onClick={fromMenu(() => setTab('inbox'))}>Inbox</MobileMenuLink>
+        <MobileMenuLink onClick={fromMenu(() => setScanning(true))}>Scan a code</MobileMenuLink>
       </MobileMenuSection>
-      <MobileMenuSection title="Account">
-        {/* Like every choice here, it closes the menu first: a sheet over the open menu loses focus to it and shuts. */}
-        <MoreScreen modules={false} onChooseRole={fromMenu(() => setChoosingRole(true))} className="p-0 pt-1" />
-      </MobileMenuSection>
+      {!switcher && module.id !== 'home' && (
+        <MobileMenuSection title={moduleLabel(module)}>
+          {visiblePages.map((p) => (
+            <MobileMenuLink
+              key={p.id}
+              current={tab === 'home' && !index && p.id === page.id}
+              count={p.badge?.(data)}
+              onClick={fromMenu(() => go(module.id, p.id))}
+            >
+              {p.label}
+            </MobileMenuLink>
+          ))}
+        </MobileMenuSection>
+      )}
+      {!switcher && (
+        <MobileMenuSection title="Modules">
+          {allowed.map((m) => (
+            // Its pages are in this menu, so a module opens on its first page.
+            <MobileMenuLink key={m.id} current={m.id === module.id} onClick={fromMenu(() => go(m.id, m.pages[0].id))}>
+              {moduleLabel(m)}
+            </MobileMenuLink>
+          ))}
+        </MobileMenuSection>
+      )}
     </MobileMenu>
   )
 
@@ -275,6 +371,7 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
       <MobileShell
         className="h-svh"
         header={header}
+        banner={strip}
         bodyId="erp-main"
         bodyClassName="@container"
         screenKey={path}
@@ -342,10 +439,14 @@ export function PhoneShell({ module, page, index, rest, aside, children }: {
             {alerts.length === 0 && <li className="text-muted-foreground p-4 text-xs">Nothing needs you.</li>}
           </ul>
         )}
-        {tab === 'more' && <MoreScreen onModule={() => setTab('home')} onChooseRole={() => setChoosingRole(true)} />}
+        {tab === 'more' && <MoreScreen modules={!menuMode} onModule={() => setTab('home')} onChooseRole={() => setChoosingRole(true)} />}
       </MobileShell>
 
       {aside}
+
+      {menuMode && switcher && switcherStyle === 'sheet' && (
+        <MobileModuleSheet open={modulesOpen} onOpenChange={setModulesOpen} items={moduleItems} />
+      )}
 
       {/* Out here rather than in More, so the menu screen, which shows More's settings, never holds a dialog. */}
       {session && (
@@ -456,7 +557,10 @@ function MoreScreen({ onModule, onChooseRole, modules: showModules = true, class
   modules?: boolean
   className?: string
 }) {
-  const { session, company, setCompany, signOut, startPage, setStartPage, phoneNav, setPhoneNav, tabStyle, setTabStyle } = useErp()
+  const {
+    session, company, setCompany, signOut, startPage, setStartPage, phoneNav, setPhoneNav, tabStyle, setTabStyle, menuButton, setMenuButton,
+    menuEffect, setMenuEffect, switcherStyle, setSwitcherStyle,
+  } = useErp()
   const { theme, setTheme } = useTheme()
   if (!session) return null
   const modules = allowedModules(session.role).filter((m) => m.id !== 'home')
@@ -518,6 +622,53 @@ function MoreScreen({ onModule, onChooseRole, modules: showModules = true, class
             <ToggleGroupItem value="both" className="h-9 flex-1">Both</ToggleGroupItem>
           </ToggleGroup>
         </MobileRow>
+        {phoneNav !== 'tabs' && (
+          <MobileRow label="Menu button">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={0}
+              value={menuButton}
+              onValueChange={(v) => v && setMenuButton(v as MenuButton)}
+              aria-label="Menu button"
+              className="w-full"
+            >
+              <ToggleGroupItem value="label" className="h-9 flex-1">≡ Menu</ToggleGroupItem>
+              <ToggleGroupItem value="icon" className="h-9 flex-1">Icon</ToggleGroupItem>
+              <ToggleGroupItem value="switcher" className="h-9 flex-1">Module</ToggleGroupItem>
+            </ToggleGroup>
+          </MobileRow>
+        )}
+        {phoneNav !== 'tabs' && (
+          <MobileRow label="Menu opens">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={0}
+              value={menuEffect}
+              onValueChange={(v) => v && setMenuEffect(v as MenuEffect)}
+              aria-label="How the menu opens"
+              className="w-full"
+            >
+              {MENU_EFFECTS.map((e) => <ToggleGroupItem key={e.value} value={e.value} className="h-9 min-w-0 flex-1 px-1 text-xs">{e.label}</ToggleGroupItem>)}
+            </ToggleGroup>
+          </MobileRow>
+        )}
+        {phoneNav !== 'tabs' && menuButton === 'switcher' && (
+          <MobileRow label="Module switcher">
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={0}
+              value={switcherStyle}
+              onValueChange={(v) => v && setSwitcherStyle(v as SwitcherStyle)}
+              aria-label="Module switcher style"
+              className="w-full"
+            >
+              {SWITCHER_STYLES.map((e) => <ToggleGroupItem key={e.value} value={e.value} className="h-9 min-w-0 flex-1 px-1 text-xs">{e.label}</ToggleGroupItem>)}
+            </ToggleGroup>
+          </MobileRow>
+        )}
         {phoneNav !== 'menu' && (
           <MobileRow label="Tab bar style">
             <ToggleGroup

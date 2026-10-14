@@ -18,6 +18,7 @@ import { TriggerEditor } from '@/blocks/ai/agents/trigger-editor'
 import { IconAction } from '@/components/icon-action'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
+import { useOrgPolicy } from './admin/org'
 import { useAgents } from './agents/context'
 import { AGENT_CATEGORIES, AGENT_TEMPLATES } from './agents/agents-data'
 import { BUILDER_GREETING, BUILDER_SUGGESTIONS, EMPTY_DRAFT, builderTurn, previewReply } from './agents/builder-script'
@@ -280,6 +281,7 @@ function AgentView({ agent, tab, start }: { agent: Agent; tab?: string; start?: 
 }
 
 function AgentBuilderView({ agent, start }: { agent?: Agent; start?: ReactNode }) {
+  const { policy } = useOrgPolicy()
   const actions = useActions()
   const state = useAgents()
   const { connectors } = useConnectors()
@@ -362,7 +364,7 @@ function AgentBuilderView({ agent, start }: { agent?: Agent; start?: ReactNode }
           onChange={(patch) => setDraft((d) => ({ ...d, ...patch }))}
           icons={PROJECT_ICONS}
           colours={PROJECT_COLOURS}
-          models={MODELS}
+          models={MODELS.filter((m) => policy.models.includes(m.id))}
           connectors={connectors}
           events={AGENT_EVENTS}
           skills={skills}

@@ -19,17 +19,22 @@ export type StartPage = 'launchpad' | 'assistant'
 export type PhoneNav = 'tabs' | 'menu' | 'both'
 // The phone's tab bar: a strip along the bottom, or floating over the page (working as iOS 26's).
 export type TabStyle = 'classic' | 'floating'
+// The menu screen's button: ≡ Menu, the bars alone, or the current module (a module switcher).
+export type MenuButton = 'label' | 'icon' | 'switcher'
+// How the menu screen opens, and how the module switcher chooses a module (the kit's MobileMenuEffect and MobileSwitcherStyle).
+export type MenuEffect = 'fade' | 'curtain' | 'rise' | 'cascade' | 'drawer'
+export type SwitcherStyle = 'tiles' | 'launcher' | 'list' | 'sheet' | 'strip'
 
 // groupByDate: the Assistant's chat history grouped by date, or one list (the default).
 // copilotWidth: the Ask AI panel's width, as you last left it.
 type Saved = {
-  session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean; phoneNav: PhoneNav; tabStyle: TabStyle
+  session: Session | null; companyId: string | null; favourites: string[]; startPage: StartPage; groupByDate: boolean; phoneNav: PhoneNav; tabStyle: TabStyle; menuButton: MenuButton; menuEffect: MenuEffect; switcherStyle: SwitcherStyle
   copilotWidth: number
 }
 
 const KEY = 'linear-kit:erp:v1'
 
-const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false, phoneNav: 'tabs', tabStyle: 'classic', copilotWidth: 400 }
+const DEFAULTS: Saved = { session: null, companyId: null, favourites: ['accounting', 'sales'], startPage: 'launchpad', groupByDate: false, phoneNav: 'tabs', tabStyle: 'classic', menuButton: 'label', menuEffect: 'fade', switcherStyle: 'tiles', copilotWidth: 400 }
 
 function load(): Saved {
   try {
@@ -49,6 +54,9 @@ type ErpState = {
   startPage: StartPage
   phoneNav: PhoneNav
   tabStyle: TabStyle
+  menuButton: MenuButton
+  menuEffect: MenuEffect
+  switcherStyle: SwitcherStyle
   groupByDate: boolean
   copilotWidth: number
   // A page's own title for the end of the breadcrumb, such as a chat's.
@@ -72,6 +80,9 @@ type ErpState = {
   setStartPage: (page: StartPage) => void
   setPhoneNav: (nav: PhoneNav) => void
   setTabStyle: (style: TabStyle) => void
+  setMenuButton: (button: MenuButton) => void
+  setMenuEffect: (effect: MenuEffect) => void
+  setSwitcherStyle: (style: SwitcherStyle) => void
   setGroupByDate: (byDate: boolean) => void
   setCopilotWidth: (width: number) => void
   setPageTitle: (title: string | null) => void
@@ -129,6 +140,9 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     startPage: saved.startPage,
     phoneNav: saved.phoneNav,
     tabStyle: saved.tabStyle,
+    menuButton: saved.menuButton,
+    menuEffect: saved.menuEffect,
+    switcherStyle: saved.switcherStyle,
     groupByDate: saved.groupByDate,
     copilotWidth: saved.copilotWidth,
     pageTitle,
@@ -172,6 +186,9 @@ export function ErpProvider({ children }: { children: ReactNode }) {
     setStartPage: (startPage) => setSaved((s) => ({ ...s, startPage })),
     setPhoneNav: (phoneNav) => setSaved((s) => ({ ...s, phoneNav })),
     setTabStyle: (tabStyle) => setSaved((s) => ({ ...s, tabStyle })),
+    setMenuButton: (menuButton) => setSaved((s) => ({ ...s, menuButton })),
+    setMenuEffect: (menuEffect) => setSaved((s) => ({ ...s, menuEffect })),
+    setSwitcherStyle: (switcherStyle) => setSaved((s) => ({ ...s, switcherStyle })),
     setGroupByDate: (groupByDate) => setSaved((s) => ({ ...s, groupByDate })),
     setCopilotWidth: (copilotWidth) => setSaved((s) => ({ ...s, copilotWidth })),
     setPageTitle,

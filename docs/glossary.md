@@ -154,6 +154,8 @@ used by most design systems).
 | Stack navigation (push / pop) | Phone navigation one screen at a time: opening a record pushes a screen with a back arrow, Back pops it |
 | Top bar (navigation bar) | A phone screen's header: a big title on a tab's first screen, a back arrow and a centred title on a pushed one, at most two actions |
 | Menu screen (full-screen menu) | A phone's navigation behind a "Menu" button in the top bar: every destination full screen under the bar, in big type under small headings, in place of a tab bar or a slide-out drawer. shadcn's own site uses it on a phone. The block part is `MobileMenu` |
+| Menu effect | How the menu screen opens: fade (blurred page), curtain (drops from the top bar), rise (from the foot), cascade (groups rise in one after another), drawer (a panel from the left edge over a dimmed page, closed by a tap outside). `MobileMenu`'s `effect` |
+| Module switcher | The control that changes the module (workspace, team) you work in. Five designs in the phone shell: tiles, launcher (a home screen's icon grid), list, sheet (a bottom sheet from the top bar's name) and strip (chips under the top bar). `MobileSwitcherStyle` |
 | Floating tab bar | A tab bar that floats over the page as a capsule, with search as a round button beside it; it shrinks to the current tab while you scroll down and comes back as you scroll up (iOS 26's behaviour). The block part is `MobileFloatingTabBar` |
 | Large title | A page's big heading at the top of its content that stands for the title; the small title in the top bar appears once it scrolls away |
 | Mobile shell | The phone app's frame: top bar, the screen, and the tab bar or the screen's own bottom action. The block is `mobile-shell` |
@@ -253,8 +255,6 @@ used by most design systems).
 | Run | One time an agent worked: queued, running, waiting for approval, then succeeded, failed or cancelled, with its steps and result |
 | Runs inbox | Every agent's runs, what needs you first (waiting for approval, or failed and not opened) |
 | Approval (human in the loop) | A run stops before a tool that sends or changes something and asks: Allow once, Always allow (it won't ask again for that tool), or Deny (the step is skipped) |
-| Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
-
 | Prompt library (saved prompts) | Prompts kept to reuse, yours and your team's; a prompt template holds variables such as {{customer}} that are filled in before it is sent |
 | Queued message | A message written while a reply is still running; it sends when the reply ends (not while it waits for an approval) |
 | Branch (message) | One version of an edited message with the replies after it; editing keeps the old branch, switched with ‹ 1 / 2 › |
@@ -266,15 +266,29 @@ used by most design systems).
 | Usage limit and rate limit | How much a plan may use in a period (the banner offers a cheaper model or an upgrade), and a short "too many requests" pause with a countdown before retrying |
 | Onboarding (first run) | The welcome on a first visit: name and role, reply style, apps to connect, a prompt to try |
 | Command menu | Ctrl+K: search and run anything in the app (chats, projects, agents, knowledge, settings, actions) |
+| Admin console | Where owners and admins run the organisation: members, roles, sign-in, policies, usage and the audit log |
+| Seat | One person's place on the plan; invited and suspended members hold one too |
+| Role and permission (RBAC) | What a role may do, set per permission in a matrix; Owner, Admin and Member are built in, custom roles can be added |
+| Domain auto-join | People with the organisation's email domain join without an invite |
+| SSO (SAML, OIDC) | Signing in through the organisation's identity provider. The service provider's entity ID and ACS URL go to the identity provider; its metadata or issuer comes back; a test sign-in shows the attributes received |
+| SCIM provisioning | The identity provider creates, updates and removes members and groups automatically, with a bearer token shown once |
+| Domain verification | Proving the organisation owns an email domain with a DNS TXT record |
+| IP allowlist | The address ranges (CIDR) people may sign in from |
+| Audit log | Who did what and when, with before and after for changes, filtered and exported |
+| Allow list (connectors) | The connectors the organisation lets people use; a connector request asks an admin to allow a blocked one |
+| Model access and feature policy | Which models and features (web search, research, voice…) the organisation allows; what is off leaves the app for everyone |
+| Retention policy and legal hold | How long the organisation keeps chats; a legal hold pauses deletion |
+| Recurrence | How often something repeats: once, daily, weekdays, weekly on some days, monthly on a day, at a time in a time zone |
+
+## Forms and checklists
 The vocabulary of the form blocks (`src/blocks/form-fields.tsx`,
 `form-renderer.tsx`, `forms-catalogue.tsx`). The blocks are generic: a
-## Forms and checklists
 checklist, an expense claim and a survey are all forms to them.
 
-| Form (form template, form definition) | What a form asks: its name, sections and fields, as data. What the catalogue lists. The type is `FormDefinition` |
-| Field schema | The kit's one list of field kinds and how each is drawn and checked, shared by the form dialog and the form renderer (`form-fields.tsx`) |
 | Term | Meaning |
 |---|---|
+| Form (form template, form definition) | What a form asks: its name, sections and fields, as data. What the catalogue lists. The type is `FormDefinition` |
+| Field schema | The kit's one list of field kinds and how each is drawn and checked, shared by the form dialog and the form renderer (`form-fields.tsx`) |
 | Form renderer | Draws a whole form from its definition: sections, progress, validation, review, submit. The block is `form-renderer` |
 | Submission | One filled-in form, kept as a record: who, when, the answers and the result |
 | Result | How a submission came out: passed or failed (a form with checks), or completed (one without) |

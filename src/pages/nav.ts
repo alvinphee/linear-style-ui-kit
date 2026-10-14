@@ -115,6 +115,7 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
       { id: 'ai-components', label: 'AI components', icon: AiMagicIcon, category: 'Components' },
       { id: 'ai-workspace', label: 'AI workspace', icon: AiChat02Icon, category: 'Blocks' },
       { id: 'ai-features', label: 'AI in the product', icon: SparklesIcon, category: 'Blocks' },
+      { id: 'ai-admin', label: 'Admin console', icon: Building06Icon, category: 'Blocks' },
       { id: 'ai-agents', label: 'Agents', icon: BotIcon, category: 'Blocks' },
       { id: 'ai-chat-features', label: 'Chat features', icon: BubbleChatSparkIcon, category: 'Blocks' },
       { id: 'ai-connectors', label: 'Connectors', icon: Plug01Icon, category: 'Blocks' },

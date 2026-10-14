@@ -16,6 +16,7 @@ import { formatFileSize } from '@/lib/format'
 import { plural } from '@/lib/text'
 import { PEOPLE } from '../../data'
 import { useJobs } from '../../jobs-store'
+import { useOrgPolicy } from './admin/org'
 import { useAgents } from './agents/context'
 import { useActions } from './context'
 import { SLASH_COMMANDS, toFileRef } from './data'
@@ -141,11 +142,13 @@ export function PromptBox({ running, awaiting = false, modes, projects, project,
     return [...agentItems, ...fileItems, ...projectItems, ...baseItems, ...connectorItems, ...people, ...jobItems]
   }, [allAgents, project, projects, bases, connected, jobs])
 
+  // Modes the organisation turned off are left out (Admin › Models and features).
+  const { features } = useOrgPolicy().policy
   const modeList = useMemo((): PromptMode[] => [
-    { id: 'web', label: 'Web search', icon: Globe02Icon, on: modes.web },
+    ...(features.webSearch ? [{ id: 'web', label: 'Web search', icon: Globe02Icon, on: modes.web }] : []),
     { id: 'deep', label: 'Deep think', icon: AiBrain01Icon, on: modes.deep },
-    { id: 'research', label: 'Research', icon: MicroscopeIcon, on: !!modes.research },
-  ], [modes])
+    ...(features.research && features.webSearch ? [{ id: 'research', label: 'Research', icon: MicroscopeIcon, on: !!modes.research }] : []),
+  ], [modes, features.webSearch, features.research])
 
   // Research searches the web, so it brings Web search with it, and turning
   // Web search off ends Research.
@@ -202,7 +205,7 @@ export function PromptBox({ running, awaiting = false, modes, projects, project,
         onModeToggle={toggleMode}
         tools={(
           <>
-            <IconAction label="Voice mode" icon={AiVoiceIcon} onClick={() => setVoiceOpen(true)} disabled={running} />
+            {features.voice && <IconAction label="Voice mode" icon={AiVoiceIcon} onClick={() => setVoiceOpen(true)} disabled={running} />}
             <IconAction label="Prompt library" icon={BookOpen01Icon} onClick={() => setLibraryOpen(true)} />
             {text.trim() && <IconAction label="Save as prompt" icon={BookmarkAdd02Icon} onClick={() => setSaveOpen(true)} />}
           </>

@@ -1,16 +1,12 @@
 import { useState, type ReactNode } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
 import {
-  CreditCardIcon, Delete02Icon, Download01Icon, Mail01Icon, MailSend01Icon, MoreHorizontalIcon,
-  Notification03Icon, SmartPhone01Icon, UserAdd01Icon, UserGroupIcon, UserIcon,
+  CreditCardIcon, Download01Icon, Mail01Icon, Notification03Icon, SmartPhone01Icon, UserAdd01Icon, UserGroupIcon, UserIcon,
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
-import { FormDialog } from '@/blocks/form-dialog'
-import type { FormField } from '@/blocks/form-fields'
+import { InviteMembersDialog } from '@/blocks/invite-members-dialog'
+import { MembersTable, type OrgMember } from '@/blocks/members-table'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +17,6 @@ import { NavItem } from '@/components/nav-item'
 import { PageHeader } from '@/components/page-header'
 import { Panel } from '@/components/panel'
 import { UserAvatar } from '@/components/person'
-import { SearchField } from '@/components/search-field'
 import { StatusBadge } from '@/components/status-badge'
 import { UsageMeter } from '@/components/usage-meter'
 import { formatNumber } from '@/lib/format'
@@ -45,9 +40,8 @@ const ROLES: { id: Role; label: string }[] = [
   { id: 'guest', label: 'Guest' },
 ]
 
-type Member = { id: string; name: string; email: string; role: Role; status: 'active' | 'invited'; you?: boolean }
-const MEMBERS: Member[] = [
-  { id: 'alex', name: 'Alex Morgan', email: 'alex@example.com', role: 'admin', status: 'active', you: true },
+const MEMBERS: OrgMember[] = [
+  { id: 'alex', name: 'Alex Morgan', email: 'alex@example.com', role: 'admin', status: 'active', isYou: true },
   { id: 'meiling', name: 'Mei Ling', email: 'meiling@example.com', role: 'admin', status: 'active' },
   { id: 'ravi', name: 'Ravi', email: 'ravi@example.com', role: 'member', status: 'active' },
   { id: 'daniel', name: 'Daniel', email: 'daniel@example.com', role: 'member', status: 'active' },
@@ -182,28 +176,33 @@ function ProfilePage() {
 /* ---------- Members ---------- */
 
 function MembersPage({ members, setMembers }: {
-  members: Member[]
-  setMembers: (update: (members: Member[]) => Member[]) => void
+  members: OrgMember[]
+  setMembers: (update: (members: OrgMember[]) => OrgMember[]) => void
 }) {
-  const [query, setQuery] = useState('')
-  const q = query.trim().toLowerCase()
-  const shown = members.filter((m) => m.name.toLowerCase().includes(q) || m.email.includes(q))
+  const [inviting, setInviting] = useState(false)
+  const roleLabel = (id: string) => ROLES.find((r) => r.id === id)?.label
 
-  function setRole(member: Member, role: Role) {
-    setMembers((all) => all.map((m) => (m.id === member.id ? { ...m, role } : m)))
-    toast.success(`${member.name} is now ${ROLES.find((r) => r.id === role)?.label}`, {
-      description: 'Demo only. Nothing was saved.',
-    })
+  function setRole(ids: string[], role: string) {
+    const changed = members.filter((m) => ids.includes(m.id))
+    setMembers((all) => all.map((m) => (ids.includes(m.id) ? { ...m, role } : m)))
+    toast.success(
+      changed.length === 1 ? `${changed[0].name || changed[0].email} is now ${roleLabel(role)}` : `${plural(changed.length, 'member')} are now ${roleLabel(role)}`,
+      { description: 'Demo only. Nothing was saved.' },
+    )
   }
 
-  function remove(member: Member) {
-    const index = members.findIndex((m) => m.id === member.id)
-    setMembers((all) => all.filter((m) => m.id !== member.id))
-    toast(`${member.name} removed`, {
+  function remove(ids: string[]) {
+    const removed = members.flatMap((m, index) => (ids.includes(m.id) ? [{ m, index }] : []))
+    setMembers((all) => all.filter((m) => !ids.includes(m.id)))
+    toast(removed.length === 1 ? `${removed[0].m.name || removed[0].m.email} removed` : `${plural(removed.length, 'member')} removed`, {
       description: 'Demo only. Nothing was saved.',
       action: {
         label: 'Undo',
-        onClick: () => setMembers((all) => [...all.slice(0, index), member, ...all.slice(index)]),
+        onClick: () => setMembers((all) => {
+          const next = [...all]
+          for (const { m, index } of removed) if (!next.some((x) => x.id === m.id)) next.splice(index, 0, m)
+          return next
+        }),
       },
     })
   }
@@ -213,129 +212,43 @@ function MembersPage({ members, setMembers }: {
       <PageHeader
         title="Members"
         description={`${members.length} of ${SEATS} seats used.`}
-        actions={<InviteDialog />}
+        actions={
+          <Button onClick={() => setInviting(true)}>
+            <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" />
+            Invite
+          </Button>
+        }
         size="sm"
         as="h3"
         className="border-b pb-4"
       />
 
-      <SearchField
-        value={query}
-        onChange={setQuery}
-        placeholder="Search by name or email…"
-        label="Search members"
-        className="sm:max-w-xs"
+      <MembersTable
+        members={members}
+        roles={ROLES}
+        adminRoles={['admin']}
+        onRoleChange={setRole}
+        onRemove={remove}
+        onResend={(id) => toast(DEMO, { description: `The invite to ${members.find((m) => m.id === id)?.email} was not resent.` })}
       />
 
-      <div className="min-w-0 rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="h-8 px-3">Member</TableHead>
-              <TableHead className="hidden h-8 sm:table-cell">Email</TableHead>
-              <TableHead className="h-8">Role</TableHead>
-              <TableHead className="h-8">Status</TableHead>
-              <TableHead className="h-8 w-10"><span className="sr-only">Actions</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {shown.map((m) => (
-              <TableRow key={m.id}>
-                <TableCell className="px-3">
-                  <div className="flex items-center gap-2">
-                    <UserAvatar name={m.name} />
-                    <div className="grid min-w-0">
-                      <span className="font-medium">
-                        {m.name}
-                        {m.you && <span className="text-muted-foreground font-normal"> (you)</span>}
-                      </span>
-                      <span className="text-muted-foreground text-[11px] sm:hidden">{m.email}</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground hidden sm:table-cell">{m.email}</TableCell>
-                <TableCell>
-                  <Select value={m.role} onValueChange={(v) => setRole(m, v as Role)} disabled={m.you}>
-                    <SelectTrigger size="sm" className="w-24" aria-label={`Role for ${m.name}`}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ROLES.map((r) => (
-                        <SelectItem key={r.id} value={r.id}>{r.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </TableCell>
-                <TableCell>
-                  <StatusBadge variant="outline" tone={m.status === 'active' ? 'success' : 'progress'}>
-                    {m.status === 'active' ? 'Active' : 'Invited'}
-                  </StatusBadge>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${m.name}`}>
-                        <HugeiconsIcon icon={MoreHorizontalIcon} strokeWidth={2} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40">
-                      <DropdownMenuItem
-                        disabled={m.status !== 'invited'}
-                        onSelect={() => toast(DEMO, { description: `The invite to ${m.email} was not resent.` })}
-                      >
-                        <HugeiconsIcon icon={MailSend01Icon} strokeWidth={2} />
-                        Resend invite
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem variant="destructive" disabled={m.you} onSelect={() => remove(m)}>
-                        <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} />
-                        Remove
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-            {shown.length === 0 && (
-              <TableRow className="hover:bg-transparent">
-                <TableCell colSpan={5} className="text-muted-foreground h-16 text-center">
-                  No members match “{query.trim()}”.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <InviteMembersDialog
+        open={inviting}
+        onOpenChange={setInviting}
+        roles={ROLES}
+        defaultRole="member"
+        description="They get an email with a link to join this workspace."
+        existingEmails={members.map((m) => m.email)}
+        seatsLeft={SEATS - members.length}
+        onInvite={(emails, role) => {
+          setMembers((all) => [
+            ...all,
+            ...emails.map((email): OrgMember => ({ id: `invite-${email}`, name: '', email, role, status: 'invited' })),
+          ])
+          toast(DEMO, { description: `In a real app, ${plural(emails.length, 'person', 'people')} would get an email invite.` })
+        }}
+      />
     </div>
-  )
-}
-
-const INVITE_FIELDS: FormField[] = [
-  {
-    key: 'email', label: 'Email', type: 'email', required: true, requiredMessage: 'Enter an email address.',
-    placeholder: 'name@example.com', autoComplete: 'off',
-  },
-  { key: 'role', label: 'Role', type: 'select', options: ROLES.map((r) => ({ value: r.id, label: r.label })) },
-]
-
-function InviteDialog() {
-  return (
-    <FormDialog
-      trigger={
-        <Button>
-          <HugeiconsIcon icon={UserAdd01Icon} strokeWidth={2} data-icon="inline-start" />
-          Invite
-        </Button>
-      }
-      title="Invite people"
-      description="They get an email with a link to join this workspace."
-      fields={INVITE_FIELDS}
-      initialValues={{ role: 'member' }}
-      submitLabel="Send invite"
-      onSubmit={() => {
-        toast(DEMO, { description: 'In a real app, the person would get an email invite.' })
-      }}
-    />
   )
 }
 

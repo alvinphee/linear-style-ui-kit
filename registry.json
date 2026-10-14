@@ -1273,6 +1273,27 @@
       ]
     },
     {
+      "name": "copy-field",
+      "type": "registry:component",
+      "title": "Copy field",
+      "description": "a read-only value with a copy button (a URL, a DNS record, a token)",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard"
+      ],
+      "files": [
+        {
+          "path": "src/components/copy-field.tsx",
+          "type": "registry:component"
+        }
+      ]
+    },
+    {
       "name": "delete-confirm",
       "type": "registry:component",
       "title": "Delete confirm",
@@ -2261,6 +2282,37 @@
       ]
     },
     {
+      "name": "audit-log",
+      "type": "registry:block",
+      "title": "Audit log",
+      "description": "who did what: filters (action, actor, date range), search, expandable rows with a before/after diff, CSV",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "date-fns@^4.4.0",
+        "sonner@^2.0.8"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/data-table",
+        "@kit/format",
+        "@kit/period-picker",
+        "@kit/person",
+        "@kit/search-field",
+        "@kit/text",
+        "@kit/toggle-group",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/audit-log.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/audit-log.tsx"
+        }
+      ]
+    },
+    {
       "name": "builder-chat",
       "type": "registry:block",
       "title": "Builder chat",
@@ -2502,6 +2554,38 @@
       ]
     },
     {
+      "name": "connector-policy",
+      "type": "registry:block",
+      "title": "Connector policy",
+      "description": "the organisation's connector allow list, requests to allow one, custom servers, approval for writes",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/connector-card",
+        "@kit/delete-confirm",
+        "@kit/format",
+        "@kit/person",
+        "@kit/settings-page",
+        "@kit/switch",
+        "@kit/text"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/admin/connector-policy.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/admin/connector-policy.tsx"
+        }
+      ]
+    },
+    {
       "name": "create-knowledge-base-dialog",
       "type": "registry:block",
       "title": "Create knowledge base dialog",
@@ -2723,6 +2807,35 @@
           "path": "src/blocks/docked-panel.tsx",
           "type": "registry:component",
           "target": "@components/blocks/docked-panel.tsx"
+        }
+      ]
+    },
+    {
+      "name": "domain-verification",
+      "type": "registry:block",
+      "title": "Domain verification",
+      "description": "domains with their DNS TXT record to add, Verify, status",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/copy-field",
+        "@kit/delete-confirm",
+        "@kit/dialog",
+        "@kit/field",
+        "@kit/format",
+        "@kit/input",
+        "@kit/spinner",
+        "@kit/status-badge",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/domain-verification.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/domain-verification.tsx"
         }
       ]
     },
@@ -3032,6 +3145,37 @@
       ]
     },
     {
+      "name": "invite-members-dialog",
+      "type": "registry:block",
+      "title": "Invite members dialog",
+      "description": "invite people by email (pasted lists, external flagged), role, groups, invite link, domain auto-join",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/clipboard",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/input-group",
+        "@kit/label",
+        "@kit/select",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/textarea",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/invite-members-dialog.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/invite-members-dialog.tsx"
+        }
+      ]
+    },
+    {
       "name": "kanban-board",
       "type": "registry:block",
       "title": "Kanban board",
@@ -3337,6 +3481,38 @@
       ]
     },
     {
+      "name": "members-table",
+      "type": "registry:block",
+      "title": "Members table",
+      "description": "an organisation's members: search, filter chips, role, groups, status, row menu, bulk bar; cards when narrow",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/delete-confirm",
+        "@kit/dropdown-menu",
+        "@kit/format",
+        "@kit/person",
+        "@kit/search-field",
+        "@kit/select",
+        "@kit/status-badge",
+        "@kit/table",
+        "@kit/text"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/members-table.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/members-table.tsx"
+        }
+      ]
+    },
+    {
       "name": "memory-manager",
       "type": "registry:block",
       "title": "Memory manager",
@@ -3388,6 +3564,31 @@
           "path": "src/blocks/mobile-shell.tsx",
           "type": "registry:component",
           "target": "@components/blocks/mobile-shell.tsx"
+        }
+      ]
+    },
+    {
+      "name": "model-feature-policy",
+      "type": "registry:block",
+      "title": "Model feature policy",
+      "description": "which models and features people may use",
+      "dependencies": [
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/settings-page",
+        "@kit/switch"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/admin/model-feature-policy.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/admin/model-feature-policy.tsx"
         }
       ]
     },
@@ -3768,6 +3969,35 @@
       ]
     },
     {
+      "name": "retention-policy",
+      "type": "registry:block",
+      "title": "Retention policy",
+      "description": "how long chats are kept, training opt-out, legal hold, export",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/alert",
+        "@kit/button",
+        "@kit/delete-confirm",
+        "@kit/radio-group",
+        "@kit/settings-page",
+        "@kit/switch"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/admin/retention-policy.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/admin/retention-policy.tsx"
+        }
+      ]
+    },
+    {
       "name": "retrieval-tester",
       "type": "registry:block",
       "title": "Retrieval tester",
@@ -3799,6 +4029,38 @@
           "path": "src/blocks/ai/knowledge/retrieval-tester.tsx",
           "type": "registry:component",
           "target": "@components/blocks/ai/knowledge/retrieval-tester.tsx"
+        }
+      ]
+    },
+    {
+      "name": "role-permissions",
+      "type": "registry:block",
+      "title": "Role permissions",
+      "description": "roles and what each may do: a permission matrix (a list when narrow), custom roles",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/badge",
+        "@kit/button",
+        "@kit/checkbox",
+        "@kit/delete-confirm",
+        "@kit/dialog",
+        "@kit/dropdown-menu",
+        "@kit/input",
+        "@kit/label",
+        "@kit/select",
+        "@kit/switch",
+        "@kit/text",
+        "@kit/textarea"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/role-permissions.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/role-permissions.tsx"
         }
       ]
     },
@@ -4305,6 +4567,38 @@
       ]
     },
     {
+      "name": "sso-setup",
+      "type": "registry:block",
+      "title": "Sso setup",
+      "description": "single sign-on: SAML or OIDC in three steps (our details, your identity provider, test), attribute mapping",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0"
+      ],
+      "registryDependencies": [
+        "@kit/button",
+        "@kit/copy-field",
+        "@kit/delete-confirm",
+        "@kit/field",
+        "@kit/file-chip",
+        "@kit/format",
+        "@kit/input",
+        "@kit/spinner",
+        "@kit/status-badge",
+        "@kit/textarea",
+        "@kit/toggle-group",
+        "@kit/tokens"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/sso-setup.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/sso-setup.tsx"
+        }
+      ]
+    },
+    {
       "name": "submission-feed",
       "type": "registry:block",
       "title": "Submission feed",
@@ -4425,6 +4719,41 @@
           "path": "src/blocks/ai/agents/trigger-editor.tsx",
           "type": "registry:component",
           "target": "@components/blocks/ai/agents/trigger-editor.tsx"
+        }
+      ]
+    },
+    {
+      "name": "usage-analytics",
+      "type": "registry:block",
+      "title": "Usage analytics",
+      "description": "usage by period: KPIs, messages by model, credits by team, top people and agents, CSV",
+      "dependencies": [
+        "@hugeicons/core-free-icons@^4.3.5",
+        "@hugeicons/react@^1.1.10",
+        "cn@^0.4.0",
+        "recharts@^3.8.0"
+      ],
+      "registryDependencies": [
+        "@kit/bar-list",
+        "@kit/button",
+        "@kit/chart",
+        "@kit/format",
+        "@kit/kpi-card",
+        "@kit/mark",
+        "@kit/panel",
+        "@kit/period-picker",
+        "@kit/person",
+        "@kit/table",
+        "@kit/text"
+      ],
+      "categories": [
+        "ai"
+      ],
+      "files": [
+        {
+          "path": "src/blocks/ai/admin/usage-analytics.tsx",
+          "type": "registry:component",
+          "target": "@components/blocks/ai/admin/usage-analytics.tsx"
         }
       ]
     },
@@ -4555,6 +4884,7 @@
         "@kit/connector-card",
         "@kit/connector-catalogue",
         "@kit/connector-dialog",
+        "@kit/connector-policy",
         "@kit/context-meter",
         "@kit/create-knowledge-base-dialog",
         "@kit/custom-connector-dialog",
@@ -4566,6 +4896,7 @@
         "@kit/knowledge-sources",
         "@kit/knowledge-types",
         "@kit/memory-manager",
+        "@kit/model-feature-policy",
         "@kit/new-project-dialog",
         "@kit/onboarding-dialog",
         "@kit/project-knowledge",
@@ -4574,6 +4905,7 @@
         "@kit/project-tools",
         "@kit/prompt-box",
         "@kit/prompt-library",
+        "@kit/retention-policy",
         "@kit/retrieval-tester",
         "@kit/run-card",
         "@kit/run-detail",
@@ -4592,6 +4924,7 @@
         "@kit/thinking-indicator",
         "@kit/thinking-trail",
         "@kit/trigger-editor",
+        "@kit/usage-analytics",
         "@kit/usage-limit",
         "@kit/voice-mode",
         "@kit/voice-picker"

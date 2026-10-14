@@ -43,13 +43,6 @@ export const HIDE_BELOW: Record<ContainerSize, string> = {
   '@6xl': 'hidden @6xl:table-cell',
 }
 
-// The shared Checkbox only styles checked/unchecked, so draw the "some selected" dash here.
-export const MIXED =
-  'data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary dark:data-[state=indeterminate]:bg-primary ' +
-  'data-[state=indeterminate]:text-primary-foreground data-[state=indeterminate]:[&_svg]:hidden ' +
-  'data-[state=indeterminate]:before:absolute data-[state=indeterminate]:before:h-0.5 data-[state=indeterminate]:before:w-2 ' +
-  'data-[state=indeterminate]:before:rounded-full data-[state=indeterminate]:before:bg-current'
-
 // "Ava Hart, Liam Okafor and 3 more"
 export function listNames(names: string[]) {
   return names.length > 3 ? `${names.slice(0, 2).join(', ')} and ${names.length - 2} more` : names.join(', ')
@@ -79,7 +72,6 @@ function SelectAllCheckbox<TData extends RowData>({ table }: { table: Table<Data
       onCheckedChange={(v) => table.toggleAllPageRowsSelected(v === true)}
       disabled={table.getRowModel().rows.length === 0}
       aria-label="Select all rows on this page"
-      className={MIXED}
     />
   )
 }

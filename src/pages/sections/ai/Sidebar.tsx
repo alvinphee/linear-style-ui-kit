@@ -1,6 +1,6 @@
 import { memo, useMemo, type ReactNode, type RefObject } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { Add01Icon, BotIcon, DashboardSquare01Icon, Database01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon, Task01Icon } from '@hugeicons/core-free-icons'
+import { Add01Icon, BotIcon, Building06Icon, DashboardSquare01Icon, Database01Icon, Logout01Icon, RefreshIcon, Settings01Icon, SparklesIcon, Task01Icon } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { AccountMenu } from '@/blocks/account-menu'
 import {
@@ -11,6 +11,7 @@ import type { MenuKit } from '@/components/menu-kit'
 import { Shortcut } from '@/components/shortcut'
 import { UsageMeter } from '@/components/usage-meter'
 import { DropdownMenuItem, DropdownMenuSeparator } from '@/components/ui/dropdown-menu'
+import { MY_ROLE } from './admin/org'
 import { useAgents } from './agents/context'
 import { useActions } from './context'
 import { CHAT_TYPES, USER, now } from './data'
@@ -148,6 +149,11 @@ export const Sidebar = memo(function Sidebar({
             <DropdownMenuItem onSelect={() => actions.openSettings()}>
               <HugeiconsIcon icon={Settings01Icon} strokeWidth={2} /> Settings
             </DropdownMenuItem>
+            {MY_ROLE !== 'member' && (
+              <DropdownMenuItem onSelect={() => actions.openAdmin()}>
+                <HugeiconsIcon icon={Building06Icon} strokeWidth={2} /> Admin console
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onSelect={() => actions.openSettings('billing')}>
               <HugeiconsIcon icon={SparklesIcon} strokeWidth={2} /> Upgrade plan
             </DropdownMenuItem>

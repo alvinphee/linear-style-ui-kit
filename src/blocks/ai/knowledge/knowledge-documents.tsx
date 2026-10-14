@@ -112,13 +112,6 @@ const STATUS_CHIPS: { value: StatusFilter; label: string }[] = [
 const matchesStatus = (d: KnowledgeDocument, filter: StatusFilter) =>
   filter === 'all' || (filter === 'processing' ? d.status === 'processing' || d.status === 'queued' : d.status === filter)
 
-// The checkbox's look when some, not all, rows are picked.
-const MIXED =
-  'data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary dark:data-[state=indeterminate]:bg-primary ' +
-  'data-[state=indeterminate]:text-primary-foreground data-[state=indeterminate]:[&_svg]:hidden ' +
-  'data-[state=indeterminate]:after:absolute data-[state=indeterminate]:after:inset-x-[3px] data-[state=indeterminate]:after:top-1/2 ' +
-  'data-[state=indeterminate]:after:h-0.5 data-[state=indeterminate]:after:-translate-y-1/2 data-[state=indeterminate]:after:rounded-full ' +
-  'data-[state=indeterminate]:after:bg-current'
 
 const ALL_SOURCES = '__all'
 
@@ -262,7 +255,7 @@ export function KnowledgeDocuments({
             <thead className="text-muted-foreground border-b text-left text-[11px]">
               <tr className="[&>th]:h-8 [&>th]:px-2 [&>th]:font-medium [&>th:first-child]:pr-0 [&>th:first-child]:pl-3 [&>th:last-child]:pr-3">
                 <th scope="col" className="w-9">
-                  <Checkbox checked={allState} onCheckedChange={toggleAll} aria-label="Select all shown documents" className={MIXED} />
+                  <Checkbox checked={allState} onCheckedChange={toggleAll} aria-label="Select all shown documents" />
                 </th>
                 <th scope="col">Name</th>
                 <th scope="col" className="w-32">Source</th>

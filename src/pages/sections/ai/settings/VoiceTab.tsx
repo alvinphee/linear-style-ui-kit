@@ -4,6 +4,7 @@ import { SettingsGroup, SettingsHeader, SettingsRow } from '@/blocks/settings-pa
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
+import { useOrgPolicy } from '../admin/org'
 import { useAiPrefs, useStoredState } from './prefs'
 
 // Voice: the voice the assistant speaks with in voice mode, how fast, and
@@ -81,13 +82,19 @@ export function useVoiceSample(speed: number) {
 }
 
 export function VoiceTab() {
+  const voiceAllowed = useOrgPolicy().policy.features.voice
   const id = useId()
   const { prefs, set } = useAiPrefs()
   const [language, setLanguage] = useStoredState('linear-kit:ai-voice-language:v1', 'auto')
   const [playingId, play] = useVoiceSample(prefs.voiceSpeed)
   return (
     <>
-      <SettingsHeader title="Voice" description="How the assistant sounds in voice mode, and how a spoken turn is sent." />
+      <SettingsHeader
+        title="Voice"
+        description={voiceAllowed
+          ? 'How the assistant sounds in voice mode, and how a spoken turn is sent.'
+          : 'Voice mode is turned off for everyone by your organisation. These choices apply if it is turned back on.'}
+      />
 
       <SettingsGroup title="Voice" description="Play a sample to hear each one. Your choice applies to new voice chats.">
         <div className="p-3">

@@ -65,6 +65,9 @@ export type ShareChatDialogProps = {
   onRevoke: () => void
   // After the link is copied.
   onCopy?: (url: string) => void
+  // False when the organisation only lets chats be shared with its people:
+  // "Anyone with the link" is left out.
+  allowPublic?: boolean
   className?: string
 }
 
@@ -137,9 +140,12 @@ export function ShareChatDialog({ open, onOpenChange, className, ...props }: Sha
 }
 
 function ShareChatBody({
-  chat, link, sharedBy, organisation = 'your organisation', now, onCreate, onUpdate, onRevoke, onCopy,
+  chat, link, sharedBy, organisation = 'your organisation', now, onCreate, onUpdate, onRevoke, onCopy, allowPublic = true,
 }: Omit<ShareChatDialogProps, 'open' | 'onOpenChange' | 'className'>) {
-  const [options, setOptions] = useState<ShareChatOptions>(() => (link ? optionsOf(link) : DEFAULTS))
+  const [options, setOptions] = useState<ShareChatOptions>(() => {
+    const start = link ? optionsOf(link) : DEFAULTS
+    return allowPublic ? start : { ...start, access: 'organisation' }
+  })
   const [confirmRevoke, setConfirmRevoke] = useState(false)
   const [copied, flagCopied] = useCopied()
   // Revoking removes the button that asked; focus moves to Create link.
@@ -227,8 +233,11 @@ function ShareChatBody({
           disabled={locked}
           onChange={(v) => set('access', v)}
           options={[
-            { value: 'link', title: 'Anyone with the link', hint: 'No sign-in needed.', icon: Globe02Icon },
-            { value: 'organisation', title: `People at ${organisation}`, hint: 'They sign in to open it.', icon: Building06Icon },
+            ...(allowPublic ? [{ value: 'link' as const, title: 'Anyone with the link', hint: 'No sign-in needed.', icon: Globe02Icon }] : []),
+            {
+              value: 'organisation', title: `People at ${organisation}`, icon: Building06Icon,
+              hint: allowPublic ? 'They sign in to open it.' : `They sign in to open it. ${organisation} doesn't allow links for anyone else.`,
+            },
           ]}
         />
 

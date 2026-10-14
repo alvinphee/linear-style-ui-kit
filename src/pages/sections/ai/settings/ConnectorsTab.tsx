@@ -8,6 +8,7 @@ import { ConnectorCatalogue } from '@/blocks/ai/connectors/connector-catalogue'
 import { ConnectorDialog } from '@/blocks/ai/connectors/connector-dialog'
 import { CustomConnectorDialog, type ConnectorAuth, type CustomConnectorInput } from '@/blocks/ai/connectors/custom-connector-dialog'
 import { Button } from '@/components/ui/button'
+import { useOrgPolicy } from '../admin/org'
 import { CONNECTORS, CONNECTORS_KEY, CUSTOM_COLOUR, CUSTOM_ICON, CUSTOM_TOOLS, DEFAULT_ACCOUNT } from './connectors-data'
 import { useStoredState } from './prefs'
 
@@ -82,13 +83,15 @@ function customConnector(c: StoredCustom): Connector {
 // connected here can be switched on in a project at once.
 export function useConnectors() {
   const [state, setState] = useStoredState<ConnectorsState>(CONNECTORS_KEY, INITIAL)
+  // The organisation's allow list (Admin › Connectors) decides which are disabled.
+  const { blocked, customServers } = useOrgPolicy().policy.connectors
   const connectors = useMemo(() => {
     const withPermissions = (c: Connector): Connector => {
       const chosen = state.permissions[c.id]
       return chosen ? { ...c, tools: c.tools.map((t) => ({ ...t, permission: chosen[t.name] ?? t.permission })) } : c
     }
     const builtIn = CONNECTORS.map((c): Connector => {
-      if (c.status === 'disabled') return c
+      if (blocked.includes(c.id)) return { ...c, status: 'disabled' }
       const link = state.connections[c.id]
       return withPermissions({
         ...c,
@@ -97,13 +100,14 @@ export function useConnectors() {
         lastUsed: link?.lastUsed,
       })
     })
-    return [...builtIn, ...state.custom.map((c) => withPermissions(customConnector(c)))]
-  }, [state])
-  return { connectors, state, setState }
+    const custom = customServers ? state.custom.map((c) => withPermissions(customConnector(c))) : []
+    return [...builtIn, ...custom]
+  }, [state, blocked, customServers])
+  return { connectors, state, setState, customServers }
 }
 
 export function ConnectorsTab() {
-  const { connectors, setState } = useConnectors()
+  const { connectors, setState, customServers } = useConnectors()
   const [openId, setOpenId] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
 
@@ -161,14 +165,14 @@ export function ConnectorsTab() {
       <SettingsHeader
         title="Connectors"
         description="Let the assistant use your other apps. It asks before it acts, unless you allow a tool."
-        action={(
+        action={customServers && (
           <Button variant="outline" size="sm" onClick={() => setAdding(true)}>
             <HugeiconsIcon icon={Add01Icon} strokeWidth={2} data-icon="inline-start" />
             Custom connector
           </Button>
         )}
       />
-      <ConnectorCatalogue connectors={connectors} onOpen={(c) => setOpenId(c.id)} onAddCustom={() => setAdding(true)} />
+      <ConnectorCatalogue connectors={connectors} onOpen={(c) => setOpenId(c.id)} onAddCustom={customServers ? () => setAdding(true) : undefined} />
       <ConnectorDialog
         connector={open}
         open={!!open}

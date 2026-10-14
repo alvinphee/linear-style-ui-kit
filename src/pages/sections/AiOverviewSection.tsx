@@ -44,6 +44,7 @@ const DEMO_PAGE: Record<string, string> = {
 }
 // Blocks in a folder of their own are demoed on that folder's page.
 const DEMO_FOLDER: Record<string, string> = {
+  admin: 'ai-admin',
   agents: 'ai-agents',
   onboarding: 'ai-chat-features',
   connectors: 'ai-connectors',

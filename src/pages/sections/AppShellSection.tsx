@@ -44,6 +44,7 @@ import { DEFAULT_LIST_DISPLAY, arrangeJobs, type Group, type JobPatch, type Layo
 import { IssueBoard, IssueList } from './app-shell/IssueView'
 import { NotificationsMenu, useNotifications, type Notifications } from './app-shell/NotificationsMenu'
 import { PhoneShell, type PhoneAction, type PhoneDisplay, type PhoneNav, type PhoneTabStyle } from './app-shell/PhoneShell'
+import type { MobileMenuButtonVariant, MobileMenuEffect, MobileSwitcherStyle } from '@/blocks/mobile-shell'
 import { FILTER_FIELDS, applyFilters, type Filters } from './FilterBar'
 import { QuickCreateDialog } from './FormsSection'
 import { JobPeek, openFullPage } from './JobActions'
@@ -79,6 +80,34 @@ const PHONE_NAVS: { value: PhoneNav; label: string; note: string }[] = [
   { value: 'tabs', label: 'Tab bar', note: 'Four tabs at the bottom, each with its own stack of screens' },
   { value: 'menu', label: 'Menu screen', note: '“Menu” in the top bar opens every destination full screen, in big type' },
   { value: 'both', label: 'Both', note: 'The menu screen for everything, and a tab bar for the screens used all day' },
+]
+
+const PHONE_MENU_BUTTONS: { value: MobileMenuButtonVariant; label: string; note: string }[] = [
+  { value: 'label', label: '≡ Menu', note: 'The bars and the word, as shadcn’s site has it' },
+  { value: 'icon', label: 'Icon', note: 'The bars alone, with the screen’s name beside them' },
+  { value: 'switcher', label: 'Module switcher', note: 'The current module (team, workspace); choose how you switch it below' },
+]
+
+const PHONE_MENU_EFFECTS: { value: MobileMenuEffect; label: string; note: string }[] = [
+  { value: 'fade', label: 'Fade', note: 'The page blurs and the menu fades in over it' },
+  { value: 'curtain', label: 'Curtain', note: 'Drops down from under the top bar, solid' },
+  { value: 'rise', label: 'Rise', note: 'Rises from the foot of the screen, solid' },
+  { value: 'cascade', label: 'Cascade', note: 'Fades in, then each group rises in after the one before' },
+  { value: 'drawer', label: 'Drawer', note: 'A panel from the left edge over a dimmed page; tap the page to close' },
+]
+
+const PHONE_MODULE_COUNTS: { value: string; label: string; note: string }[] = [
+  { value: '4', label: '4', note: 'A small app: every style copes' },
+  { value: '9', label: '9', note: 'About the ERP’s size: the tiles and the list get long, the strip scrolls' },
+  { value: '14', label: '14', note: 'A big suite: the launcher and the sheet hold up best' },
+]
+
+const PHONE_SWITCHER_STYLES: { value: MobileSwitcherStyle; label: string; note: string }[] = [
+  { value: 'tiles', label: 'Tiles', note: 'Two cards to a row at the top of the menu, with a detail line' },
+  { value: 'launcher', label: 'Launcher', note: 'A home screen’s grid at the top of the menu: four marks to a row, name under each' },
+  { value: 'list', label: 'List', note: 'One row per module at the top of the menu, a tick on the current one' },
+  { value: 'sheet', label: 'Sheet', note: 'The module’s name opens a bottom sheet; the bars beside it open the menu' },
+  { value: 'strip', label: 'Strip', note: 'Chips under the top bar that scroll sideways: always in view, one tap to switch' },
 ]
 
 const PHONE_TAB_STYLES: { value: PhoneTabStyle; label: string; note: string }[] = [
@@ -198,8 +227,12 @@ export default function AppShellSection() {
   const [createOpen, setCreateOpen] = useState(false)
   const [phoneDisplay, setPhoneDisplay] = useState<PhoneDisplay>('browser')
   const [phoneAction, setPhoneAction] = useState<PhoneAction>('fab')
-  const [phoneNav, setPhoneNav] = useState<PhoneNav>('tabs')
+  const [phoneNav, setPhoneNav] = useState<PhoneNav>('menu')
   const [phoneTabStyle, setPhoneTabStyle] = useState<PhoneTabStyle>('classic')
+  const [phoneMenuButton, setPhoneMenuButton] = useState<MobileMenuButtonVariant>('switcher')
+  const [phoneMenuEffect, setPhoneMenuEffect] = useState<MobileMenuEffect>('fade')
+  const [phoneSwitcher, setPhoneSwitcher] = useState<MobileSwitcherStyle>('tiles')
+  const [phoneModules, setPhoneModules] = useState(9)
   const [offline, setOffline] = useState(false)
   const notes = useNotifications()
   const { jobs, addJob, updateJob, select } = useJobs()
@@ -436,6 +469,18 @@ export default function AppShellSection() {
         {phoneNav !== 'menu' && (
           <Picker label="Tab bar" value={phoneTabStyle} options={PHONE_TAB_STYLES} onChange={(v) => setPhoneTabStyle(v as PhoneTabStyle)} />
         )}
+        {phoneNav !== 'tabs' && (
+          <Picker label="Menu button" value={phoneMenuButton} options={PHONE_MENU_BUTTONS} onChange={(v) => setPhoneMenuButton(v as MobileMenuButtonVariant)} />
+        )}
+        {phoneNav !== 'tabs' && (
+          <Picker label="Menu opens" value={phoneMenuEffect} options={PHONE_MENU_EFFECTS} onChange={(v) => setPhoneMenuEffect(v as MobileMenuEffect)} />
+        )}
+        {phoneNav !== 'tabs' && phoneMenuButton === 'switcher' && (
+          <Picker label="Modules in the app" value={String(phoneModules)} options={PHONE_MODULE_COUNTS} onChange={(v) => setPhoneModules(Number(v))} />
+        )}
+        {phoneNav !== 'tabs' && phoneMenuButton === 'switcher' && (
+          <Picker label="Switching" value={phoneSwitcher} options={PHONE_SWITCHER_STYLES} onChange={(v) => setPhoneSwitcher(v as MobileSwitcherStyle)} />
+        )}
         <Picker
           label="Main action"
           value={phoneAction}
@@ -457,6 +502,10 @@ export default function AppShellSection() {
           display={phoneDisplay}
           nav={phoneNav}
           tabStyle={phoneTabStyle}
+          menuButton={phoneMenuButton}
+          menuEffect={phoneMenuEffect}
+          switcherStyle={phoneSwitcher}
+          teamCount={phoneModules}
           action={phoneAction}
           offline={offline}
           notes={notes}

@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { downloadText } from '@/lib/download'
 import { formatShortDate } from '@/lib/format'
 import { plural } from '@/lib/text'
+import { useOrgPolicy } from '../admin/org'
 import { now } from '../data'
 import { useAiPrefs, useStoredState } from './prefs'
 import { MEMORIES_KEY, SAMPLE_MEMORIES } from './memory-data'
@@ -25,6 +26,9 @@ function toMarkdown(memories: Memory[]) {
 
 export function MemoryTab() {
   const { prefs, set } = useAiPrefs()
+  // Off for everyone when the organisation turned memory off (Admin › Models and features).
+  const allowed = useOrgPolicy().policy.features.memory
+  const memoryOn = allowed && prefs.memory
   const uid = useId()
   const [memories, setMemories] = useStoredState<Memory[]>(MEMORIES_KEY, SAMPLE_MEMORIES)
 
@@ -58,9 +62,11 @@ export function MemoryTab() {
         <SettingsRow
           label="Memory"
           htmlFor={`${uid}-memory`}
-          hint="Let the assistant save useful details as you chat, such as your role or how you like answers, and use them later."
+          hint={allowed
+            ? 'Let the assistant save useful details as you chat, such as your role or how you like answers, and use them later.'
+            : 'Turned off for everyone by your organisation.'}
         >
-          <Switch id={`${uid}-memory`} checked={prefs.memory} onCheckedChange={(on) => set('memory', on)} />
+          <Switch id={`${uid}-memory`} checked={memoryOn} disabled={!allowed} onCheckedChange={(on) => set('memory', on)} />
         </SettingsRow>
         <SettingsRow
           label="Reference past chats"
@@ -93,7 +99,7 @@ export function MemoryTab() {
         <MemoryManager
           memories={memories}
           now={now()}
-          enabled={prefs.memory}
+          enabled={memoryOn}
           onEdit={(id, text) => {
             setMemories((list) => list.map((m) => (m.id === id ? { ...m, text, updatedAt: now() } : m)))
             toast('Memory updated')

@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode, type UIEventHandler } from 'react'
 import { HugeiconsIcon, type IconSvgElement } from '@hugeicons/react'
-import { Add01Icon, ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
+import { Add01Icon, ArrowDown01Icon, ArrowLeft01Icon, ArrowRight01Icon, Tick02Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
+import { UserAvatar } from '@/components/person'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
 import { plural } from '@/lib/text'
@@ -117,48 +118,225 @@ export function MobileShell({
 
 // "Menu" for the top bar, opening and closing the menu screen. Its two bars
 // turn into a cross while the menu is open.
-export function MobileMenuButton({ open, onClick, controls, label = 'Menu', className }: {
+// Three looks:
+//   label     ≡ Menu, as shadcn's site has it (the default)
+//   icon      the bars alone, a 36px target; put the page's title beside it
+//   switcher  the current module (or workspace, team) as its mark and name
+//             with a chevron: the menu it opens leads with the modules
+//             (MobileMenuTiles), so the button is the module switcher too
+export type MobileMenuButtonVariant = 'label' | 'icon' | 'switcher'
+
+export function MobileMenuButton({ open, onClick, controls, label = 'Menu', variant = 'label', mark, className }: {
   open: boolean
   onClick: () => void
   // The menu's id.
   controls: string
+  // "Menu", or with `switcher` the current module's name.
   label?: string
+  variant?: MobileMenuButtonVariant
+  // With `switcher`: the current module's mark.
+  mark?: ReactNode
   className?: string
 }) {
   const bar = 'bg-foreground absolute left-0 block h-0.5 w-4 rounded-full transition-all duration-100'
+  const bars = (
+    <span aria-hidden className="relative size-4 shrink-0">
+      <span className={cn(bar, open ? 'top-[7px] -rotate-45' : 'top-1')} />
+      <span className={cn(bar, open ? 'top-[7px] rotate-45' : 'top-2.5')} />
+    </span>
+  )
+  const base = 'focus-visible:ring-ring/50 flex h-9 min-w-0 touch-manipulation items-center rounded-md outline-none focus-visible:ring-2'
+  const shared = { type: 'button' as const, 'aria-expanded': open, 'aria-controls': controls, onClick }
+
+  if (variant === 'icon') {
+    return (
+      <button {...shared} aria-label={label} className={cn(base, 'hover:bg-accent size-9 justify-center', className)}>
+        {bars}
+      </button>
+    )
+  }
+  if (variant === 'switcher') {
+    return (
+      <button {...shared} className={cn(base, 'hover:bg-accent max-w-full gap-2 px-1.5 text-[15px] font-semibold', className)}>
+        {mark}
+        <span className="min-w-0 truncate">{label}</span>
+        <HugeiconsIcon
+          icon={ArrowDown01Icon}
+          strokeWidth={2}
+          className={cn('text-muted-foreground size-4 shrink-0 transition-transform duration-150', open && 'rotate-180')}
+        />
+        <span className="sr-only">, switch module and menu</span>
+      </button>
+    )
+  }
   return (
-    <button
-      type="button"
-      aria-expanded={open}
-      aria-controls={controls}
-      onClick={onClick}
-      className={cn(
-        'focus-visible:ring-ring/50 flex h-9 touch-manipulation items-center gap-2.5 rounded-md px-1.5 text-[15px] font-medium outline-none focus-visible:ring-2',
-        className,
-      )}
-    >
-      <span aria-hidden className="relative size-4">
-        <span className={cn(bar, open ? 'top-[7px] -rotate-45' : 'top-1')} />
-        <span className={cn(bar, open ? 'top-[7px] rotate-45' : 'top-2.5')} />
-      </span>
+    <button {...shared} className={cn(base, 'gap-2.5 px-1.5 text-[15px] font-medium', className)}>
+      {bars}
       {label}
     </button>
+  )
+}
+
+// The modules (workspaces, teams) as tiles, two to a row, at the top of the
+// menu screen when its button is the switcher. The current one is marked.
+export function MobileMenuTiles({ items }: {
+  items: { id: string; label: string; mark: ReactNode; detail?: string; current?: boolean; onClick: () => void }[]
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={item.onClick}
+          aria-current={item.current ? 'page' : undefined}
+          className="bg-card hover:bg-accent focus-visible:ring-ring/50 aria-[current=page]:border-brand/60 aria-[current=page]:bg-brand/5 flex min-w-0 flex-col items-start gap-2 rounded-xl border p-3 text-left outline-none focus-visible:ring-2"
+        >
+          {item.mark}
+          <span className="grid w-full min-w-0 gap-0.5">
+            <span className="truncate text-[13px] font-medium">{item.label}</span>
+            {item.detail && <span className="text-muted-foreground truncate text-[11px] tabular-nums">{item.detail}</span>}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// The module switcher, in five designs. Each takes the same items:
+//   tiles     two cards to a row, mark above name and detail (MobileMenuTiles)
+//   launcher  a home screen's grid: four marks to a row, name under each
+//             (MobileMenuLauncher)
+//   list      one row per module: mark, name, detail, a tick on the current
+//             one (MobileMenuModuleList)
+//   sheet     a bottom sheet of those rows, opened from the top bar's module
+//             name, so the menu stays for pages (MobileModuleSheet)
+//   strip     chips in a row that scrolls sideways under the top bar, always
+//             in view, one tap to switch (MobileModuleStrip)
+// The first three lead the menu screen; the last two live outside it.
+export type MobileSwitcherStyle = 'tiles' | 'launcher' | 'list' | 'sheet' | 'strip'
+export type MobileSwitcherItem = { id: string; label: string; mark: ReactNode; detail?: string; current?: boolean; onClick: () => void }
+
+export function MobileMenuLauncher({ items }: { items: MobileSwitcherItem[] }) {
+  return (
+    <div className="grid grid-cols-4 gap-x-2 gap-y-4">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={item.onClick}
+          aria-current={item.current ? 'page' : undefined}
+          className="focus-visible:ring-ring/50 group flex min-w-0 flex-col items-center gap-1.5 rounded-lg p-1 text-center outline-none focus-visible:ring-2"
+        >
+          <span className="group-aria-[current=page]:ring-brand ring-offset-background rounded-xl ring-2 ring-transparent ring-offset-2 transition-shadow [&>*]:size-12 [&>*]:rounded-xl">
+            {item.mark}
+          </span>
+          <span className="group-aria-[current=page]:text-brand line-clamp-2 w-full text-[11px] leading-tight font-medium break-words">{item.label}</span>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export function MobileMenuModuleList({ items }: { items: MobileSwitcherItem[] }) {
+  return (
+    <div className="bg-card divide-y rounded-xl border">
+      {items.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          onClick={item.onClick}
+          aria-current={item.current ? 'page' : undefined}
+          className="hover:bg-accent focus-visible:bg-accent flex min-h-12 w-full min-w-0 items-center gap-3 px-3 py-2 text-left outline-none first:rounded-t-xl last:rounded-b-xl"
+        >
+          <span className="shrink-0">{item.mark}</span>
+          <span className="grid min-w-0 flex-1">
+            <span className={cn('truncate text-[15px] font-medium', item.current && 'text-brand')}>{item.label}</span>
+            {item.detail && <span className="text-muted-foreground truncate text-xs tabular-nums">{item.detail}</span>}
+          </span>
+          {item.current && <HugeiconsIcon icon={Tick02Icon} strokeWidth={2} className="text-brand size-4 shrink-0" />}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// The module switcher as a bottom sheet; choosing a module closes it.
+export function MobileModuleSheet({ open, onOpenChange, title = 'Switch module', items, container }: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  title?: string
+  items: MobileSwitcherItem[]
+  container?: HTMLElement | null
+}) {
+  return (
+    <MobileSheet open={open} onOpenChange={onOpenChange} title={title} description="Choose where to work." container={container}>
+      <div className="px-4 pt-1">
+        <MobileMenuModuleList items={items.map((i) => ({ ...i, onClick: () => { onOpenChange(false); i.onClick() } }))} />
+      </div>
+    </MobileSheet>
+  )
+}
+
+// The module switcher as a strip of chips under the top bar. Scrolls
+// sideways; the current chip is filled and scrolled into view.
+export function MobileModuleStrip({ items, label = 'Modules', className }: { items: MobileSwitcherItem[]; label?: string; className?: string }) {
+  const current = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    current.current?.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [])
+  return (
+    <nav aria-label={label} className={cn('border-b', className)}>
+      <div className="flex gap-1.5 overflow-x-auto px-4 py-2 [scrollbar-width:none]">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            ref={item.current ? current : undefined}
+            type="button"
+            onClick={item.onClick}
+            aria-current={item.current ? 'page' : undefined}
+            className="hover:bg-accent focus-visible:ring-ring/50 aria-[current=page]:bg-foreground aria-[current=page]:text-background aria-[current=page]:border-foreground flex h-8 shrink-0 touch-manipulation items-center gap-1.5 rounded-full border pr-3 pl-1 text-xs font-medium outline-none focus-visible:ring-2 [&>span:first-child>*]:size-5 [&>span:first-child>*]:rounded-full"
+          >
+            <span className="shrink-0">{item.mark}</span>
+            {item.label}
+          </button>
+        ))}
+      </div>
+    </nav>
   )
 }
 
 // The menu screen: every destination, under small headings, in big type on
 // a blurred page that fills the screen under the top bar (MobileShell's
 // `menu`). Focus moves into it; Escape closes it and returns to its button.
-export function MobileMenu({ id, label = 'Menu', onClose, children, className }: {
+//
+// How it opens (`effect`):
+//   fade     the page blurs and the menu fades in (the default)
+//   curtain  drops down from under the top bar, solid
+//   rise     rises from the foot of the screen, solid
+//   cascade  fades in, then each group rises in after the one before
+//   drawer   a panel from the left edge over a dimmed page; a tap on the
+//            page closes it
+export type MobileMenuEffect = 'fade' | 'curtain' | 'rise' | 'cascade' | 'drawer'
+
+const MENU_EFFECT: Record<Exclude<MobileMenuEffect, 'drawer'>, string> = {
+  fade: 'bg-background/90 animate-in fade-in-0 backdrop-blur duration-100',
+  curtain: 'bg-background animate-in fade-in-0 slide-in-from-top-8 duration-200 ease-out',
+  rise: 'bg-background animate-in fade-in-0 slide-in-from-bottom-8 duration-200 ease-out',
+  cascade: 'menu-cascade bg-background/90 animate-in fade-in-0 backdrop-blur duration-100',
+}
+
+export function MobileMenu({ id, label = 'Menu', onClose, effect = 'fade', children, className }: {
   id: string
   label?: string
   onClose: () => void
+  effect?: MobileMenuEffect
   children: ReactNode
   className?: string
 }) {
   const ref = useRef<HTMLElement>(null)
   useEffect(() => {
-    ref.current?.querySelector<HTMLElement>('a[href], button:not([disabled])')?.focus()
+    ref.current?.querySelector<HTMLElement>('a[href], button:not([disabled]):not([tabindex="-1"])')?.focus()
   }, [])
   // Escape from anywhere, the menu's button included. It is marked handled,
   // so nothing else listening for Escape acts on it too.
@@ -174,13 +352,35 @@ export function MobileMenu({ id, label = 'Menu', onClose, children, className }:
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [id])
+  if (effect === 'drawer') {
+    return (
+      <nav ref={ref} id={id} aria-label={label} className="absolute inset-0 z-30">
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Close menu"
+          onClick={onClose}
+          className="bg-foreground/30 animate-in fade-in-0 absolute inset-0 backdrop-blur-[2px] duration-150"
+        />
+        <div
+          className={cn(
+            'bg-background animate-in slide-in-from-left absolute inset-y-0 left-0 w-[85%] max-w-80 overflow-y-auto overscroll-contain border-r shadow-xl duration-200 ease-out [scrollbar-width:none]',
+            className,
+          )}
+        >
+          <div className="flex flex-col gap-8 px-5 pt-6 pb-[max(env(safe-area-inset-bottom),1.5rem)]">{children}</div>
+        </div>
+      </nav>
+    )
+  }
   return (
     <nav
       ref={ref}
       id={id}
       aria-label={label}
       className={cn(
-        'bg-background/90 animate-in fade-in-0 absolute inset-0 z-30 overflow-y-auto overscroll-contain backdrop-blur duration-100 [scrollbar-width:none]',
+        'absolute inset-0 z-30 overflow-y-auto overscroll-contain [scrollbar-width:none]',
+        MENU_EFFECT[effect],
         className,
       )}
     >
@@ -277,6 +477,27 @@ export function MobileTopAction({ label, icon, onClick, dot, pressed }: {
       <HugeiconsIcon icon={icon} strokeWidth={2} className="size-4.5" />
       {dot && <span aria-hidden className="bg-brand absolute top-1.5 right-1.5 size-1.5 rounded-full" />}
     </Button>
+  )
+}
+
+// The signed-in person's avatar for the top bar's right end: it opens their
+// account (profile, settings, theme, sign out). `pressed` while that is open.
+export function MobileAccountButton({ name, onClick, pressed, label = 'Account' }: {
+  name: string
+  onClick: () => void
+  pressed?: boolean
+  label?: string
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={`${label}: ${name}`}
+      aria-pressed={pressed}
+      onClick={onClick}
+      className="focus-visible:ring-ring/50 grid size-9 shrink-0 touch-manipulation place-items-center rounded-full outline-none focus-visible:ring-2"
+    >
+      <UserAvatar name={name} className={cn('size-7 transition-shadow', pressed && 'ring-brand ring-offset-background ring-2 ring-offset-2')} />
+    </button>
   )
 }
 

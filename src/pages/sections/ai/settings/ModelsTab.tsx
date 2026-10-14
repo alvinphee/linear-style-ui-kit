@@ -6,6 +6,7 @@ import { SettingsGroup, SettingsHeader, SettingsRow } from '@/blocks/settings-pa
 import { Badge } from '@/components/ui/badge'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Switch } from '@/components/ui/switch'
+import { useOrgPolicy, type OrgPolicy } from '../admin/org'
 import { MODELS } from '../data'
 import type { ModelId } from '../types'
 import { useAiPrefs, type Prefs } from './prefs'
@@ -16,6 +17,11 @@ import { useAiPrefs, type Prefs } from './prefs'
 // it comes in as a prop; the features are prefs.
 
 type FeatureKey = keyof Pick<Prefs, 'extendedThinking' | 'webSearch' | 'artifacts' | 'codeExecution' | 'imageGeneration'>
+
+// The organisation's switch for each feature, where it has one.
+const ORG_FEATURE: Partial<Record<FeatureKey, keyof OrgPolicy['features']>> = {
+  webSearch: 'webSearch', codeExecution: 'codeExecution', imageGeneration: 'imageGeneration',
+}
 
 const FEATURES: { key: FeatureKey; label: string; hint: string; icon: IconSvgElement; badge?: string }[] = [
   {
@@ -32,6 +38,7 @@ const FEATURES: { key: FeatureKey; label: string; hint: string; icon: IconSvgEle
 ]
 
 export function ModelsTab({ model, onModelChange }: { model: ModelId; onModelChange: (id: ModelId) => void }) {
+  const org = useOrgPolicy().policy
   const id = useId()
   const { prefs, set } = useAiPrefs()
 
@@ -42,7 +49,7 @@ export function ModelsTab({ model, onModelChange }: { model: ModelId; onModelCha
       <SettingsGroup title="Default model" description="New chats start with this one. You can switch in any chat.">
         <div className="p-3">
           <RadioGroup value={model} onValueChange={(v) => onModelChange(v as ModelId)} aria-label="Default model" className="gap-2">
-            {MODELS.map((m) => {
+            {MODELS.filter((m) => org.models.includes(m.id)).map((m) => {
               const itemId = `${id}-${m.id}`
               return (
                 <div
@@ -85,21 +92,30 @@ export function ModelsTab({ model, onModelChange }: { model: ModelId; onModelCha
       </SettingsGroup>
 
       <SettingsGroup title="Features" description="Tools the assistant may use. Each can still be switched off in a chat.">
-        {FEATURES.map((f) => (
-          <SettingsRow
-            key={f.key}
-            htmlFor={`${id}-${f.key}`}
-            hint={f.hint}
-            label={
-              <FeatureLabel icon={f.icon}>
-                {f.label}
-                {f.badge && <Badge variant="outline">{f.badge}</Badge>}
-              </FeatureLabel>
-            }
-          >
-            <Switch id={`${id}-${f.key}`} checked={prefs[f.key]} onCheckedChange={(on) => set(f.key, on)} />
-          </SettingsRow>
-        ))}
+        {FEATURES.map((f) => {
+          // Off for everyone when the organisation turned it off (Admin › Models and features).
+          const blocked = ORG_FEATURE[f.key] && !org.features[ORG_FEATURE[f.key]!]
+          return (
+            <SettingsRow
+              key={f.key}
+              htmlFor={`${id}-${f.key}`}
+              hint={blocked ? 'Turned off for everyone by your organisation.' : f.hint}
+              label={
+                <FeatureLabel icon={f.icon}>
+                  {f.label}
+                  {f.badge && <Badge variant="outline">{f.badge}</Badge>}
+                </FeatureLabel>
+              }
+            >
+              <Switch
+                id={`${id}-${f.key}`}
+                checked={!blocked && prefs[f.key]}
+                disabled={blocked}
+                onCheckedChange={(on) => set(f.key, on)}
+              />
+            </SettingsRow>
+          )
+        })}
       </SettingsGroup>
     </>
   )

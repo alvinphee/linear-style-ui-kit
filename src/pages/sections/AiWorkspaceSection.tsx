@@ -17,6 +17,7 @@ import { goTo } from '../nav'
 import { SAMPLE_AGENTS, SHARED_AGENTS } from './ai/agents/agents-data'
 import { AGENTS_KEY, AgentsProvider } from './ai/agents/context'
 import { AgentsView } from './ai/AgentsView'
+import { AdminScreen } from './ai/admin/AdminScreen'
 import { AllChats } from './ai/AllChats'
 import { ArtifactPanel } from './ai/ArtifactPanel'
 import { ChatChrome } from './ai/ChatChrome'
@@ -32,7 +33,7 @@ import { SAMPLE_KNOWLEDGE_BASES } from './ai/knowledge/bases-data'
 import { KnowledgeProvider } from './ai/knowledge/context'
 import { KnowledgeView } from './ai/KnowledgeView'
 import { ProjectView } from './ai/ProjectView'
-import { isAppPath, parseRoute, pathFor, settingsPath } from './ai/routes'
+import { adminPath, isAppPath, isFullPage, parseRoute, pathFor, settingsPath } from './ai/routes'
 import { RunsView } from './ai/RunsView'
 import { useConnectors } from './ai/settings/ConnectorsTab'
 import { useStoredState } from './ai/settings/prefs'
@@ -104,7 +105,11 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
   // first section on a wide screen). Full page, it lives in the address.
   const path = usePath()
   const [cardSettings, setCardSettings] = useState<string | null | undefined>(undefined)
-  const settings = page && isAppPath(path) ? parseRoute(path).settings : page ? undefined : cardSettings
+  const [cardAdmin, setCardAdmin] = useState<string | null | undefined>(undefined)
+  const pageRoute = page && isAppPath(path) ? parseRoute(path) : null
+  const settings = page ? pageRoute?.settings : cardSettings
+  const admin = page ? pageRoute?.admin : cardAdmin
+  const fullPage = settings !== undefined || admin !== undefined
   const [notice, setNotice] = useState('')
   const runRef = useRef<Run | null>(null)
   const cardRef = useRef<HTMLElement>(null)
@@ -609,11 +614,27 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
         closePanel(false)
         setSheetOpen(false)
         if (page) navigate(settingsPath(section))
-        else setCardSettings(section)
+        else {
+          setCardAdmin(undefined)
+          setCardSettings(section)
+        }
       },
       closeSettings() {
         if (page) navigate(pathFor(stateRef.current.view))
         else setCardSettings(undefined)
+      },
+      openAdmin(section = null) {
+        closePanel(false)
+        setSheetOpen(false)
+        if (page) navigate(adminPath(section))
+        else {
+          setCardSettings(undefined)
+          setCardAdmin(section)
+        }
+      },
+      closeAdmin() {
+        if (page) navigate(pathFor(stateRef.current.view))
+        else setCardAdmin(undefined)
       },
       setDefaultModel(model) {
         dispatch({ type: 'model', model })
@@ -626,7 +647,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
   // Full page, a change of view goes into the address… Only a change of
   // view: leaving Settings by the back button must not put the old view back.
   useEffect(() => {
-    if (!page || !isAppPath(readPath()) || parseRoute(readPath()).settings !== undefined) return
+    if (!page || !isAppPath(readPath()) || isFullPage(parseRoute(readPath()))) return
     const target = pathFor(state.view)
     if (readPath() !== target) navigate(target)
   }, [page, state.view])
@@ -636,7 +657,7 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
     // Leaving the app, the address is someone else's.
     if (!page || !isAppPath(path)) return
     const route = parseRoute(path)
-    if (route.settings !== undefined) return
+    if (isFullPage(route)) return
     const next = validView(route.view, stateRef.current)
     // A deleted chat or an unknown address: show what is open, in place.
     if (!next) window.location.replace(`#${pathFor(stateRef.current.view)}`)
@@ -776,14 +797,20 @@ export function AiWorkspace({ page = false }: { page?: boolean }) {
               page ? 'h-svh' : 'h-[46rem] rounded-lg border lg:col-span-2',
             )}
           >
-            {settings === undefined && sidebarInline && (
+            {!fullPage && sidebarInline && (
               <aside aria-label="Chats and projects" className="bg-subtle flex w-64 shrink-0 flex-col border-r">
                 {sidebar(false)}
               </aside>
             )}
 
             <div className="flex min-w-0 flex-1 flex-col">
-              {settings !== undefined ? (
+              {admin !== undefined ? (
+                <AdminScreen
+                  active={admin}
+                  onSelect={actions.openAdmin}
+                  start={<IconAction label="Back to chats" icon={ArrowLeft01Icon} onClick={actions.closeAdmin} />}
+                />
+              ) : settings !== undefined ? (
                 <SettingsScreen
                   active={settings}
                   onSelect={actions.openSettings}

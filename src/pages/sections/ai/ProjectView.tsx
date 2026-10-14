@@ -21,6 +21,7 @@ import { IconColourSwatch } from '@/components/icon-colour-picker'
 import { Button } from '@/components/ui/button'
 import { estimateFileTokens, estimateTokens } from '@/lib/token-estimate'
 import { plural } from '@/lib/text'
+import { useOrgPolicy } from './admin/org'
 import { useActions } from './context'
 import { now, toFileRef, uid } from './data'
 import { useKnowledge } from './knowledge/context'
@@ -31,7 +32,7 @@ import { PROJECT_COLOURS, PROJECT_ICONS, projectIcon } from './projects/template
 import { useConnectors } from './settings/ConnectorsTab'
 import { useSkills } from './settings/skills-data'
 import type { ChatSummary } from './Sidebar'
-import type { Project, ProjectSharing as Sharing } from './types'
+import type { ModelId, Project, ProjectSharing as Sharing } from './types'
 
 // A project in the AI chat app, as a workspace with tabs: Overview (start a
 // chat, its instructions, recent chats), Chats, Knowledge, Tools (connectors,
@@ -52,6 +53,7 @@ export function ProjectView({ project, chats, tab, start }: {
   tab?: string
   start?: React.ReactNode
 }) {
+  const { policy } = useOrgPolicy()
   const actions = useActions()
   const { connectors } = useConnectors()
   const { skills } = useSkills()
@@ -418,7 +420,7 @@ export function ProjectView({ project, chats, tab, start }: {
         onOpenChange={(open) => !open && setTask(null)}
         initial={editTask}
         editing={!!editTask}
-        models={SCHEDULE_MODELS}
+        models={SCHEDULE_MODELS.filter((m) => policy.models.includes(m.value as ModelId))}
         now={time}
         onSave={saveTask}
         key={task?.id ?? 'new'}

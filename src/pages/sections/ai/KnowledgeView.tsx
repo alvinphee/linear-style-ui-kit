@@ -14,6 +14,7 @@ import type { KnowledgeBase } from '@/blocks/ai/knowledge/knowledge-types'
 import { RetrievalTester } from '@/blocks/ai/knowledge/retrieval-tester'
 import { IconAction } from '@/components/icon-action'
 import { Button } from '@/components/ui/button'
+import { useOrgKnowledgeDefault } from './admin/OrgKnowledgeTab'
 import { useActions } from './context'
 import { USER, now } from './data'
 import { DEFAULT_RETRIEVAL } from './knowledge/bases-data'
@@ -44,6 +45,8 @@ export function KnowledgeView({ baseId, tab, projects, start }: {
   const library = useKnowledge()
   const { connectors } = useConnectors()
   const [creating, setCreating] = useState(false)
+  // New knowledge bases start as the organisation says (Admin › Knowledge).
+  const [defaultAccess] = useOrgKnowledgeDefault()
   const [adding, setAdding] = useState<{ kind?: KnowledgeSourceDraft['kind'] } | null>(null)
 
   // Linked projects as the projects say, not as the sample data said.
@@ -90,7 +93,9 @@ export function KnowledgeView({ baseId, tab, projects, start }: {
       icons={PROJECT_ICONS}
       colours={PROJECT_COLOURS}
       organisation={ORGANISATION}
+      initial={{ access: defaultAccess }}
       onCreate={create}
+      key={defaultAccess}
     />
   )
 

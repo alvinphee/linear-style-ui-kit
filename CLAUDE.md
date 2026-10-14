@@ -63,10 +63,6 @@ linear-style-ui-kit/
 │   ├── agent-brief.md         the rules given to each helper
 │   ├── refactor/              notes from the one-home-per-part refactor
 │   ├── findings.md            what we have learned so far
-│   ├── ui-comparison.md  why this kit's UI is polished and the another app app's is not
-│   ├── brief-vs-setup-study/  test: what the brief, the setup and the model each add
-│   │                          (paper.md and figures/); the same folder is kept with the
-│   │                          test materials in Desktop\ui-brief-test\docs
 │   └── glossary.md            the industry terms we use
 └── src/
     ├── main.tsx
@@ -95,6 +91,11 @@ linear-style-ui-kit/
     │   │   │   ├── scheduled-task-list.tsx  scheduled tasks: schedule, next run, last run, pause, Run now
     │   │   │   ├── scheduled-task-dialog.tsx  create or edit a scheduled task: prompt, recurrence, next runs, model, delivery
     │   │   │   └── task-run-history.tsx  a scheduled task's runs, inline or in a sheet
+    │   │   ├── admin/         the admin console's AI parts:
+    │   │   │   ├── usage-analytics.tsx  usage by period: KPIs, messages by model, credits by team, top people and agents, CSV
+    │   │   │   ├── connector-policy.tsx  the organisation's connector allow list, requests to allow one, custom servers, approval for writes
+    │   │   │   ├── model-feature-policy.tsx  which models and features people may use
+    │   │   │   └── retention-policy.tsx  how long chats are kept, training opt-out, legal hold, export
     │   │   ├── agents/        saved assistants that also work on their own:
     │   │   │   ├── agent-types.ts  the shapes the agent blocks share: agent, draft, template, trigger, run, step, approval
     │   │   │   ├── agent-card.tsx  an agent: mark, description, trigger chips, what it uses, status, Chat and Run now; the template card
@@ -141,8 +142,10 @@ linear-style-ui-kit/
     │   │       ├── voice-picker.tsx  voices as radio cards with a sample to play and an equaliser
     │   │       └── voice-mode.tsx  voice mode: a full-screen spoken conversation with the orb, captions, mute, end; VoiceOrb
     │   ├── account-menu.tsx   who is signed in, with their menu: a row at a sidebar's foot, or the avatar in a header
+    │   ├── audit-log.tsx      who did what: filters (action, actor, date range), search, expandable rows with a before/after diff, CSV
     │   ├── data-table/        TanStack table: toolbar, facets, views, bulk bar, CSV
     │   ├── display-menu.tsx   Display options: layout, grouping, ordering, properties
+    │   ├── domain-verification.tsx  domains with their DNS TXT record to add, Verify, status
     │   ├── docked-panel.tsx   side panel beside the page that narrows it (Ask AI): slides, resizes from its edge, a sheet on narrow screens
     │   ├── dock-schedule/     yard dock schedule: day by dock and time slot, docks
     │   │                      as rows or as columns (drag, book a free slot), week
@@ -165,8 +168,10 @@ linear-style-ui-kit/
     │   ├── form-dialog.tsx    field-driven dialog, quick create, property pills
     │   ├── gantt-chart.tsx    Gantt chart: timescale, bars, milestones, today line, Weeks / Months
     │   ├── grouped-list.tsx   list in folding groups, row shell, selection
+    │   ├── invite-members-dialog.tsx  invite people by email (pasted lists, external flagged), role, groups, invite link, domain auto-join
     │   ├── kanban-board.tsx   columns, drag and drop, "Move to…" menu, card shell
     │   ├── kpi-card.tsx       KPI card, delta badge, sparkline, grid
+    │   ├── members-table.tsx  an organisation's members: search, filter chips, role, groups, status, row menu, bulk bar; cards when narrow
     │   ├── markdown.tsx       Markdown renderer (chat replies, artifacts, previews)
     │   ├── mobile-shell.tsx   the phone app's frame (PWA): MobileShell, top bar, tab bar, floating
     │   │                      button, bottom sheet and its options, chips, cards, grouped rows,
@@ -181,7 +186,9 @@ linear-style-ui-kit/
     │   ├── share-dialog.tsx   share anything: invite people with a role, people with access, general access, copy link; ShareSummary, ShareButton
     │   ├── session-list.tsx   signed-in devices: device, browser, place, last active, sign out one or all others
     │   ├── settings-page.tsx  settings page: sections down the left (a list that drills in when narrow), SettingsHeader, SettingsGroup, SettingsRow
+    │   ├── role-permissions.tsx  roles and what each may do: a permission matrix (a list when narrow), custom roles
     │   ├── record-sheet.tsx   record peek: one record in a centred modal (center peek) or a panel from the right (side peek)
+    │   ├── sso-setup.tsx      single sign-on: SAML or OIDC in three steps (our details, your identity provider, test), attribute mapping
     │   ├── sign-in.tsx        sign-in page parts: form, SSO, aside, footer
     │   ├── submission-feed.tsx  submissions as cards by day (score bar, failed checks, who, when)
     │   │                      and the day's numbers; the modern alternative to the records table
@@ -226,6 +233,7 @@ linear-style-ui-kit/
     │   ├── time-marker.tsx    today or now on a timeline: a line and its label, down or across
     │   ├── view-switch.tsx    list / board toggle
     │   ├── search-field.tsx   search box with clear and a shortcut hint
+    │   ├── copy-field.tsx     a read-only value with a copy button (a URL, a DNS record, a token)
     │   ├── delete-confirm.tsx confirm before deleting
     │   ├── comment-box.tsx    write a comment, Ctrl/⌘ Enter to send
     │   ├── usage-meter.tsx    allowance used, with warning colours
@@ -304,6 +312,9 @@ linear-style-ui-kit/
             │                         ChatChrome (onboarding, shortcuts, command menu, offline and usage notices),
             │                         AppCommandMenu (Ctrl+K), VoiceSession (scripted voice mode),
             │                         prompts-data.ts (the prompt library), scenarios-research.ts (deep research)
+            │   ├── admin/             the admin console: AdminScreen (its sections), one tab per file,
+            │                         org.ts (the organisation and its policies, useOrgPolicy) and sample
+            │                         members, usage and audit events
             │   ├── agents/            sample agents, templates, events and runs, the scripted builder
             │                         (builder-script.ts), the made-up runner (runner.ts) and its provider
             │   ├── knowledge/         sample knowledge bases and retrieval, the made-up indexer
@@ -314,7 +325,8 @@ linear-style-ui-kit/
             │                         file, prefs.ts (useAiPrefs, useStoredState: kept in the browser)
             │                         and the connectors', skills' and memories' sample data
             ├── AiSettingsSection.tsx, AiConnectorsSection.tsx, AiSkillsSection.tsx, AiProjectsSection.tsx,
-            │   AiKnowledgeSection.tsx, AiAgentsSection.tsx, AiChatFeaturesSection.tsx  kit pages
+            │   AiKnowledgeSection.tsx, AiAgentsSection.tsx, AiChatFeaturesSection.tsx, AiAdminSection.tsx  kit pages
+            ├── ai-admin/              the Admin console page's panels (overview, members, security, policies)
             ├── ai-chat-features/      the Chat features page's panels (composer, chat core, modes, states)
             ├── ai-agents/             the Agents page's panels (gallery, builder, configure, runs)
             ├── ai-knowledge/          the Knowledge page's panels (project knowledge, bases, retrieval, citations)
@@ -352,7 +364,7 @@ levels, smallest first (definitions in `docs/glossary.md`):
 - **AI:** the AI kit, a domain across the levels rather than a level (see
   "Domains" in `docs/architecture.md`): Overview (install the AI kit, every
   AI item read from the registry, the AI templates); Components: AI
-  components; Blocks: AI workspace, AI in the product, Agents, Chat features,
+  components; Blocks: Admin console, AI workspace, AI in the product, Agents, Chat features,
   Connectors, Knowledge, Projects, Settings page, Skills and memory. An AI-only part goes in its level's `ai/` folder
 - **Icons:** the Hugeicons test
 - **Templates:** whole apps, outside the kit's shell (see below)
@@ -436,7 +448,17 @@ template. List them in `TEMPLATES` (`nav.ts`) and route them in `App.tsx`.
   voice button) is a full-screen spoken conversation; ending it saves it as
   chat messages. Ctrl+K is the command menu, `?` the shortcuts; the first
   visit opens the welcome (onboarding). Near the monthly credit limit a
-  banner offers a cheaper model or an upgrade. Settings is a full page at
+  banner offers a cheaper model or an upgrade.
+  The admin console (account menu › Admin console, `/admin/<section>`, for
+  owners and admins; the sample user owns Acme): Overview, Members (invite,
+  roles, groups, domain auto-join), Roles and permissions, Usage; SSO and
+  provisioning (SAML or OIDC, domain verification, SCIM), Security policies;
+  Models and features, Connectors (allow list and requests), Knowledge, Data
+  and privacy; Audit log. Its policies (`ai/admin/org.ts`, kept in the
+  browser) take effect in the app: a feature turned off leaves the prompt box
+  and is locked in Settings, models not allowed leave every picker, blocked
+  connectors read "Disabled by admin", public links leave Share chat, and the
+  organisation's retention and training choice lock Data controls. Settings is a full page at
   `/settings/<section>` (the account menu, or Upgrade plan for Billing):
   Profile, Appearance, Personalisation, Notifications, Security; Models and
   features, Memory, Connectors, Skills, Voice; Data controls, Billing and
@@ -482,10 +504,14 @@ session, company and starred modules are kept in the browser.
   More › Navigation (kept in the browser): Tab bar, Menu, or Both. Menu
   swaps the tab bar for the menu screen: "Menu" in the top bar (its two bars
   turn into a cross) opens, under the bar, Home, Ask AI or the Assistant,
-  Inbox and Scan; the open module's pages with their counts; every module;
-  and the account settings. Every page is then a first screen, so only a
+  Inbox and Scan; the open module's pages with their counts; and every
+  module. The account (profile, company, role, theme, sign out) is the avatar
+  at the top bar's right, not part of the menu. Every page is then a first screen, so only a
   form being filled in keeps a back arrow. A choice, Escape or Menu again
   closes it. Both keeps a tab bar too (Home, Inbox, Scan, Ask AI; no More).
+  Menu opens (Fade, Curtain, Rise, Cascade, Drawer) and, with the Module
+  button, Module switcher (Tiles, Launcher, List, Sheet, Strip) are also
+  set there, kept in the browser; the App shells page has the same pickers.
   Tab bar style: Classic (a strip along the bottom) or Floating, which works
   as iOS 26's does without its glass look: a solid capsule over the page,
   Scan among the tabs and search (the command palette) as a round button
@@ -643,8 +669,8 @@ Linear name, logo or assets in the app.
 ## The registry
 The kit is a shadcn registry: another project can install any part with
 `npx shadcn add`, and gets the files, npm packages and other kit parts it
-needs. 185 items: `tokens` (the whole theme from `styles.css`), 47 ui, 40
-components, 85 blocks, 11 lib files and the `ai-kit` bundle. No part may be
+needs. 196 items: `tokens` (the whole theme from `styles.css`), 47 ui, 41
+components, 95 blocks, 11 lib files and the `ai-kit` bundle. No part may be
 called `tokens` (the script stops if one is). Which level
 becomes which item: `docs/architecture.md`.
 - Items from `components/ai/` and `blocks/ai/**` have `categories: ["ai"]`;
@@ -730,7 +756,9 @@ becomes which item: `docs/architecture.md`.
   the component.
 - This folder stands alone. Do not link it to, compare it with, merge it
   into or change any other project, unless the user names that project.
-- Local only: no git branches, no deploys, no AWS.
+- The repository is public on the user's GitHub (`origin`, branch `main`).
+  Nothing about the user's employer or its apps goes in it. No other
+  branches, no deploys, no AWS.
 
 ## Reinstalling the skill on Windows
 `npx skills add https://github.com/hugeicons/hugeicons --skill hugeicons`

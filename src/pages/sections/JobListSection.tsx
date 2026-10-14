@@ -6,7 +6,7 @@ import {
 } from '@hugeicons/core-free-icons'
 import { toast } from 'sonner'
 import { cn } from 'cn'
-import { listNames, MIXED } from '@/blocks/data-table'
+import { listNames } from '@/blocks/data-table'
 import { GroupedList } from '@/blocks/grouped-list'
 import { DeleteConfirm } from '@/components/delete-confirm'
 import { IconAction } from '@/components/icon-action'
@@ -116,7 +116,6 @@ export default function JobListSection() {
               onCheckedChange={() => (allPicked ? clear() : setChecked(new Set(visible)))}
               disabled={!visible.length}
               aria-label="Select all jobs in this view"
-              className={MIXED}
             />
             <Tabs value={tab} onValueChange={changeTab}>
               <TabsList>

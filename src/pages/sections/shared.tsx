@@ -1,6 +1,6 @@
-import { Children, createContext, useContext, type ReactNode } from 'react'
+import { Children, createContext, useContext, type ReactNode, type Ref } from 'react'
 import { HugeiconsIcon } from '@hugeicons/react'
-import { ArrowRight01Icon } from '@hugeicons/core-free-icons'
+import { ArrowRight01Icon, BatteryFullIcon, FullSignalIcon, Wifi01Icon, WifiOff01Icon } from '@hugeicons/core-free-icons'
 import { cn } from 'cn'
 import { PageHeader } from '@/components/page-header'
 import { Panel as KitPanel } from '@/components/panel'
@@ -68,3 +68,52 @@ export function Panel({ title, note, children, className, wide }: {
 export function Row({ children, className }: { children: ReactNode; className?: string }) {
   return <div className={cn('flex flex-wrap items-center gap-2', className)}>{children}</div>
 }
+
+// A phone drawn round a screen, for the kit pages that show a phone app (App
+// shells, the sign-in page): a bezel, and a screen sized like a 390 × 844
+// phone that never grows wider than the space it is given. `screenRef` is
+// the screen, for sheets that open inside it.
+export function PhoneFrame({ children, screenRef, className }: {
+  children: ReactNode
+  screenRef?: Ref<HTMLDivElement>
+  className?: string
+}) {
+  return (
+    <div className="bg-muted ring-border mx-auto w-full max-w-[24.5rem] rounded-[3rem] p-2.5 shadow-xl ring-1">
+      <div
+        ref={screenRef}
+        className={cn(
+          'bg-background relative isolate flex h-[46rem] max-h-[85vh] min-h-[34rem] flex-col overflow-hidden rounded-[2.4rem] border',
+          className,
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
+// What the phone itself draws at the top: the time, signal, Wi-Fi and
+// battery. An installed app sits under it; the top safe area keeps it clear.
+export function PhoneStatusBar({ offline = false }: { offline?: boolean }) {
+  return (
+    <div aria-hidden className="text-foreground flex h-11 shrink-0 items-center justify-between px-7 text-xs font-semibold">
+      <span className="tabular-nums">9:41</span>
+      <span className="flex items-center gap-1.5">
+        <HugeiconsIcon icon={FullSignalIcon} strokeWidth={2} className="size-3.5" />
+        <HugeiconsIcon icon={offline ? WifiOff01Icon : Wifi01Icon} strokeWidth={2} className="size-3.5" />
+        <HugeiconsIcon icon={BatteryFullIcon} strokeWidth={2} className="size-4" />
+      </span>
+    </div>
+  )
+}
+
+// The home indicator: the bar at the foot of a phone without a home button.
+export function PhoneHomeIndicator() {
+  return (
+    <div aria-hidden className="flex h-5 shrink-0 justify-center">
+      <span className="bg-foreground/70 mt-1.5 h-1 w-28 rounded-full" />
+    </div>
+  )
+}
+

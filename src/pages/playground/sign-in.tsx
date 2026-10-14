@@ -16,9 +16,11 @@ const DEMO = 'Demo only. Nothing was sent.'
 const demo = (label: string) => () => toast(label, { description: DEMO })
 
 const ASIDES = ['none', 'testimonial', 'pitch'] as const
+const ASIDE_SIDES = ['right', 'left'] as const
 const METHOD_SETS = ['none', 'single sign-on', 'single sign-on and passkey'] as const
 
 type Aside = (typeof ASIDES)[number]
+type AsideSideName = (typeof ASIDE_SIDES)[number]
 type MethodSet = (typeof METHOD_SETS)[number]
 
 const HEADING = { title: 'Sign in to Acme', description: 'Welcome back. Pick up where you left off.' }
@@ -40,6 +42,7 @@ const METHOD_ICON_NAMES: Record<string, string> = { sso: 'SquareLock02Icon', pas
 
 type SignInOptions = {
   aside: Aside
+  side: AsideSideName
   methods: MethodSet
   password: boolean
   remember: boolean
@@ -53,6 +56,7 @@ type SignInOptions = {
 function signInOptions(v: Values): SignInOptions {
   return {
     aside: str(v, 'aside') as Aside,
+    side: str(v, 'side') as AsideSideName,
     methods: str(v, 'methods') as MethodSet,
     password: bool(v, 'password'),
     remember: bool(v, 'remember'),
@@ -104,7 +108,7 @@ function SignInPreview(o: SignInOptions) {
       : undefined
   return (
     <div className="bg-background flex h-[32rem] w-full min-w-0 flex-col overflow-hidden rounded-lg border">
-      <SignInLayout from="md" className="min-h-0 flex-1 grid-rows-1" aside={aside}>
+      <SignInLayout from="md" asideSide={o.side === 'left' ? 'start' : 'end'} className="min-h-0 flex-1 grid-rows-1" aside={aside}>
         <SignInMain
           size="sm"
           footer={o.footer && (
@@ -208,7 +212,7 @@ function signInCode(v: Values) {
     form,
     note,
   ].filter(Boolean).join('\n'))
-  const layout = aside ? element('SignInLayout', [`aside={\n${indent(aside)}\n}`], main) : `<SignInLayout>\n${indent(main)}\n</SignInLayout>`
+  const layout = aside ? element('SignInLayout', [o.side === 'left' && 'asideSide="start"', `aside={\n${indent(aside)}\n}`], main) : `<SignInLayout>\n${indent(main)}\n</SignInLayout>`
   return [
     head,
     '// The preview is framed, so it passes size="sm", from="md" and an h4 heading. A full page uses the defaults.',
@@ -224,6 +228,7 @@ export default function SignInDemos() {
         description="Submit it empty to see the field errors"
         controls={[
           { kind: 'select', name: 'aside', label: 'Side panel (aside)', options: ASIDES, initial: 'testimonial' },
+          { kind: 'select', name: 'side', label: 'Side panel position', options: ASIDE_SIDES, initial: 'right' },
           { kind: 'select', name: 'methods', label: 'Other ways in', options: METHOD_SETS, initial: 'single sign-on and passkey' },
           { kind: 'switch', name: 'password', label: 'Password', initial: true },
           { kind: 'switch', name: 'remember', label: 'Remember me', initial: true },

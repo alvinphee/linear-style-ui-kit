@@ -53,8 +53,8 @@ Keep content generic SaaS, no real brands.
   - Button sizes: xs / sm / default / lg / icon-xs / icon-sm / icon / icon-lg
   - cn is imported from 'cn'
   - CommandDialog does not wrap its children in <Command>: add it yourself
-  - Checkbox has no indeterminate style (see the MIXED classes in
-    JobListSection.tsx)
+  - Checkbox draws its own "some selected" dash: pass
+    checked="indeterminate"
 - Toasts: import { toast } from 'sonner'.
 - Shared helpers: StatusIcon, PriorityIcon, Initials({ name, className })
   from src/pages/sections/StatusSection.tsx; sample data in src/pages/data.ts;

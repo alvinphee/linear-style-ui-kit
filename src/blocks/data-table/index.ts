@@ -6,6 +6,6 @@ export {
 } from './features'
 export {
   BulkDelete, DensityToggle, FacetFilter, Pagination, RangeFilter, ViewOptions, actionsColumn,
-  listNames, MIXED, selectColumn, type DataTableRowAction, type Density, type FacetOption,
+  listNames, selectColumn, type DataTableRowAction, type Density, type FacetOption,
 } from './parts'
 export { downloadCsv, exportTableCsv, type DataTableCsv } from './csv'

@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { greeting } from '@/lib/text'
+import { useOrgPolicy } from './admin/org'
 import { useActions } from './context'
 import { DEFAULT_MODEL, MODELS, STARTERS, USER, now } from './data'
 import { ChatUsageNotice, ComposerNotices } from './ChatChrome'
@@ -89,6 +90,7 @@ function Header({ chat, project, projects, model, incognito, sidebarToggle, hasA
   onDeleted: () => void
 }) {
   const actions = useActions()
+  const { policy } = useOrgPolicy()
   const [renaming, setRenaming] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const skipFocusReturn = useRef(false)
@@ -138,7 +140,7 @@ function Header({ chat, project, projects, model, incognito, sidebarToggle, hasA
         {project && <ProjectChip project={project} />}
       </div>
       <ModelPicker
-        models={MODEL_OPTIONS}
+        models={MODEL_OPTIONS.filter((m) => policy.models.includes(m.id as ModelId))}
         value={model}
         onChange={(id) => actions.setModel(id as ModelId)}
         label="Model · made up for this demo"
@@ -199,6 +201,7 @@ function Header({ chat, project, projects, model, incognito, sidebarToggle, hasA
       <DeleteChatDialog chatId={confirm && kept ? kept.id : null} title={kept?.title ?? ''} onClose={() => setConfirm(false)} onDeleted={onDeleted} />
       {kept && (
         <ShareChatDialog
+          allowPublic={policy.features.publicLinks}
           open={sharing}
           onOpenChange={setSharing}
           chat={{ title: kept.title, messageCount: kept.messages.length, hasArtifacts }}

@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { copyText } from '@/lib/clipboard'
 import { formatNumber, formatShortDate } from '@/lib/format'
 import { plural } from '@/lib/text'
+import { useOrgPolicy } from '../admin/org'
 import { useAiPrefs, useStoredState } from './prefs'
 
 // Data controls: training opt-in, how long chats are kept, the links you
@@ -60,6 +61,8 @@ export function DataTab({ chatCount, onExportAll, onResetDemo }: {
 }) {
   const id = useId()
   const { prefs, set } = useAiPrefs()
+  // The organisation's data policy (Admin › Data and retention) overrides these.
+  const org = useOrgPolicy().policy
   const [deleting, setDeleting] = useState(false)
 
   return (
@@ -69,18 +72,28 @@ export function DataTab({ chatCount, onExportAll, onResetDemo }: {
       <SettingsGroup title="Privacy">
         <SettingsRow
           label="Improve the model for everyone"
-          hint="Allow your chats to be used to train future models. Off by default; incognito chats are never used."
+          hint={org.trainingOptOut
+            ? 'Off for everyone: your organisation never lets chats be used to train models.'
+            : 'Allow your chats to be used to train future models. Off by default; incognito chats are never used.'}
           htmlFor={`${id}-improve`}
         >
-          <Switch id={`${id}-improve`} checked={prefs.improve} onCheckedChange={(on) => set('improve', on)} />
+          <Switch
+            id={`${id}-improve`}
+            checked={!org.trainingOptOut && prefs.improve}
+            disabled={org.trainingOptOut}
+            onCheckedChange={(on) => set('improve', on)}
+          />
         </SettingsRow>
         <SettingsRow
           label="Chat history retention"
-          hint="Chats older than this are deleted for good. Pinned chats and project chats are kept."
+          hint={org.retentionDays !== null
+            ? `Set by your organisation: chats older than ${org.retentionDays} days are deleted.`
+            : 'Chats older than this are deleted for good. Pinned chats and project chats are kept.'}
           htmlFor={`${id}-retention`}
         >
           <Select
-            value={prefs.retentionDays === null ? 'forever' : String(prefs.retentionDays)}
+            disabled={org.retentionDays !== null}
+            value={(org.retentionDays ?? prefs.retentionDays) === null ? 'forever' : String(org.retentionDays ?? prefs.retentionDays)}
             onValueChange={(v) => {
               const days = RETENTION.find((r) => r.value === v)?.days ?? null
               set('retentionDays', days)
